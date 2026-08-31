@@ -4,6 +4,8 @@ A single-page planner for an Orlando theme-park holiday, built with **Nuxt 4** a
 deployed to **Cloudflare Pages**. All trip data lives in the browser's
 `localStorage` — there is no backend and no account.
 
+Repo: <https://github.com/jviddy/OrlandoPlanner>
+
 ## Features
 
 | Page | What it does |
@@ -41,7 +43,7 @@ or connect the repo in the Cloudflare dashboard with:
 
 - **Build command:** `npm run build`
 - **Build output directory:** `dist`
-- **Node version:** 20 (`.nvmrc`)
+- **Node version:** 22 (`.nvmrc`)
 
 ## Tech
 

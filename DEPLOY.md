@@ -43,7 +43,7 @@ Environment variables:
 
 | Name | Value | Why |
 | --- | --- | --- |
-| `NODE_VERSION` | `20` | matches `.nvmrc`; Nuxt 4 needs ≥ 20.11 |
+| `NODE_VERSION` | `22` | matches `.nvmrc`; Nuxt 4 needs ≥ 20.19 |
 | `NPM_CONFIG_LEGACY_PEER_DEPS` | `true` | mirrors `.npmrc`; avoids the npm 11 peer-resolver crash |
 
 `compatibility_date` and the `nodejs_compat` flag are already in
