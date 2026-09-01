@@ -1,42 +1,64 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2026-08-31',
+  compatibilityDate: '2026-09-01',
   devtools: { enabled: true },
 
   modules: ['@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
 
+  // The Nuxt persistedstate module defaults to cookies; the trip (up to 21 days
+  // of plans) belongs in localStorage.
+  piniaPluginPersistedstate: {
+    storage: 'localStorage',
+  },
+
   css: ['~/assets/css/main.css'],
 
   app: {
+    pageTransition: { name: 'fade', mode: 'out-in' },
     head: {
       htmlAttrs: { lang: 'en' },
       title: 'Orlando Trip Planner',
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        {
+          name: 'viewport',
+          content:
+            'width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1',
+        },
         {
           name: 'description',
           content:
-            'Plan your Orlando theme-park trip: build a day-by-day itinerary, track your budget, and pack with confidence.',
+            'Plan an Orlando theme-park trip: see the whole holiday as a grid of days, set each day, and keep dining and fixed-time plans in one place.',
         },
-        { name: 'theme-color', content: '#0b3d91' },
+        { name: 'theme-color', content: '#fdfaf3' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
       ],
-      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        {
+          rel: 'preconnect',
+          href: 'https://fonts.gstatic.com',
+          crossorigin: '',
+        },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap',
+        },
+      ],
     },
   },
 
   /*
-   * This project lives under a path that contains parentheses
-   * ("iCloud Drive (Archive)"). Nuxt's component scanner escapes glob
-   * metacharacters, but unimport's directory scan does not, so `composables/`
-   * and `stores/` auto-imports silently come back empty. Registering them
-   * explicitly makes the app build the same from any checkout path.
+   * The checkout path contains parentheses ("iCloud Drive (Archive)"), which
+   * breaks unimport's glob scan of composables/ and stores/. Nuxt's component
+   * scanner escapes glob metacharacters; unimport does not. Register the few
+   * we auto-use explicitly so the app builds from any path.
    */
   imports: {
     presets: [
       { from: '~/stores/trip', imports: ['useTripStore'] },
-      { from: '~/composables/useFormat', imports: ['useFormat'] },
-      { from: '~/composables/useHydrated', imports: ['useHydrated'] },
+      { from: '~/composables/useDates', imports: ['useDates'] },
     ],
   },
 
@@ -45,12 +67,11 @@ export default defineNuxtConfig({
     preset: 'cloudflare-pages',
     prerender: {
       crawlLinks: true,
-      routes: ['/', '/itinerary', '/attractions', '/budget', '/packing', '/settings'],
+      routes: ['/', '/new', '/templates', '/edit', '/day'],
     },
   },
 
   routeRules: {
-    // App shell is fully client-driven from localStorage; prerender the markup.
     '/**': { prerender: true },
   },
 

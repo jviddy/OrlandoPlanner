@@ -1,106 +1,105 @@
+import { GLYPHS } from './glyphs'
+
+export type ResortKey = 'wdw' | 'uor' | 'sea' | 'off'
+
+export interface Resort {
+  key: ResortKey
+  name: string
+  /** Circle background. */
+  bg: string
+  /** Glyph ink on that background. */
+  fg: string
+  /** Counter / dot colour. */
+  dot: string
+  /** Circle drop-shadow colour (rgba). */
+  shadow: string
+}
+
+/**
+ * The core system: circle BACKGROUND = resort, circle GLYPH = park.
+ * Per-park colour is deliberately not used on the overview — it makes a 21-day
+ * grid unreadable.
+ */
+export const RESORTS: Record<ResortKey, Resort> = {
+  wdw: {
+    key: 'wdw',
+    name: 'Walt Disney World',
+    bg: '#0b3d91',
+    fg: '#ffffff',
+    dot: '#0b3d91',
+    shadow: 'rgba(11,61,145,.34)',
+  },
+  uor: {
+    key: 'uor',
+    name: 'Universal Orlando',
+    bg: '#f45d48',
+    fg: '#ffffff',
+    dot: '#f45d48',
+    shadow: 'rgba(244,93,72,.34)',
+  },
+  sea: {
+    key: 'sea',
+    name: 'SeaWorld Parks',
+    bg: '#17a398',
+    fg: '#ffffff',
+    dot: '#17a398',
+    shadow: 'rgba(23,163,152,.34)',
+  },
+  off: {
+    key: 'off',
+    name: 'Off-park',
+    bg: '#ffd86b',
+    fg: '#7a5600',
+    dot: '#e0a94a',
+    shadow: 'rgba(224,169,74,.36)',
+  },
+}
+
 export interface Park {
   id: string
+  resort: ResortKey
   name: string
-  resort: 'Walt Disney World' | 'Universal Orlando' | 'SeaWorld Parks' | 'Other'
+  /** 2–3 word label shown under the grid circle. */
   short: string
-  /** Accent colour used for chips / day headers. */
-  color: string
-  blurb: string
+  glyph: string
 }
 
 export const PARKS: Park[] = [
-  {
-    id: 'mk',
-    name: 'Magic Kingdom',
-    resort: 'Walt Disney World',
-    short: 'MK',
-    color: '#8b5cf6',
-    blurb: 'Cinderella Castle, classic dark rides, fireworks and parades.',
-  },
-  {
-    id: 'epcot',
-    name: 'EPCOT',
-    resort: 'Walt Disney World',
-    short: 'EP',
-    color: '#0ea5e9',
-    blurb: 'World Showcase, Guardians coaster, food-and-wine energy year round.',
-  },
-  {
-    id: 'hs',
-    name: 'Hollywood Studios',
-    resort: 'Walt Disney World',
-    short: 'HS',
-    color: '#f43f5e',
-    blurb: 'Star Wars: Galaxy’s Edge, Toy Story Land, Tower of Terror.',
-  },
-  {
-    id: 'ak',
-    name: 'Animal Kingdom',
-    resort: 'Walt Disney World',
-    short: 'AK',
-    color: '#22c55e',
-    blurb: 'Pandora – The World of Avatar, Kilimanjaro Safaris, Expedition Everest.',
-  },
-  {
-    id: 'usf',
-    name: 'Universal Studios Florida',
-    resort: 'Universal Orlando',
-    short: 'USF',
-    color: '#f59e0b',
-    blurb: 'Diagon Alley, The Simpsons, movie-backlot thrill rides.',
-  },
-  {
-    id: 'ioa',
-    name: 'Islands of Adventure',
-    resort: 'Universal Orlando',
-    short: 'IOA',
-    color: '#14b8a6',
-    blurb: 'Hogsmeade, Jurassic World, Hagrid’s and the Hulk coaster.',
-  },
-  {
-    id: 'eu',
-    name: 'Epic Universe',
-    resort: 'Universal Orlando',
-    short: 'EU',
-    color: '#6366f1',
-    blurb: 'Super Nintendo World, How to Train Your Dragon, Dark Universe.',
-  },
-  {
-    id: 'volcano',
-    name: 'Volcano Bay',
-    resort: 'Universal Orlando',
-    short: 'VB',
-    color: '#ef4444',
-    blurb: 'Universal’s water theme park – slides, a wave pool and a lazy river.',
-  },
-  {
-    id: 'seaworld',
-    name: 'SeaWorld Orlando',
-    resort: 'SeaWorld Parks',
-    short: 'SW',
-    color: '#3b82f6',
-    blurb: 'Record-breaking coasters plus animal encounters and shows.',
-  },
-  {
-    id: 'other',
-    name: 'Other / Off-park day',
-    resort: 'Other',
-    short: '—',
-    color: '#64748b',
-    blurb: 'Rest day, outlet shopping, Disney Springs, CityWalk or a travel day.',
-  },
+  { id: 'mk', resort: 'wdw', name: 'Magic Kingdom', short: 'Magic K.', glyph: GLYPHS.castle },
+  { id: 'ep', resort: 'wdw', name: 'EPCOT', short: 'EPCOT', glyph: GLYPHS.sphere },
+  { id: 'hs', resort: 'wdw', name: 'Hollywood Studios', short: 'Studios', glyph: GLYPHS.clapper },
+  { id: 'ak', resort: 'wdw', name: 'Animal Kingdom', short: 'Animal K.', glyph: GLYPHS.tree },
+  { id: 'usf', resort: 'uor', name: 'Universal Studios', short: 'Studios', glyph: GLYPHS.globe },
+  { id: 'ioa', resort: 'uor', name: 'Islands of Adventure', short: 'Islands', glyph: GLYPHS.island },
+  { id: 'eu', resort: 'uor', name: 'Epic Universe', short: 'Epic', glyph: GLYPHS.portal },
+  { id: 'vb', resort: 'uor', name: 'Volcano Bay', short: 'Volcano', glyph: GLYPHS.volcano },
+  { id: 'sw', resort: 'sea', name: 'SeaWorld Orlando', short: 'SeaWorld', glyph: GLYPHS.fin },
+  { id: 'aq', resort: 'sea', name: 'Aquatica', short: 'Aquatica', glyph: GLYPHS.water },
+  { id: 'pool', resort: 'off', name: 'Pool / rest day', short: 'Pool', glyph: GLYPHS.sun },
+  { id: 'shop', resort: 'off', name: 'Shopping', short: 'Shops', glyph: GLYPHS.bag },
+  { id: 'rest', resort: 'off', name: 'Nothing planned', short: 'Rest', glyph: GLYPHS.moon },
+  { id: 'travel', resort: 'off', name: 'Travel day', short: 'Travel', glyph: GLYPHS.plane },
 ]
 
 export const PARK_BY_ID: Record<string, Park> = Object.fromEntries(
   PARKS.map((p) => [p.id, p]),
 )
 
-export function parkName(id: string | null | undefined): string {
-  if (!id) return 'Unassigned'
-  return PARK_BY_ID[id]?.name ?? 'Unassigned'
+/** Groups for the quick-assign sheet, in order. */
+export const SHEET_GROUPS: { title: string; ids: string[] }[] = [
+  { title: 'Walt Disney World', ids: ['mk', 'ep', 'hs', 'ak'] },
+  { title: 'Universal Orlando', ids: ['usf', 'ioa', 'eu', 'vb'] },
+  { title: 'SeaWorld Parks', ids: ['sw', 'aq'] },
+  { title: 'Off-park', ids: ['pool', 'shop', 'rest', 'travel'] },
+]
+
+export function resortOf(parkId: string | null | undefined): Resort | null {
+  if (!parkId) return null
+  const park = PARK_BY_ID[parkId]
+  return park ? RESORTS[park.resort] : null
 }
 
-export function parkColor(id: string | null | undefined): string {
-  if (!id) return '#64748b'
-  return PARK_BY_ID[id]?.color ?? '#64748b'
+export function parkName(parkId: string | null | undefined): string {
+  if (!parkId) return 'Nothing set yet'
+  return PARK_BY_ID[parkId]?.name ?? 'Nothing set yet'
 }

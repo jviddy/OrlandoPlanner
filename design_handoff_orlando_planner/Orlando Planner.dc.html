@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9e2d3;font-family:"Instrument Sans",system-ui,sans-serif;text-wrap:pretty}
+a{color:#0b3d91}a:hover{color:#0a337a}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+input,select{font:inherit;color:inherit}
+*{box-sizing:border-box}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideIn{from{transform:translateX(24px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.16) rotate(-5deg)}100%{transform:scale(1)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.pop,.popb{animation:pop .34s cubic-bezier(.34,1.56,.64,1)}
+.bob{animation:bob 3.4s ease-in-out infinite}
+.scr::-webkit-scrollbar{width:0}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:28px 16px 48px;gap:22px">
+<div style="width:390px;height:844px;background:#fdfaf3;border-radius:38px;box-shadow:0 24px 60px rgba(16,24,40,.22),0 0 0 9px #12141c,0 0 0 10px #33384a;overflow:hidden;position:relative;display:flex;flex-direction:column">
+
+  <div style="height:44px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-size:12px;font-weight:600;color:#1a2233;background:#fffdf8">
+    <span>9:41</span><span style="letter-spacing:1px">▪▪▪ ◗</span>
+  </div>
+
+  <sc-if value="{{ isGate }}" hint-placeholder-val="{{ true }}">
+  <div class="scr" style="flex:1;overflow-y:auto;background:#fffdf8">
+    <div style="padding:20px 20px 8px">
+      <div style="font:600 11px/1 'Instrument Sans';letter-spacing:.14em;text-transform:uppercase;color:#8a93a5">New trip</div>
+      <h1 style="font:700 30px/1.1 'Bricolage Grotesque';letter-spacing:-.02em;color:#1a2233;margin:8px 0 6px">Let's get the bones in.</h1>
+      <p style="margin:0;font-size:14px;line-height:1.5;color:#5b6577">Name and dates are all we need. The rest sharpens the warnings later.</p>
+    </div>
+
+    <div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:14px">
+      <label style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:12px;font-weight:600;color:#5b6577">Trip name</span>
+        <input value="{{ tripName }}" onInput="{{ setName }}" placeholder="Florida 2027" style="width:100%;padding:13px 14px;border:1.5px solid #d7dbe6;border-radius:12px;background:#fff;font-size:16px" />
+      </label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;font-weight:600;color:#5b6577">Arrive</span>
+          <input type="date" value="{{ startDate }}" onInput="{{ setStart }}" style="width:100%;padding:13px 12px;border:1.5px solid #d7dbe6;border-radius:12px;background:#fff;font-size:15px" />
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;font-weight:600;color:#5b6577">Depart</span>
+          <input type="date" value="{{ endDate }}" onInput="{{ setEnd }}" style="width:100%;padding:13px 12px;border:1.5px solid #d7dbe6;border-radius:12px;background:#fff;font-size:15px" />
+        </label>
+      </div>
+      <div style="font-size:13px;color:#8a93a5;margin-top:-4px">{{ nightsLabel }}</div>
+    </div>
+
+    <div style="padding:18px 20px 0">
+      <div style="font:600 11px/1 'Instrument Sans';letter-spacing:.14em;text-transform:uppercase;color:#8a93a5;margin-bottom:10px">Optional — add now or later</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ optionalSections }}" as="s" hint-placeholder-count="3">
+          <div style="border:1.5px solid #efe7d6;border-radius:16px;background:#fffdf6;overflow:hidden">
+            <button onClick="{{ s.toggle }}" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px">
+              <span style="width:32px;height:32px;flex:none;border-radius:10px;background:{{ s.tint }};display:flex;align-items:center;justify-content:center">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{ s.ink }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ s.icon }}"></path></svg>
+              </span>
+              <span style="flex:1;text-align:left">
+                <span style="display:block;font-size:15px;font-weight:600;color:#1a2233">{{ s.title }}</span>
+                <span style="display:block;font-size:12.5px;color:#8a93a5;margin-top:1px">{{ s.summary }}</span>
+              </span>
+              <span style="font-size:13px;color:#8a93a5">{{ s.chev }}</span>
+            </button>
+            <sc-if value="{{ s.open }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:0 14px 14px;display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ s.fields }}" as="f" hint-placeholder-count="2">
+                  <label style="display:flex;align-items:center;gap:10px">
+                    <span style="flex:none;width:96px;font-size:12.5px;font-weight:600;color:#5b6577">{{ f.label }}</span>
+                    <input value="{{ f.value }}" onInput="{{ f.onInput }}" type="{{ f.type }}" placeholder="{{ f.placeholder }}" style="flex:1;min-width:0;padding:9px 11px;border:1.5px solid #e2e5ee;border-radius:10px;background:#fff;font-size:14px" />
+                  </label>
+                </sc-for>
+                <button onClick="{{ s.action }}" style="align-self:flex-start;font-size:13px;font-weight:600;color:#0b3d91;padding:6px 0">{{ s.actionLabel }}</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="height:110px"></div>
+  </div>
+  <div style="flex:none;padding:12px 20px 26px;background:#fffdf8;border-top:1px solid #f0e9da">
+    <button onClick="{{ goTemplates }}" disabled="{{ gateBlocked }}" style="width:100%;padding:16px;border-radius:16px;background:{{ ctaBg }};color:#fff;font:700 16px 'Instrument Sans';box-shadow:0 6px 18px rgba(11,61,145,.22)">Next — pick a starting point</button>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isTemplates }}" hint-placeholder-val="{{ false }}">
+  <div class="scr" style="flex:1;overflow-y:auto;background:#fffdf8;animation:fadeIn .2s ease">
+    <div style="padding:18px 20px 4px">
+      <button onClick="{{ backToGate }}" style="font-size:13px;font-weight:600;color:#5b6577;margin-bottom:14px">← Trip details</button>
+      <h1 style="font:700 27px/1.15 'Bricolage Grotesque';letter-spacing:-.02em;color:#1a2233;margin:0 0 6px">{{ nightsHeadline }}</h1>
+      <p style="margin:0;font-size:14px;line-height:1.5;color:#5b6577">Start empty, or drop in a shape you can pull apart.</p>
+    </div>
+    <div style="padding:18px 20px 30px;display:flex;flex-direction:column;gap:12px">
+      <sc-for list="{{ templates }}" as="t" hint-placeholder-count="3">
+        <button onClick="{{ t.pick }}" style="text-align:left;border:1.5px solid #efe7d6;border-radius:20px;background:#fff;padding:16px;box-shadow:0 3px 10px rgba(120,98,55,.08)" style-active="transform:scale(.99)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span style="font:700 17px 'Bricolage Grotesque';color:#1a2233">{{ t.name }}</span>
+            <span style="font-size:11.5px;font-weight:600;color:#8a93a5">{{ t.meta }}</span>
+          </div>
+          <div style="font-size:13.5px;line-height:1.45;color:#5b6577;margin-top:5px">{{ t.blurb }}</div>
+          <div style="display:flex;gap:4px;margin-top:12px;flex-wrap:wrap">
+            <sc-for list="{{ t.preview }}" as="p" hint-placeholder-count="10">
+              <span style="width:20px;height:20px;border-radius:50%;background:{{ p.bg }};display:flex;align-items:center;justify-content:center">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="{{ p.fg }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ p.glyph }}"></path></svg>
+              </span>
+            </sc-for>
+          </div>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0;background:#fbf6ea">
+    <div style="flex:none;background:#fffdf8;padding:10px 18px 12px;border-bottom:1px solid #f0e9da">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="min-width:0">
+          <div style="font:700 21px/1.15 'Bricolage Grotesque';letter-spacing:-.02em;color:#1a2233;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tripName }}</div>
+          <div style="font-size:12.5px;color:#8a93a5;margin-top:2px">{{ tripRange }}</div>
+        </div>
+        <div style="flex:none;text-align:center;background:#ffd86b;border-radius:14px;padding:7px 12px;box-shadow:0 3px 10px rgba(224,169,74,.4)">
+          <div style="font:800 19px/1 'Bricolage Grotesque';color:#5d4300;letter-spacing:-.02em">{{ daysToGo }}</div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8a6a00;margin-top:3px">sleeps to go</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:11px;overflow-x:auto">
+        <sc-for list="{{ counters }}" as="c" hint-placeholder-count="3">
+          <span style="flex:none;display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:{{ c.bg }};border:1px solid {{ c.bd }}">
+            <span style="width:7px;height:7px;border-radius:50%;background:{{ c.dot }}"></span>
+            <span style="font-size:12px;font-weight:600;color:#1a2233">{{ c.label }}</span>
+            <span style="font-size:12px;font-weight:700;color:{{ c.numInk }}">{{ c.value }}</span>
+          </span>
+        </sc-for>
+      </div>
+    </div>
+
+    <div class="scr" style="flex:1;overflow-y:auto;padding:12px 12px 96px">
+      <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="1">
+        <div style="display:flex;gap:9px;align-items:flex-start;padding:11px 12px;border-radius:13px;background:{{ a.bg }};border:1px solid {{ a.bd }};margin-bottom:9px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ a.ink }}" stroke-width="2.2" stroke-linecap="round" style="flex:none;margin-top:1px"><path d="{{ a.icon }}"></path></svg>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:#1a2233;line-height:1.35">{{ a.title }}</div>
+            <div style="font-size:12.5px;color:#5b6577;line-height:1.4;margin-top:1px">{{ a.body }}</div>
+          </div>
+          <sc-if value="{{ a.hasFix }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ a.fix }}" style="flex:none;font-size:12px;font-weight:700;color:{{ a.ink }};padding:2px 0">{{ a.fixLabel }}</button>
+          </sc-if>
+        </div>
+      </sc-for>
+
+      <sc-for list="{{ weeks }}" as="w" hint-placeholder-count="3">
+        <div style="margin-bottom:14px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 7px">
+            <span style="font:700 12px 'Instrument Sans';letter-spacing:.05em;color:#5b6577">{{ w.label }}</span>
+            <span style="font-size:11.5px;color:#a3aab8">{{ w.range }}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:#fff;border:1px solid #efe7d6;border-radius:20px;padding:11px 5px 10px;box-shadow:0 2px 8px rgba(120,98,55,.07)">
+            <sc-for list="{{ w.days }}" as="d" hint-placeholder-count="7">
+              <div style="min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;opacity:{{ d.op }}">
+                <span style="font-size:9.5px;font-weight:600;color:#a3aab8;letter-spacing:.03em">{{ d.dow }}</span>
+                <button class="{{ d.cls }}" onPointerDown="{{ d.down }}" onPointerUp="{{ d.up }}" onPointerLeave="{{ d.cancel }}" onContextMenu="{{ d.ctx }}" style="width:40px;height:40px;border-radius:50%;background:{{ d.bg }};border:{{ d.border }};box-shadow:{{ d.shadow }};display:flex;align-items:center;justify-content:center;position:relative;touch-action:none" style-active="transform:scale(.9)">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="{{ d.fg }}" stroke-width="{{ d.sw }}" stroke-linecap="round" stroke-linejoin="round"><path d="{{ d.glyph }}"></path></svg>
+                  <span style="position:absolute;top:-2px;right:-3px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#fff;border:1px solid #e2e5ee;font:700 9px/13px 'Instrument Sans';color:#5b6577;display:{{ d.numDisplay }}">{{ d.dnum }}</span>
+                </button>
+                <span style="font-size:9px;font-weight:600;color:#5b6577;line-height:1.15;text-align:center;height:11px;overflow:hidden;width:100%">{{ d.short }}</span>
+                <span style="display:flex;gap:2px;height:5px;align-items:center">
+                  <sc-for list="{{ d.dots }}" as="dot" hint-placeholder-count="2">
+                    <span style="width:4px;height:4px;border-radius:50%;background:{{ dot.c }}"></span>
+                  </sc-for>
+                  <span style="font-size:8px;font-weight:700;color:#a3aab8;line-height:1;display:{{ d.moreDisplay }}">{{ d.more }}</span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#f4ecda;margin-top:2px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a93a5" stroke-width="2" stroke-linecap="round"><path d="M12 10v6m0-9.5v.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"></path></svg>
+        <span style="font-size:12px;color:#5b6577;line-height:1.4">Tap a circle to set the day. Press and hold to open it.</span>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isDay }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0;background:#fbf6ea;animation:slideIn .18s ease">
+    <div style="flex:none;background:{{ dv.headBg }};padding:12px 18px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <button onClick="{{ closeDay }}" style="font-size:13.5px;font-weight:600;color:{{ dv.headInk }}">← Overview</button>
+        <div style="display:flex;gap:14px">
+          <button onClick="{{ prevDay }}" style="font-size:13.5px;font-weight:600;color:{{ dv.headInk }};opacity:.75">Prev</button>
+          <button onClick="{{ nextDay }}" style="font-size:13.5px;font-weight:600;color:{{ dv.headInk }};opacity:.75">Next</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:13px;margin-top:14px">
+        <button onClick="{{ openQuickFromDay }}" style="width:56px;height:56px;flex:none;border-radius:50%;background:{{ dv.bg }};border:{{ dv.border }};display:flex;align-items:center;justify-content:center" style-active="transform:scale(.94)">
+          <svg class="bob" width="29" height="29" viewBox="0 0 24 24" fill="none" stroke="{{ dv.fg }}" stroke-width="{{ dv.sw }}" stroke-linecap="round" stroke-linejoin="round"><path d="{{ dv.glyph }}"></path></svg>
+        </button>
+        <div style="min-width:0">
+          <div style="font:700 22px/1.1 'Bricolage Grotesque';letter-spacing:-.02em;color:{{ dv.headInk }}">{{ dv.parkName }}</div>
+          <div style="font-size:13px;color:{{ dv.headSub }};margin-top:3px">{{ dv.dateLine }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scr" style="flex:1;overflow-y:auto;padding:14px 16px 30px">
+      <sc-for list="{{ dv.warnings }}" as="a" hint-placeholder-count="0">
+        <div style="display:flex;gap:9px;padding:11px 12px;border-radius:13px;background:#fff1ef;border:1px solid #f7cdc6;margin-bottom:12px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c1442f" stroke-width="2.2" stroke-linecap="round" style="flex:none;margin-top:1px"><path d="M12 9v4m0 3v.5M10.3 3.9 2.6 17.4A1.8 1.8 0 0 0 4.2 20h15.6a1.8 1.8 0 0 0 1.6-2.6L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"></path></svg>
+          <span style="font-size:12.5px;line-height:1.4;color:#8f3524">{{ a.body }}</span>
+        </div>
+      </sc-for>
+
+      <sc-for list="{{ dv.groups }}" as="g" hint-placeholder-count="2">
+        <div style="margin-bottom:16px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+            <span style="font:700 12px 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:#8a93a5">{{ g.title }}</span>
+            <span style="font-size:11.5px;color:#a3aab8">{{ g.hint }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:11px;background:#fff;border:1px solid #efe7d6;border-radius:16px;padding:12px 13px">
+                <span style="flex:none;width:46px;font:700 13px 'Instrument Sans';color:{{ it.timeInk }};text-align:center">{{ it.time }}</span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font-size:14.5px;font-weight:600;color:#1a2233;line-height:1.25">{{ it.title }}</span>
+                  <span style="display:block;font-size:12px;color:#8a93a5;margin-top:2px">{{ it.sub }}</span>
+                </span>
+                <span style="flex:none;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:6px;background:{{ it.tagBg }};color:{{ it.tagInk }}">{{ it.tag }}</span>
+              </div>
+            </sc-for>
+            <button onClick="{{ g.add }}" style="display:flex;align-items:center;gap:8px;padding:12px 13px;border:1.5px dashed #d7dbe6;border-radius:14px;color:#5b6577;font-size:13.5px;font-weight:600" style-active="transform:scale(.99)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a93a5" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>{{ g.addLabel }}
+            </button>
+          </div>
+        </div>
+      </sc-for>
+
+      <div style="margin-top:2px">
+        <div style="font:700 12px 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:#8a93a5;margin-bottom:8px">Note</div>
+        <textarea value="{{ dv.note }}" onInput="{{ setNote }}" placeholder="Rope drop plan, backup park, who's tired…" style="width:100%;min-height:74px;padding:12px 13px;border:1px solid #e8ebf1;border-radius:14px;background:#fff;font:400 14px/1.45 'Instrument Sans';resize:none"></textarea>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(12,16,26,.42);animation:fadeIn .15s ease"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:22px 22px 0 0;padding:8px 0 26px;max-height:78%;display:flex;flex-direction:column;animation:sheetUp .22s cubic-bezier(.2,.8,.3,1)">
+      <div style="width:38px;height:4px;border-radius:2px;background:#dfe3ec;margin:6px auto 10px"></div>
+      <div style="padding:0 20px 10px">
+        <div style="font:700 18px 'Bricolage Grotesque';color:#1a2233">{{ sheetTitle }}</div>
+        <div style="font-size:12.5px;color:#8a93a5;margin-top:2px">{{ sheetSub }}</div>
+      </div>
+      <div class="scr" style="flex:1;overflow-y:auto;padding:0 14px">
+        <sc-for list="{{ sheetGroups }}" as="g" hint-placeholder-count="4">
+          <div style="margin-bottom:12px">
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#a3aab8;padding:0 6px 6px">{{ g.title }}</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
+              <sc-for list="{{ g.options }}" as="o" hint-placeholder-count="4">
+                <button onClick="{{ o.pick }}" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 2px;border-radius:13px;background:{{ o.cardBg }}" style-active="transform:scale(.94)">
+                  <span style="width:42px;height:42px;border-radius:50%;background:{{ o.bg }};border:{{ o.border }};box-shadow:{{ o.shadow }};display:flex;align-items:center;justify-content:center">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ o.fg }}" stroke-width="{{ o.sw }}" stroke-linecap="round" stroke-linejoin="round"><path d="{{ o.glyph }}"></path></svg>
+                  </span>
+                  <span style="font-size:9.5px;font-weight:600;color:#5b6577;line-height:1.15;text-align:center">{{ o.short }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:6px 20px 0;display:flex;gap:10px">
+        <button onClick="{{ clearDay }}" style="flex:1;padding:13px;border-radius:13px;background:#f2f4f9;font-size:14px;font-weight:600;color:#5b6577">Clear day</button>
+        <button onClick="{{ openDayFromSheet }}" style="flex:1;padding:13px;border-radius:13px;background:#0b3d91;color:#fff;font-size:14px;font-weight:600">Open day</button>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:460,&quot;height&quot;:940}}">
+const G = {
+  castle:'M4 20V11l2.5-3.5L9 11v1h1V7.5L12.5 4 15 7.5V12h1v-1l2-2.5L20 11v9M3 20h18',
+  sphere:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3 12h18M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18',
+  clapper:'M3 9h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9Zm0 0 1.4-4h15.2L21 9M8.4 5 7 9M13.4 5 12 9M18.4 5 17 9',
+  tree:'M12 21v-6m0 0a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z',
+  globe:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.4 9h17.2M3.4 15h17.2',
+  island:'M3 19c1.6 1.4 3.2 1.4 4.8 0s3.2-1.4 4.8 0 3.2 1.4 4.8 0 1.8.7 3.6 0M12 16V9m0 0c-1.8-2-4-1.6-5.2 0M12 9c1.8-2 4-1.6 5.2 0',
+  portal:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-4.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8Z',
+  volcano:'M3.5 20h17L14 7h-4L3.5 20ZM10 7l2-3 2 3',
+  fin:'M12 15V4c4.4 2.6 6.4 7 6.4 11M3 19c1.7 1.4 3.4 1.4 5.1 0s3.4-1.4 5.1 0 3.4 1.4 5.1 0 1.1.5 2.7 0',
+  water:'M3 8c1.7 1.4 3.4 1.4 5.1 0s3.4-1.4 5.1 0 3.4 1.4 5.1 0 1.1.5 2.7 0M3 14c1.7 1.4 3.4 1.4 5.1 0s3.4-1.4 5.1 0 3.4 1.4 5.1 0 1.1.5 2.7 0M3 20c1.7 1.4 3.4 1.4 5.1 0s3.4-1.4 5.1 0 3.4 1.4 5.1 0 1.1.5 2.7 0',
+  sun:'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10ZM12 2.5v1.8m0 15.4v1.8M4.4 4.4l1.3 1.3m12.6 12.6 1.3 1.3M2.5 12h1.8m15.4 0h1.8M4.4 19.6l1.3-1.3M18.3 5.7l1.3-1.3',
+  bag:'M6 8h12l1 12H5L6 8Zm3 0V6a3 3 0 0 1 6 0v2',
+  moon:'M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z',
+  plane:'M21 12 3 19.5l3.4-7.5L3 4.5 21 12ZM6.4 12H14',
+  plus:'M12 6v12M6 12h12',
+  bed:'M3 18v-7m0 0V7m0 4h18v7M3 11h5a2.5 2.5 0 0 1 0-5h3a2.5 2.5 0 0 1 0 5',
+  ticket:'M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 2 2 0 0 0 0-4Zm10-2v12',
+  warn:'M12 9v4m0 3v.5M10.3 3.9 2.6 17.4A1.8 1.8 0 0 0 4.2 20h15.6a1.8 1.8 0 0 0 1.6-2.6L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z',
+  bell:'M18 9a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7M10.3 20a2 2 0 0 0 3.4 0'
+};
+
+const RESORT = {
+  wdw:{name:'Walt Disney World',bg:'#0b3d91',fg:'#fff',dot:'#0b3d91',sh:'rgba(11,61,145,.34)'},
+  uor:{name:'Universal Orlando',bg:'#f45d48',fg:'#fff',dot:'#f45d48',sh:'rgba(244,93,72,.34)'},
+  sea:{name:'SeaWorld Parks',bg:'#17a398',fg:'#fff',dot:'#17a398',sh:'rgba(23,163,152,.34)'},
+  off:{name:'Off-park',bg:'#ffd86b',fg:'#7a5600',dot:'#e0a94a',sh:'rgba(224,169,74,.36)'}
+};
+
+const PARKS = [
+  {id:'mk',resort:'wdw',name:'Magic Kingdom',short:'Magic K.',glyph:G.castle},
+  {id:'ep',resort:'wdw',name:'EPCOT',short:'EPCOT',glyph:G.sphere},
+  {id:'hs',resort:'wdw',name:'Hollywood Studios',short:'Studios',glyph:G.clapper},
+  {id:'ak',resort:'wdw',name:'Animal Kingdom',short:'Animal K.',glyph:G.tree},
+  {id:'usf',resort:'uor',name:'Universal Studios',short:'Studios',glyph:G.globe},
+  {id:'ioa',resort:'uor',name:'Islands of Adventure',short:'Islands',glyph:G.island},
+  {id:'eu',resort:'uor',name:'Epic Universe',short:'Epic',glyph:G.portal},
+  {id:'vb',resort:'uor',name:'Volcano Bay',short:'Volcano',glyph:G.volcano},
+  {id:'sw',resort:'sea',name:'SeaWorld Orlando',short:'SeaWorld',glyph:G.fin},
+  {id:'aq',resort:'sea',name:'Aquatica',short:'Aquatica',glyph:G.water},
+  {id:'pool',resort:'off',name:'Pool / rest day',short:'Pool',glyph:G.sun},
+  {id:'shop',resort:'off',name:'Shopping',short:'Shops',glyph:G.bag},
+  {id:'rest',resort:'off',name:'Nothing planned',short:'Rest',glyph:G.moon},
+  {id:'travel',resort:'off',name:'Travel day',short:'Travel',glyph:G.plane}
+];
+const PARK = Object.fromEntries(PARKS.map(p => [p.id, p]));
+
+const SHEET_GROUPS = [
+  {title:'Walt Disney World', ids:['mk','ep','hs','ak']},
+  {title:'Universal Orlando', ids:['usf','ioa','eu','vb']},
+  {title:'SeaWorld Parks', ids:['sw','aq']},
+  {title:'Off-park', ids:['pool','shop','rest','travel']}
+];
+
+const TEMPLATES = [
+  {id:'blank', name:'Blank slate', meta:'0 days set', blurb:'Every day empty. Build it your way.', pattern:null},
+  {id:'disney', name:'First timer Disney', meta:'Disney only', blurb:'Four parks, a repeat of the big two, and a rest day after every three.', pattern:['travel','mk','ep','pool','hs','ak','shop','mk','ep','rest','hs','ak','pool','mk','travel']},
+  {id:'both', name:'Best of both worlds', meta:'Disney + Universal', blurb:'Split the trip — Universal front half, Disney back half, water park in the middle.', pattern:['travel','eu','usf','ioa','pool','eu','shop','vb','rest','mk','ep','hs','pool','ak','mk','rest','travel']}
+];
+
+const SEED_DINING = {
+  mk:[{title:'Be Our Guest',time:'12:40',kind:'dining',state:'booked'}],
+  ep:[{title:'Space 220',time:'19:15',kind:'dining',state:'booked'},{title:'Food & Wine crawl',time:'',kind:'dining',state:'idea'}],
+  eu:[{title:'Toadstool Cafe',time:'',kind:'dining',state:'idea'}],
+  hs:[{title:'Oga\u2019s Cantina',time:'16:00',kind:'dining',state:'booked'}]
+};
+const SEED_FIXED = {
+  mk:[{title:'Seven Dwarfs Lightning Lane',time:'10:20',kind:'fixed',state:'booked'}],
+  eu:[{title:'Early park entry',time:'08:00',kind:'fixed',state:'booked'}],
+  ak:[{title:'Wild Africa Trek',time:'09:30',kind:'fixed',state:'booked'}]
+};
+
+const DOW = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const iso = d => d.toISOString().slice(0,10);
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(Date.UTC(y, m-1, d)); };
+
+class Component extends DCLogic {
+  state = {
+    screen: 'gate',
+    tripName: 'Florida 2027',
+    startDate: '2027-04-03',
+    endDate: '2027-04-19',
+    open: {},
+    hotel: 'Disney\u2019s Art of Animation',
+    hotel2: '',
+    ticketD: '14',
+    ticketU: '5',
+    flightOut: 'MAN 09:55 \u2192 MCO 14:20',
+    flightBack: 'MCO 20:40 \u2192 MAN 09:30',
+    days: [],
+    sel: null,
+    sheet: false
+  };
+
+  get dayList() { return this.state.days; }
+
+  buildDays(patternId) {
+    const s = parse(this.state.startDate), e = parse(this.state.endDate);
+    const n = Math.max(1, Math.round((e - s) / 86400000) + 1);
+    const tpl = TEMPLATES.find(t => t.id === patternId);
+    const days = [];
+    for (let i = 0; i < n; i++) {
+      const d = new Date(s.getTime() + i * 86400000);
+      let pid = null;
+      if (tpl && tpl.pattern) {
+        pid = i === n - 1 ? 'travel' : tpl.pattern[i % tpl.pattern.length];
+        if (i === 0) pid = 'travel';
+      }
+      const items = [];
+      if (pid && SEED_DINING[pid] && i % 3 !== 2) items.push(...SEED_DINING[pid].map(x => ({...x})));
+      if (pid && SEED_FIXED[pid] && i % 2 === 1) items.push(...SEED_FIXED[pid].map(x => ({...x})));
+      days.push({ date: iso(d), parkId: pid, note: '', items });
+    }
+    // one deliberate cross-park conflict so the warning is real
+    const conflict = days.findIndex(d => d.parkId === 'pool');
+    if (conflict > -1) days[conflict].items.push({title:'Chef Mickey\u2019s',time:'18:30',kind:'dining',state:'booked',parkId:'mk'});
+    return days;
+  }
+
+  set = (k) => (e) => this.setState({ [k]: e.target.value });
+  toggleSection = (k) => () => this.setState(s => ({ open: {...s.open, [k]: !s.open[k]} }));
+
+  startPress(i) {
+    this.longFired = false;
+    clearTimeout(this._t);
+    this._t = setTimeout(() => { this.longFired = true; this.setState({ sel: i, screen: 'day', sheet: false }); }, 400);
+  }
+  endPress(i) {
+    clearTimeout(this._t);
+    if (!this.longFired) this.setState({ sel: i, sheet: true });
+  }
+  assign(pid) {
+    this.setState(s => {
+      const days = s.days.slice();
+      days[s.sel] = {...days[s.sel], parkId: pid};
+      return { days, sheet: false, justSet: s.sel, bump: (s.bump || 0) + 1 };
+    });
+  }
+
+  warningsFor(day) {
+    if (!day) return [];
+    const out = [];
+    for (const it of day.items) {
+      if (it.parkId && it.parkId !== day.parkId) {
+        out.push({ body: it.title + ' at ' + (PARK[it.parkId] ? PARK[it.parkId].name : '?') + ' \u2014 but this day is set to ' + (day.parkId ? PARK[day.parkId].name : 'nothing') + '.' });
+      }
+    }
+    return out;
+  }
+
+  circle(pid, size) {
+    const p = pid ? PARK[pid] : null;
+    const r = p ? RESORT[p.resort] : null;
+    return {
+      bg: p ? r.bg : 'rgba(255,255,255,.6)',
+      fg: p ? r.fg : '#c9bda4',
+      border: p ? '0' : '1.5px dashed #ddd2ba',
+      shadow: p ? '0 4px 10px ' + r.sh : 'none',
+      glyph: p ? p.glyph : G.plus,
+      sw: p ? '1.7' : '2.2',
+      short: p ? p.short : '',
+      name: p ? p.name : 'Nothing set yet'
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const days = s.days;
+    const ok = s.tripName.trim() && s.startDate && s.endDate && parse(s.endDate) >= parse(s.startDate);
+    const nights = ok ? Math.round((parse(s.endDate) - parse(s.startDate)) / 86400000) : 0;
+
+    const v = {
+      isGate: s.screen === 'gate', isTemplates: s.screen === 'templates',
+      isOverview: s.screen === 'overview', isDay: s.screen === 'day',
+      tripName: s.tripName, startDate: s.startDate, endDate: s.endDate,
+      setName: this.set('tripName'), setStart: this.set('startDate'), setEnd: this.set('endDate'),
+      gateBlocked: !ok, ctaBg: ok ? '#0b3d91' : '#c2c8d6',
+      nightsLabel: ok ? (nights + 1) + ' days \u00b7 ' + nights + ' nights' : 'Add both dates to continue',
+      nightsHeadline: (nights + 1) + ' days to fill.',
+      goTemplates: () => ok && this.setState({ screen: 'templates' }),
+      backToGate: () => this.setState({ screen: 'gate' }),
+      sheetOpen: s.sheet,
+      closeSheet: () => this.setState({ sheet: false }),
+      optionalSections: [
+        { key:'stay', title:'Where you\u2019re staying', summary: s.hotel2 ? 'Split stay \u00b7 2 hotels' : (s.hotel || 'Not set'), icon:G.bed, tint:'#e8effb', ink:'#0b3d91',
+          fields:[{label:'Hotel 1',value:s.hotel,onInput:this.set('hotel'),type:'text',placeholder:'Hotel name'},
+                  {label:'Hotel 2',value:s.hotel2,onInput:this.set('hotel2'),type:'text',placeholder:'Second half of the trip'}],
+          actionLabel:'+ Add another stay', action:()=>{} },
+        { key:'tix', title:'Tickets', summary:(s.ticketD||'0')+' Disney \u00b7 '+(s.ticketU||'0')+' Universal', icon:G.ticket, tint:'#fdece9', ink:'#c1442f',
+          fields:[{label:'Disney days',value:s.ticketD,onInput:this.set('ticketD'),type:'number',placeholder:'0'},
+                  {label:'Universal days',value:s.ticketU,onInput:this.set('ticketU'),type:'number',placeholder:'0'}],
+          actionLabel:'Park hopper included', action:()=>{} },
+        { key:'fly', title:'Flights', summary: s.flightOut ? 'Outbound + return set' : 'Not set', icon:G.plane, tint:'#e6f5f3', ink:'#0f7d74',
+          fields:[{label:'Out',value:s.flightOut,onInput:this.set('flightOut'),type:'text',placeholder:'MAN \u2192 MCO'},
+                  {label:'Back',value:s.flightBack,onInput:this.set('flightBack'),type:'text',placeholder:'MCO \u2192 MAN'}],
+          actionLabel:'+ Add car hire', action:()=>{} }
+      ].map(x => ({...x, open: !!s.open[x.key], chev: s.open[x.key] ? '\u25b2' : '\u25bc', toggle: this.toggleSection(x.key) })),
+      templates: TEMPLATES.map(t => ({
+        name: t.name, meta: t.meta, blurb: t.blurb,
+        preview: (t.pattern || Array(10).fill(null)).slice(0, 11).map(pid => {
+          const c = this.circle(pid);
+          return { bg: pid ? c.bg : '#eef1f7', fg: pid ? c.fg : '#c3c9d6', glyph: c.glyph };
+        }),
+        pick: () => this.setState({ days: this.buildDays(t.id), screen: 'overview', sel: null })
+      }))
+    };
+
+    if (!days.length) return v;
+
+    const start = parse(days[0].date);
+    const today = new Date(Date.UTC(2026, 8, 1));
+    v.daysToGo = Math.max(0, Math.round((start - today) / 86400000));
+    v.tripRange = start.getUTCDate() + ' ' + MON[start.getUTCMonth()] + ' \u2013 ' +
+      parse(days[days.length-1].date).getUTCDate() + ' ' + MON[parse(days[days.length-1].date).getUTCMonth()] + ' ' + start.getUTCFullYear();
+
+    const count = r => days.filter(d => d.parkId && PARK[d.parkId].resort === r).length;
+    const dCount = count('wdw'), uCount = count('uor'), offCount = days.filter(d => d.parkId && PARK[d.parkId].resort === 'off').length;
+    const tD = Number(s.ticketD) || 0, tU = Number(s.ticketU) || 0;
+    v.counters = [
+      { label:'Disney', value: tD ? dCount + '/' + tD : String(dCount), bg:'#eef3fc', bd:'#dbe5f7', dot:'#0b3d91', numInk: tD && dCount > tD ? '#c1442f' : '#0b3d91' },
+      { label:'Universal', value: tU ? uCount + '/' + tU : String(uCount), bg:'#fdefec', bd:'#f8dcd6', dot:'#f45d48', numInk: tU && uCount > tU ? '#c1442f' : '#5b6577' },
+      { label:'Off-park', value: String(offCount), bg:'#fdf3dd', bd:'#f2e2b0', dot:'#e0a94a', numInk:'#8a6a00' },
+      { label:'Unset', value: String(days.filter(d => !d.parkId).length), bg:'#f2f4f9', bd:'#e5e9f1', dot:'#cdd3e0', numInk:'#5b6577' }
+    ];
+
+    const alerts = [];
+    days.forEach((d, i) => {
+      this.warningsFor(d).forEach(w => alerts.push({
+        bg:'#fff1ef', bd:'#f7cdc6', ink:'#c1442f', icon:G.warn,
+        title:'Reservation in the wrong park',
+        body:'Day ' + (i+1) + ' \u00b7 ' + w.body,
+        hasFix:true, fixLabel:'Fix', fix: () => this.setState({ sel: i, screen: 'day' })
+      }));
+    });
+    if (tD && dCount > tD) alerts.push({ bg:'#fff1ef', bd:'#f7cdc6', ink:'#c1442f', icon:G.warn, title:'More Disney days than ticket days', body: dCount + ' planned, ' + tD + ' on your ticket.', hasFix:false, fixLabel:'', fix:()=>{} });
+    const windowOpens = new Date(start.getTime() - 60 * 86400000);
+    const toWindow = Math.round((windowOpens - today) / 86400000);
+    if (toWindow > 0) {
+      alerts.push({ bg:'#fff8e2', bd:'#f2e2b0', ink:'#a07a10', icon:G.bell,
+        title:'Dining bookings open in ' + toWindow + ' days',
+        body:'60 days before arrival \u2014 that\u2019s ' + windowOpens.getUTCDate() + ' ' + MON[windowOpens.getUTCMonth()] + ' ' + windowOpens.getUTCFullYear() + '.',
+        hasFix:false, fixLabel:'', fix:()=>{} });
+    }
+    v.alerts = alerts;
+
+    const pad = (start.getUTCDay() + 6) % 7;
+    const cells = [];
+    for (let i = 0; i < pad; i++) cells.push(null);
+    days.forEach((d, i) => cells.push(i));
+    while (cells.length % 7) cells.push(null);
+
+    v.weeks = [];
+    for (let w = 0; w < cells.length / 7; w++) {
+      const slice = cells.slice(w * 7, w * 7 + 7);
+      const real = slice.filter(x => x !== null);
+      const a = parse(days[real[0]].date), b = parse(days[real[real.length-1]].date);
+      v.weeks.push({
+        label: 'Week ' + (w + 1),
+        range: a.getUTCDate() + ' ' + MON[a.getUTCMonth()] + ' \u2013 ' + b.getUTCDate() + ' ' + MON[b.getUTCMonth()],
+        days: slice.map((idx, k) => {
+          if (idx === null) return { dow: DOW[(k + 1) % 7], dnum:'', op:'0', bg:'transparent', fg:'transparent', border:'0', shadow:'none', glyph:'', sw:'0', short:'', dots:[], more:'', moreDisplay:'none', numDisplay:'none', down:()=>{}, up:()=>{}, cancel:()=>{}, ctx:(e)=>e.preventDefault() };
+          const d = days[idx], c = this.circle(d.parkId), dt = parse(d.date);
+          const dots = d.items.slice(0, 3).map(it => ({ c: it.kind === 'dining' ? '#e08a1e' : '#0b3d91' }));
+          const extra = d.items.length - dots.length;
+          return {
+            dow: DOW[dt.getUTCDay()], dnum: String(dt.getUTCDate()), numDisplay:'block', op:'1',
+            cls: s.justSet === idx ? ((s.bump || 0) % 2 ? 'pop' : 'popb') : '',
+            bg: c.bg, fg: c.fg, border: c.border, shadow: c.shadow, glyph: c.glyph, sw: c.sw, short: c.short,
+            dots, more: extra > 0 ? '+' + extra : '', moreDisplay: extra > 0 ? 'block' : 'none',
+            down: () => this.startPress(idx), up: () => this.endPress(idx),
+            cancel: () => clearTimeout(this._t), ctx: (e) => e.preventDefault()
+          };
+        })
+      });
+    }
+
+    const gi = SHEET_GROUPS;
+    v.sheetTitle = s.sel !== null ? 'Set ' + parse(days[s.sel].date).getUTCDate() + ' ' + MON[parse(days[s.sel].date).getUTCMonth()] : 'Set the day';
+    v.sheetSub = 'One tap. Long-press the circle next time to skip straight into the day.';
+    v.sheetGroups = gi.map(g => ({
+      title: g.title,
+      options: g.ids.map(pid => {
+        const c = this.circle(pid);
+        const on = s.sel !== null && days[s.sel].parkId === pid;
+        return { short: PARK[pid].short, bg: c.bg, fg: c.fg, border: c.border, shadow: c.shadow, glyph: c.glyph, sw: c.sw,
+          cardBg: on ? '#fdf3dd' : 'transparent', pick: () => this.assign(pid) };
+      })
+    }));
+    v.clearDay = () => this.assign(null);
+    v.openDayFromSheet = () => this.setState({ screen: 'day', sheet: false });
+
+    if (s.sel !== null) {
+      const d = days[s.sel], c = this.circle(d.parkId), dt = parse(d.date);
+      const r = d.parkId ? RESORT[PARK[d.parkId].resort] : null;
+      const light = !d.parkId;
+      const mk = arr => arr.map(it => ({
+        title: it.title, time: it.time || '\u2014',
+        timeInk: it.time ? '#1a2233' : '#c3c9d6',
+        sub: it.parkId && it.parkId !== d.parkId ? '\u26a0 ' + PARK[it.parkId].name : (it.state === 'booked' ? 'Confirmed' : 'Not booked yet'),
+        tag: it.state === 'booked' ? 'Booked' : 'Idea',
+        tagBg: it.state === 'booked' ? '#e6f5f3' : '#f2f4f9',
+        tagInk: it.state === 'booked' ? '#0f7d74' : '#8a93a5'
+      }));
+      v.dv = {
+        headBg: light ? '#fffdf8' : r.bg,
+        headInk: light ? '#1a2233' : r.fg,
+        headSub: light ? '#8a93a5' : (r.fg === '#fff' ? 'rgba(255,255,255,.8)' : 'rgba(90,62,0,.7)'),
+        bg: light ? c.bg : (r.fg === '#fff' ? '#fff' : 'rgba(255,255,255,.8)'), fg: light ? c.fg : (r.fg === '#fff' ? r.bg : '#7a5600'),
+        border: light ? c.border : '0', glyph: c.glyph, sw: c.sw,
+        parkName: c.name,
+        dateLine: 'Day ' + (s.sel + 1) + ' of ' + days.length + ' \u00b7 ' + DOW[dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + MON[dt.getUTCMonth()],
+        note: d.note,
+        warnings: this.warningsFor(d),
+        groups: [
+          { title:'Eating', hint:'Bookings open 60 days out', addLabel:'Add a meal or an idea', add:()=>{}, items: mk(d.items.filter(i => i.kind === 'dining')) },
+          { title:'Fixed times', hint:'Won\u2019t move if you shuffle days', addLabel:'Add Lightning Lane, tour or show', add:()=>{}, items: mk(d.items.filter(i => i.kind === 'fixed')) }
+        ]
+      };
+      v.closeDay = () => this.setState({ screen: 'overview' });
+      v.prevDay = () => this.setState(st => ({ sel: Math.max(0, st.sel - 1) }));
+      v.nextDay = () => this.setState(st => ({ sel: Math.min(st.days.length - 1, st.sel + 1) }));
+      v.openQuickFromDay = () => this.setState({ sheet: true });
+      v.setNote = (e) => { const val = e.target.value; this.setState(st => { const dd = st.days.slice(); dd[st.sel] = {...dd[st.sel], note: val}; return { days: dd }; }); };
+    }
+    return v;
+  }
+}
+</script>
+</body>
+</html>

@@ -1,20 +1,16 @@
 import { defineStore } from 'pinia'
+import { PARK_BY_ID, parkName } from '~/data/parks'
+import { TEMPLATES, templateParkId } from '~/data/templates'
 import {
-  ATTRACTION_BY_ID,
-  type Attraction,
-  type AttractionType,
-} from '~/data/attractions'
-import { PACKING_TEMPLATE } from '~/data/packingTemplate'
-import type {
-  BudgetItem,
-  ItineraryItem,
-  PlannerDay,
-  PackingItem,
-  TripInfo,
-  TripState,
-} from '~/types/trip'
+  addDays,
+  diffDays,
+  parseISO,
+  toISO,
+  todayUTC,
+} from '~/composables/useDates'
+import type { Day, DayItem, TripState } from '~/types/trip'
 
-const STATE_VERSION = 1
+const VERSION = 1
 
 function uid(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -23,245 +19,404 @@ function uid(): string {
   return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-function emptyDay(): PlannerDay {
-  return { parkId: null, note: '', items: [] }
-}
-
-function defaultTrip(): TripInfo {
+function blankState(): TripState {
   return {
-    name: 'Orlando Adventure',
+    version: VERSION,
+    created: false,
+    name: '',
     startDate: '',
-    nights: 5,
-    partySize: 2,
-    homeBase: '',
-    notes: '',
+    endDate: '',
+    hotels: [],
+    ticketDays: { disney: 0, universal: 0 },
+    parkHopper: false,
+    flights: { out: '', back: '' },
+    carHire: '',
+    days: [],
+    selectedDay: null,
+    sheetOpen: false,
+    justSet: null,
   }
 }
 
-function makeDays(count: number, existing: PlannerDay[] = []): PlannerDay[] {
-  const next: PlannerDay[] = []
-  for (let i = 0; i < count; i++) {
-    next.push(existing[i] ?? emptyDay())
-  }
-  return next
+const MON_FULL = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+]
+
+function countResort(days: Day[], resort: string): number {
+  return days.filter((d) => d.parkId && PARK_BY_ID[d.parkId]?.resort === resort)
+    .length
+}
+
+interface Counter {
+  label: string
+  value: string
+  bg: string
+  border: string
+  dot: string
+  numInk: string
+}
+
+interface Alert {
+  id: string
+  tone: 'warn' | 'remind'
+  title: string
+  body: string
+  fixDayIndex?: number
+}
+
+interface WeekView {
+  label: string
+  range: string
+  cells: (number | null)[]
 }
 
 export const useTripStore = defineStore('orlando-trip', {
-  state: (): TripState => ({
-    version: STATE_VERSION,
-    trip: defaultTrip(),
-    days: makeDays(5),
-    budgetTotal: 4000,
-    budget: [],
-    packing: [],
-    packingSeeded: false,
-  }),
+  state: (): TripState => blankState(),
 
-  persist: true,
+  persist: {
+    pick: [
+      'version',
+      'created',
+      'name',
+      'startDate',
+      'endDate',
+      'hotels',
+      'ticketDays',
+      'parkHopper',
+      'flights',
+      'carHire',
+      'days',
+    ],
+  },
 
   getters: {
-    dayCount: (s): number => s.days.length,
+    startD: (s): Date | null => (s.startDate ? parseISO(s.startDate) : null),
+    endD: (s): Date | null => (s.endDate ? parseISO(s.endDate) : null),
 
-    /** One entry per park day, with a resolved calendar date when known. */
-    schedule: (s) => {
-      const base = s.trip.startDate ? new Date(`${s.trip.startDate}T00:00:00`) : null
-      return s.days.map((day, index) => {
-        let date: Date | null = null
-        if (base && !Number.isNaN(base.getTime())) {
-          date = new Date(base)
-          date.setDate(base.getDate() + index)
-        }
-        return { index, date, day }
-      })
+    datesValid(): boolean {
+      return Boolean(
+        this.name.trim() &&
+          this.startD &&
+          this.endD &&
+          this.endD.getTime() >= this.startD.getTime(),
+      )
     },
 
-    endDate(): Date | null {
-      const entries = this.schedule
-      const last = entries[entries.length - 1]
-      return last?.date ?? null
+    dayCount(): number {
+      if (!this.startD || !this.endD) return 0
+      return Math.max(0, diffDays(this.endD, this.startD) + 1)
     },
 
-    daysUntilStart: (s): number | null => {
-      if (!s.trip.startDate) return null
-      const start = new Date(`${s.trip.startDate}T00:00:00`)
-      if (Number.isNaN(start.getTime())) return null
-      const now = new Date()
-      now.setHours(0, 0, 0, 0)
-      return Math.round((start.getTime() - now.getTime()) / 86_400_000)
+    nights(): number {
+      return this.dayCount > 0 ? this.dayCount - 1 : 0
     },
 
-    tripIsActive(): boolean {
-      const until = this.daysUntilStart
-      if (until === null) return false
-      return until <= 0 && (this.daysUntilStart ?? 0) > -this.dayCount
+    hasTrip: (s): boolean => s.created && s.days.length > 0,
+
+    firstDate(): Date | null {
+      return this.days[0] ? parseISO(this.days[0].date) : this.startD
+    },
+    lastDate(): Date | null {
+      const last = this.days[this.days.length - 1]
+      return last ? parseISO(last.date) : this.endD
     },
 
-    totalPlannedItems: (s): number =>
-      s.days.reduce((sum, d) => sum + d.items.length, 0),
+    rangeLabel(): string {
+      const a = this.firstDate
+      const b = this.lastDate
+      if (!a || !b) return ''
+      return `${a.getUTCDate()} ${MON_FULL[a.getUTCMonth()]} – ${b.getUTCDate()} ${MON_FULL[b.getUTCMonth()]} ${b.getUTCFullYear()}`
+    },
 
-    plannedMinutesByDay: (s): number[] =>
-      s.days.map((d) =>
-        d.items.reduce((sum, it) => sum + (it.durationMin ?? 0), 0),
-      ),
+    sleepsToGo(): number {
+      const a = this.firstDate
+      if (!a) return 0
+      return Math.max(0, diffDays(a, todayUTC()))
+    },
 
-    /** Map of attractionId -> day index it is scheduled on (first match). */
-    plannedAttractionDays: (s): Record<string, number> => {
-      const map: Record<string, number> = {}
-      s.days.forEach((day, index) => {
+    disneyDays: (s): number => countResort(s.days, 'wdw'),
+    universalDays: (s): number => countResort(s.days, 'uor'),
+    offParkDays: (s): number => countResort(s.days, 'off'),
+    unsetDays: (s): number => s.days.filter((d) => !d.parkId).length,
+
+    counters: (s): Counter[] => {
+      const tD = s.ticketDays.disney || 0
+      const tU = s.ticketDays.universal || 0
+      const d = countResort(s.days, 'wdw')
+      const u = countResort(s.days, 'uor')
+      const off = countResort(s.days, 'off')
+      const unset = s.days.filter((x) => !x.parkId).length
+      return [
+        {
+          label: 'Disney',
+          value: tD ? `${d}/${tD}` : String(d),
+          bg: '#eef3fc',
+          border: '#dbe5f7',
+          dot: '#0b3d91',
+          numInk: tD && d > tD ? '#c1442f' : '#0b3d91',
+        },
+        {
+          label: 'Universal',
+          value: tU ? `${u}/${tU}` : String(u),
+          bg: '#fdefec',
+          border: '#f8dcd6',
+          dot: '#f45d48',
+          numInk: tU && u > tU ? '#c1442f' : '#5b6577',
+        },
+        {
+          label: 'Off-park',
+          value: String(off),
+          bg: '#fdf3dd',
+          border: '#f2e2b0',
+          dot: '#e0a94a',
+          numInk: '#8a6a00',
+        },
+        {
+          label: 'Unset',
+          value: String(unset),
+          bg: '#f2f4f9',
+          border: '#e5e9f1',
+          dot: '#cdd3e0',
+          numInk: '#5b6577',
+        },
+      ]
+    },
+
+    wrongParkItems: (s): { dayIndex: number; item: DayItem }[] => {
+      const out: { dayIndex: number; item: DayItem }[] = []
+      s.days.forEach((day, dayIndex) => {
         for (const item of day.items) {
-          if (item.attractionId && !(item.attractionId in map)) {
-            map[item.attractionId] = index
+          if (item.parkId && item.parkId !== day.parkId) {
+            out.push({ dayIndex, item })
           }
         }
       })
-      return map
-    },
-
-    parksInPlan: (s): string[] => {
-      const seen = new Set<string>()
-      for (const d of s.days) if (d.parkId) seen.add(d.parkId)
-      return [...seen]
-    },
-
-    budgetSpent: (s): number =>
-      s.budget.reduce((sum, b) => sum + (Number(b.amount) || 0), 0),
-
-    budgetPaid: (s): number =>
-      s.budget
-        .filter((b) => b.paid)
-        .reduce((sum, b) => sum + (Number(b.amount) || 0), 0),
-
-    budgetRemaining(): number {
-      return this.budgetTotal - this.budgetSpent
-    },
-
-    budgetByCategory: (s): Record<string, number> => {
-      const out: Record<string, number> = {}
-      for (const b of s.budget) {
-        out[b.category] = (out[b.category] ?? 0) + (Number(b.amount) || 0)
-      }
       return out
     },
 
-    perPersonSpend(): number {
-      const size = Math.max(1, this.trip.partySize)
-      return this.budgetSpent / size
+    diningWindow(): { date: Date; daysAway: number } | null {
+      const a = this.firstDate
+      if (!a) return null
+      const opens = addDays(a, -60)
+      const daysAway = diffDays(opens, todayUTC())
+      return { date: opens, daysAway }
     },
 
-    packingByCategory: (s): Record<string, PackingItem[]> => {
-      const out: Record<string, PackingItem[]> = {}
-      for (const item of s.packing) {
-        ;(out[item.category] ??= []).push(item)
+    alerts(): Alert[] {
+      const list: Alert[] = []
+
+      for (const { dayIndex, item } of this.wrongParkItems) {
+        const day = this.days[dayIndex]!
+        list.push({
+          id: `wrong-${dayIndex}-${item.id}`,
+          tone: 'warn',
+          title: 'Reservation in the wrong park',
+          body: `Day ${dayIndex + 1} · ${item.title} at ${parkName(item.parkId)} — but this day is set to ${day.parkId ? parkName(day.parkId) : 'nothing'}.`,
+          fixDayIndex: dayIndex,
+        })
       }
-      return out
+
+      const tD = this.ticketDays.disney || 0
+      const tU = this.ticketDays.universal || 0
+      if (tD && this.disneyDays > tD) {
+        list.push({
+          id: 'over-wdw',
+          tone: 'warn',
+          title: 'More Disney days than ticket days',
+          body: `${this.disneyDays} planned, ${tD} on your ticket.`,
+        })
+      }
+      if (tU && this.universalDays > tU) {
+        list.push({
+          id: 'over-uor',
+          tone: 'warn',
+          title: 'More Universal days than ticket days',
+          body: `${this.universalDays} planned, ${tU} on your ticket.`,
+        })
+      }
+
+      const dw = this.diningWindow
+      if (dw && dw.daysAway > 0) {
+        list.push({
+          id: 'dining-window',
+          tone: 'remind',
+          title: `Dining bookings open in ${dw.daysAway} days`,
+          body: `60 days before arrival — that's ${dw.date.getUTCDate()} ${MON_FULL[dw.date.getUTCMonth()]} ${dw.date.getUTCFullYear()}.`,
+        })
+      }
+      return list
     },
 
-    packingProgress: (s): { done: number; total: number; pct: number } => {
-      const total = s.packing.length
-      const done = s.packing.filter((p) => p.done).length
-      return { done, total, pct: total ? Math.round((done / total) * 100) : 0 }
+    /** Monday-first calendar weeks; cell = day index, or null for padding. */
+    weeks(): WeekView[] {
+      if (!this.days.length || !this.firstDate) return []
+      const start = this.firstDate
+      const pad = (start.getUTCDay() + 6) % 7
+
+      const cells: (number | null)[] = []
+      for (let i = 0; i < pad; i++) cells.push(null)
+      this.days.forEach((_, i) => cells.push(i))
+      while (cells.length % 7) cells.push(null)
+
+      const weeks: WeekView[] = []
+      for (let w = 0; w * 7 < cells.length; w++) {
+        const slice = cells.slice(w * 7, w * 7 + 7)
+        const real = slice.filter((x): x is number => x !== null)
+        const a = parseISO(this.days[real[0]!]!.date)
+        const b = parseISO(this.days[real[real.length - 1]!]!.date)
+        weeks.push({
+          label: `Week ${w + 1}`,
+          range: `${a.getUTCDate()} ${MON_FULL[a.getUTCMonth()]} – ${b.getUTCDate()} ${MON_FULL[b.getUTCMonth()]}`,
+          cells: slice,
+        })
+      }
+      return weeks
+    },
+
+    selected(): Day | null {
+      return this.selectedDay === null
+        ? null
+        : (this.days[this.selectedDay] ?? null)
     },
   },
 
   actions: {
-    // ---- trip ----
-    updateTrip(patch: Partial<TripInfo>) {
-      this.trip = { ...this.trip, ...patch }
-      if (patch.nights !== undefined) {
-        this.setDayCount(Math.max(1, Math.round(patch.nights)))
+    updateFields(
+      patch: Partial<
+        Pick<
+          TripState,
+          | 'name'
+          | 'startDate'
+          | 'endDate'
+          | 'hotels'
+          | 'ticketDays'
+          | 'parkHopper'
+          | 'flights'
+          | 'carHire'
+        >
+      >,
+    ) {
+      const datesTouched =
+        patch.startDate !== undefined || patch.endDate !== undefined
+      Object.assign(this, patch)
+      if (datesTouched && this.created && this.datesValid) {
+        this.refitDays()
       }
     },
 
-    setDayCount(count: number) {
-      const n = Math.min(30, Math.max(1, Math.round(count)))
-      this.days = makeDays(n, this.days)
+    setHotel(index: number, value: string) {
+      const next = this.hotels.slice()
+      next[index] = value
+      this.hotels = next
+    },
+    addHotel() {
+      if (this.hotels.length < 4) this.hotels = [...this.hotels, '']
+    },
+    removeHotel(index: number) {
+      this.hotels = this.hotels.filter((_, i) => i !== index)
     },
 
-    assignPark(dayIndex: number, parkId: string | null) {
-      const day = this.days[dayIndex]
-      if (day) day.parkId = parkId
+    buildDays(pattern: string[] | null): Day[] {
+      if (!this.startD || !this.datesValid) return []
+      const n = this.dayCount
+      const prev = new Map(this.days.map((d) => [d.date, d]))
+      const days: Day[] = []
+      for (let i = 0; i < n; i++) {
+        const iso = toISO(addDays(this.startD, i))
+        const carried = prev.get(iso)
+        days.push({
+          date: iso,
+          parkId: carried ? carried.parkId : templateParkId(pattern, i, n),
+          note: carried?.note ?? '',
+          items: carried?.items ?? [],
+        })
+      }
+      return days
     },
 
-    setDayNote(dayIndex: number, note: string) {
-      const day = this.days[dayIndex]
+    applyTemplate(id: string) {
+      const tpl = TEMPLATES.find((t) => t.id === id)
+      if (!tpl || !this.datesValid) return
+      // Fresh layout: ignore any carried days from a previous template choice.
+      this.days = []
+      this.days = this.buildDays(tpl.pattern)
+      this.created = true
+      this.selectedDay = null
+      this.sheetOpen = false
+      this.justSet = null
+    },
+
+    /** Re-fit the day array to the current date range, keeping days by date. */
+    refitDays() {
+      this.days = this.buildDays(null)
+    },
+
+    assignDay(index: number, parkId: string | null) {
+      const day = this.days[index]
+      if (!day) return
+      day.parkId = parkId
+      this.justSet = index
+      this.sheetOpen = false
+    },
+    clearDay(index: number) {
+      this.assignDay(index, null)
+    },
+    clearJustSet() {
+      this.justSet = null
+    },
+
+    setDayNote(index: number, note: string) {
+      const day = this.days[index]
       if (day) day.note = note
     },
 
-    // ---- itinerary items ----
-    addItem(dayIndex: number, partial: Partial<ItineraryItem> & { title: string }) {
-      const day = this.days[dayIndex]
+    openSheet(index: number) {
+      this.selectedDay = index
+      this.sheetOpen = true
+    },
+    closeSheet() {
+      this.sheetOpen = false
+    },
+    selectDay(index: number) {
+      this.selectedDay = Math.max(0, Math.min(this.days.length - 1, index))
+    },
+    stepDay(dir: -1 | 1) {
+      if (this.selectedDay === null) return
+      this.selectDay(this.selectedDay + dir)
+    },
+
+    addItem(
+      index: number,
+      partial: Omit<DayItem, 'id'> & Partial<Pick<DayItem, 'id'>>,
+    ) {
+      const day = this.days[index]
       if (!day) return
-      const item: ItineraryItem = {
-        id: uid(),
+      day.items.push({
+        id: partial.id ?? uid(),
         title: partial.title,
-        type: partial.type ?? 'other',
-        attractionId: partial.attractionId,
-        time: partial.time,
-        durationMin: partial.durationMin,
-        note: partial.note,
-        done: false,
-      }
-      day.items.push(item)
-      this.sortDay(dayIndex)
-      return item.id
-    },
-
-    addAttractionToDay(dayIndex: number, attractionId: string) {
-      const a: Attraction | undefined = ATTRACTION_BY_ID[attractionId]
-      if (!a) return
-      return this.addItem(dayIndex, {
-        title: a.name,
-        type: a.type as AttractionType,
-        attractionId: a.id,
-        durationMin: a.durationMin,
+        time: partial.time ?? '',
+        kind: partial.kind,
+        state: partial.state,
+        parkId: partial.parkId ?? null,
       })
+      this.sortDayItems(index)
     },
-
-    updateItem(dayIndex: number, itemId: string, patch: Partial<ItineraryItem>) {
-      const day = this.days[dayIndex]
-      const item = day?.items.find((i) => i.id === itemId)
+    updateItem(index: number, itemId: string, patch: Partial<DayItem>) {
+      const item = this.days[index]?.items.find((i) => i.id === itemId)
       if (!item) return
       Object.assign(item, patch)
-      if (patch.time !== undefined) this.sortDay(dayIndex)
+      this.sortDayItems(index)
     },
-
-    toggleItemDone(dayIndex: number, itemId: string) {
-      const item = this.days[dayIndex]?.items.find((i) => i.id === itemId)
-      if (item) item.done = !item.done
+    removeItem(index: number, itemId: string) {
+      const day = this.days[index]
+      if (day) day.items = day.items.filter((i) => i.id !== itemId)
     },
-
-    removeItem(dayIndex: number, itemId: string) {
-      const day = this.days[dayIndex]
+    /** Timed items ascending, untimed items after, stable otherwise. */
+    sortDayItems(index: number) {
+      const day = this.days[index]
       if (!day) return
-      day.items = day.items.filter((i) => i.id !== itemId)
-    },
-
-    moveItemToDay(fromDay: number, itemId: string, toDay: number) {
-      if (fromDay === toDay) return
-      const src = this.days[fromDay]
-      const dest = this.days[toDay]
-      if (!src || !dest) return
-      const idx = src.items.findIndex((i) => i.id === itemId)
-      if (idx === -1) return
-      const [item] = src.items.splice(idx, 1)
-      dest.items.push(item!)
-      this.sortDay(toDay)
-    },
-
-    nudgeItem(dayIndex: number, itemId: string, dir: -1 | 1) {
-      const items = this.days[dayIndex]?.items
-      if (!items) return
-      const i = items.findIndex((x) => x.id === itemId)
-      const j = i + dir
-      if (i === -1 || j < 0 || j >= items.length) return
-      ;[items[i], items[j]] = [items[j]!, items[i]!]
-    },
-
-    /** Keep timed items in chronological order; untimed items keep their slot. */
-    sortDay(dayIndex: number) {
-      const day = this.days[dayIndex]
-      if (!day) return
-      day.items = [...day.items]
+      day.items = day.items
         .map((item, order) => ({ item, order }))
         .sort((a, b) => {
           const ta = a.item.time
@@ -274,113 +429,8 @@ export const useTripStore = defineStore('orlando-trip', {
         .map((x) => x.item)
     },
 
-    clearDay(dayIndex: number) {
-      const day = this.days[dayIndex]
-      if (day) day.items = []
-    },
-
-    // ---- budget ----
-    setBudgetTotal(value: number) {
-      this.budgetTotal = Math.max(0, Math.round(Number(value) || 0))
-    },
-
-    addBudgetItem(partial: Omit<BudgetItem, 'id'>) {
-      this.budget.push({ ...partial, id: uid() })
-    },
-
-    updateBudgetItem(id: string, patch: Partial<BudgetItem>) {
-      const item = this.budget.find((b) => b.id === id)
-      if (item) Object.assign(item, patch)
-    },
-
-    removeBudgetItem(id: string) {
-      this.budget = this.budget.filter((b) => b.id !== id)
-    },
-
-    // ---- packing ----
-    seedPacking(force = false) {
-      if (this.packingSeeded && !force) return
-      const existing = new Set(this.packing.map((p) => p.label.toLowerCase()))
-      for (const seed of PACKING_TEMPLATE) {
-        if (existing.has(seed.label.toLowerCase())) continue
-        this.packing.push({
-          id: uid(),
-          label: seed.label,
-          category: seed.category,
-          done: seed.done ?? false,
-        })
-      }
-      this.packingSeeded = true
-    },
-
-    addPackingItem(label: string, category = 'Other') {
-      const clean = label.trim()
-      if (!clean) return
-      this.packing.push({ id: uid(), label: clean, category, done: false })
-    },
-
-    togglePacking(id: string) {
-      const item = this.packing.find((p) => p.id === id)
-      if (item) item.done = !item.done
-    },
-
-    removePackingItem(id: string) {
-      this.packing = this.packing.filter((p) => p.id !== id)
-    },
-
-    clearCheckedPacking() {
-      this.packing = this.packing.filter((p) => !p.done)
-    },
-
-    // ---- whole trip ----
-    resetAll() {
+    resetTrip() {
       this.$reset()
-    },
-
-    loadDemo() {
-      this.$reset()
-      const start = new Date()
-      start.setDate(start.getDate() + 30)
-      this.trip = {
-        name: 'Orlando with the family',
-        startDate: start.toISOString().slice(0, 10),
-        nights: 5,
-        partySize: 4,
-        homeBase: "Universal's Cabana Bay Beach Resort",
-        notes: 'First-timers. One rest day mid-week. Fireworks at least once.',
-      }
-      this.setDayCount(5)
-      const plan: Array<[string, string[]]> = [
-        ['ioa', ['ioa-hagrid', 'ioa-velocicoaster', 'ioa-forbidden', 'ioa-spiderman']],
-        ['usf', ['usf-escape', 'usf-bourne', 'usf-mummy', 'usf-simpsons']],
-        ['other', []],
-        ['mk', ['mk-sdmt', 'mk-tron', 'mk-pirates', 'mk-haunted', 'mk-fireworks']],
-        ['ep', ['ep-guardians', 'ep-frozen', 'ep-ratatouille', 'ep-worldshowcase']],
-      ]
-      plan.forEach(([parkId, ids], i) => {
-        this.assignPark(i, parkId === 'ep' ? 'epcot' : parkId)
-        ids.forEach((id) => this.addAttractionToDay(i, id))
-      })
-      this.days[2]!.note = 'Pool morning, Disney Springs in the evening.'
-      this.budgetTotal = 6500
-      ;[
-        ['Park tickets (4 × 5-day)', 'Tickets', 2100, null],
-        ['Cabana Bay – 5 nights', 'Hotel', 1150, null],
-        ['Flights', 'Flights', 1600, null],
-        ['Rental car + parking', 'Car & transport', 380, null],
-        ['Character breakfast', 'Food & drink', 220, 3],
-        ['Butterbeer fund', 'Food & drink', 90, 0],
-        ['Souvenirs allowance', 'Merchandise', 400, null],
-      ].forEach(([label, category, amount, day]) => {
-        this.addBudgetItem({
-          label: label as string,
-          category: category as BudgetItem['category'],
-          amount: amount as number,
-          day: day as number | null,
-          paid: category === 'Flights' || category === 'Hotel',
-        })
-      })
-      this.seedPacking()
     },
   },
 })

@@ -1,69 +1,67 @@
 # Orlando Trip Planner
 
-A single-page planner for an Orlando theme-park holiday, built with **Nuxt 4** and
-deployed to **Cloudflare Pages**. All trip data lives in the browser's
-`localStorage` — there is no backend and no account.
+Mobile-first planner for an Orlando theme-park holiday, built to
+`design_handoff_orlando_planner/`. Nuxt 4 / Vue 3 / Pinia. All trip data lives in
+the browser's `localStorage` — no backend, no account.
 
-Repo: <https://github.com/jviddy/OrlandoPlanner>
+Repo: <https://github.com/jviddy/OrlandoPlanner> · Deploy target: **Cloudflare Pages**
 
-## Features
+## The flow
 
-| Page | What it does |
-| --- | --- |
-| **Dashboard** | Countdown, at-a-glance stats, day-by-day summary, must-dos you still need to slot in. |
-| **Itinerary** | One card per day: assign a park, add rides / shows / meals, set times (list auto-sorts), move items between days, per-day notes. |
-| **Attractions** | Curated catalogue of Walt Disney World, Universal, Epic Universe, Volcano Bay and SeaWorld headliners. Filter by park / type / intensity and drop each onto a day. |
-| **Budget** | Set a total, add line items by category and day, mark them paid, see per-person and by-category breakdowns. |
-| **Packing** | Orlando-tuned starter list (heat, rain, step counts), grouped by category with progress. |
-| **Settings** | Trip name / dates / party size, JSON export + import, load a demo trip, reset. |
-
-## Local development
-
-```bash
-npm install          # uses .npmrc -> legacy-peer-deps (npm 11 peer-resolver bug)
-npm run dev          # http://localhost:3000
+```
+/new        New-trip gate — name + arrive/depart, plus optional stay / tickets / flights
+/templates  Pick a starting point — Blank, First-timer Disney, Best of both worlds
+/           Overview — the whole trip as a Monday-first grid of day circles
+/day        One day — dining and fixed-time plans, warnings, a note
+/edit       Change trip details, or start over
 ```
 
-## Build
+The **overview** is the core screen: a countdown chip, four counters
+(Disney / Universal / Off-park / Unset), derived alerts (reservation in the wrong
+park, over ticket days, dining-window reminder), then one card per calendar week
+of 7 day circles. Circle **background = resort** (Disney blue, Universal coral,
+SeaWorld teal, off-park yellow, unassigned dashed); **glyph = park**. Tap a circle
+for the quick-assign bottom sheet; press and hold to open the day.
+
+## Develop
 
 ```bash
-npm run build        # Nitro `cloudflare-pages` preset -> ./dist
-npm run cf:preview   # build, then serve ./dist with `wrangler pages dev`
+npm install       # .npmrc pins legacy-peer-deps (npm 11 peer-resolver bug)
+npm run dev       # http://localhost:3000
 ```
 
-## Deploy to Cloudflare Pages
-
-See [`DEPLOY.md`](./DEPLOY.md). Short version:
+## Build & deploy
 
 ```bash
-npm run deploy       # build + `wrangler pages deploy dist --project-name=orlando-planner`
+npm run build     # Nitro cloudflare-pages preset -> ./dist (every route prerendered)
+npm run cf:preview
 ```
 
-or connect the repo in the Cloudflare dashboard with:
+Cloudflare Pages, Git integration: build command `npm run build`, output directory
+`dist`, `NODE_VERSION=22`, `NPM_CONFIG_LEGACY_PEER_DEPS=true`. See `DEPLOY.md`.
 
-- **Build command:** `npm run build`
-- **Build output directory:** `dist`
-- **Node version:** 22 (`.nvmrc`)
-
-## Tech
-
-- Nuxt 4 / Vue 3, `ssr: true` with every route prerendered (static shell + hydration).
-- Pinia + `pinia-plugin-persistedstate` for the single `orlando-trip` store.
-- No CSS framework — design tokens + scoped styles in `app/assets/css/main.css`.
-- No runtime icon dependency — `AppIcon.vue` holds a small inline SVG set.
-
-## Project layout
+## Layout
 
 ```
 app/
-  assets/css/main.css   design tokens + base styles
-  components/           AppNav, AttractionCard, PlannerDayCard, ItineraryRow, …
-  composables/          useFormat, useHydrated
-  data/                 parks, attractions, packing template (the seed content)
-  layouts/default.vue   header + nav + footer shell
-  pages/                index, itinerary, attractions, budget, packing, settings
-  stores/trip.ts        the whole app state
-  types/trip.ts
-nuxt.config.ts          nitro.preset = 'cloudflare-pages'
-wrangler.toml           project name + pages_build_output_dir
+  assets/css/main.css       design tokens (warm surface ramp, resort colours, type, motion)
+  components/
+    DayCircle.vue           the one circle — grid, sheet, previews, day-view header (20/40/42/56px)
+    WeekGrid.vue            weeks as stacked rows; tap / 400ms long-press model
+    CounterRow.vue, AlertCard.vue
+    QuickAssignSheet.vue    bottom sheet (in the layout, over any page)
+    TripDetailsFields.vue   shared by /new and /edit
+    ItemForm.vue, DayItemRow.vue, AppIcon.vue
+  composables/useDates.ts   UTC date helpers + formatting
+  data/parks.ts             14 parks, 4 resorts, sheet groups
+  data/templates.ts         3 starting patterns
+  data/glyphs.ts            placeholder park glyphs + UI icons (single swap point)
+  pages/                    index, new, templates, day, edit
+  stores/trip.ts            the whole app state (Trip / Day / DayItem) + derived values
 ```
+
+## Not built (specified in the handoff, deferred)
+
+Drag-to-reorder days, share-image export, Sunday-first week option, per-stay
+check-in/out dates. The add/edit flow for day items is intentionally utilitarian
+pending its own design.

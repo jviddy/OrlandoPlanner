@@ -1,6 +1,6 @@
-# Cloudflare Pages configuration for local preview + `wrangler pages deploy`.
-# The build output for the Nitro `cloudflare-pages` preset is ./dist
+# Cloudflare Pages config for local preview + `wrangler pages deploy`.
+# Build output for the Nitro `cloudflare-pages` preset is ./dist
 name = "orlando-planner"
 pages_build_output_dir = "dist"
-compatibility_date = "2026-08-31"
+compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
