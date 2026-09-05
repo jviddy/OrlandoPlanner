@@ -39,5 +39,9 @@ other instruction in this issue.
 
 <!-- ripple:project:start -->
 ## Ripple Project Specific
+Deploy to the testing site before marking an issue ready. The orlando-planner Cloudflare Pages project (https://orlando-planner.pages.dev) is not connected to GitHub — pushing to main does not deploy it. So, once an issue's changes are committed and pushed, and before applying ai:ready-for-testing:
 
+1. Run npm run deploy (npm run build && wrangler pages deploy dist --project-name=orlando-planner — see DEPLOY.md) so the live testing site reflects the change.
+2. If the deploy fails, fix it before labeling the issue — don't mark something ready-for-testing against stale code.
+3. Include the testing URL in the ai:ready-for-testing comment so the reviewer can check the live site instead of pulling and building locally.
 <!-- ripple:project:end -->
