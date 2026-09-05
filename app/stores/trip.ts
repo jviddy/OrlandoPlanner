@@ -31,7 +31,7 @@ function blankState(): TripState {
     hotels: [],
     ticketDays: { disney: 0, universal: 0 },
     parkHopper: false,
-    flights: { out: '', back: '' },
+    flights: [],
     carHire: '',
     days: [],
     selectedDay: null,
@@ -90,6 +90,23 @@ export const useTripStore = defineStore('orlando-trip', {
       'carHire',
       'days',
     ],
+    /**
+     * `hotels` used to be `string[]` and `flights` used to be `{ out, back }`
+     * — reshape anything persisted in those old shapes so existing trips
+     * don't lose data (or crash) after the schema change.
+     */
+    afterHydrate(ctx) {
+      const s = ctx.store as any
+      if (!Array.isArray(s.flights)) {
+        const old = s.flights ?? {}
+        s.flights = [old.out, old.back]
+          .filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '')
+          .map((route: string) => ({ route, time: '' }))
+      }
+      if (Array.isArray(s.hotels)) {
+        s.hotels = s.hotels.map((h: unknown) => (typeof h === 'string' ? { name: h } : h))
+      }
+    },
   },
 
   getters: {
@@ -329,6 +346,18 @@ export const useTripStore = defineStore('orlando-trip', {
     },
     removeHotel(index: number) {
       this.hotels = this.hotels.filter((_, i) => i !== index)
+    },
+
+    setFlight(index: number, patch: Partial<{ route: string; time: string }>) {
+      const next = this.flights.slice()
+      next[index] = { route: '', time: '', ...next[index], ...patch }
+      this.flights = next
+    },
+    addFlight() {
+      if (this.flights.length < 6) this.flights = [...this.flights, { route: '', time: '' }]
+    },
+    removeFlight(index: number) {
+      this.flights = this.flights.filter((_, i) => i !== index)
     },
 
     buildDays(pattern: string[] | null): Day[] {

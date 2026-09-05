@@ -24,6 +24,8 @@ const props = withDefaults(
     sheetTitle?: string
     compact?: boolean
     variant?: 'calendar' | 'days'
+    /** ISO dates to mark with a subtle dot — e.g. "already booked" at another stay. */
+    assignedDates?: string[]
   }>(),
   {
     min: '',
@@ -32,6 +34,7 @@ const props = withDefaults(
     sheetTitle: 'Select dates',
     compact: false,
     variant: 'calendar',
+    assignedDates: () => [],
   },
 )
 
@@ -135,6 +138,10 @@ const boundsLabel = computed(() => {
   return `Within your trip: ${a.getUTCDate()} ${MON[a.getUTCMonth()]} – ${b.getUTCDate()} ${MON[b.getUTCMonth()]}`
 })
 
+function isAssignedElsewhere(d: Date): boolean {
+  return props.assignedDates.includes(toISO(d))
+}
+
 function isDisabled(d: Date): boolean {
   const iso = toISO(d)
   if (props.min && iso < props.min) return true
@@ -222,27 +229,32 @@ onBeforeUnmount(() => {
               </button>
             </div>
             <p v-else-if="boundsLabel" class="drf-bounds">{{ boundsLabel }}</p>
+            <p v-if="variant === 'days' && assignedDates.length" class="drf-legend">
+              <span class="drf-legend__dot" /> already has a hotel
+            </p>
           </div>
 
           <div class="sheet__body drf-body">
             <template v-if="variant === 'calendar'">
-              <div v-for="m in monthsToShow" :key="m.key" class="drf-month">
-                <p class="drf-month__label">{{ m.label }}</p>
-                <div class="drf-dow">
-                  <span v-for="d in DOW" :key="d">{{ d }}</span>
-                </div>
-                <div class="drf-grid">
-                  <button
-                    v-for="(d, i) in m.cells"
-                    :key="i"
-                    type="button"
-                    class="drf-cell"
-                    :class="[d ? `drf-cell--${cellState(d)}` : 'drf-cell--empty']"
-                    :disabled="!d || isDisabled(d)"
-                    @click="pick(d)"
-                  >
-                    {{ d ? d.getUTCDate() : '' }}
-                  </button>
+              <div class="drf-months">
+                <div v-for="m in monthsToShow" :key="m.key" class="drf-month">
+                  <p class="drf-month__label">{{ m.label }}</p>
+                  <div class="drf-dow">
+                    <span v-for="d in DOW" :key="d">{{ d }}</span>
+                  </div>
+                  <div class="drf-grid">
+                    <button
+                      v-for="(d, i) in m.cells"
+                      :key="i"
+                      type="button"
+                      class="drf-cell"
+                      :class="[d ? `drf-cell--${cellState(d)}` : 'drf-cell--empty']"
+                      :disabled="!d || isDisabled(d)"
+                      @click="pick(d)"
+                    >
+                      {{ d ? d.getUTCDate() : '' }}
+                    </button>
+                  </div>
                 </div>
               </div>
             </template>
@@ -260,6 +272,7 @@ onBeforeUnmount(() => {
                       @click="pick(d)"
                     >
                       {{ d.getUTCDate() }}
+                      <span v-if="isAssignedElsewhere(d)" class="drf-circle__dot" />
                     </button>
                   </template>
                 </div>
@@ -422,12 +435,43 @@ onBeforeUnmount(() => {
   color: var(--text-faint);
   margin-top: 6px;
 }
+.drf-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 6px;
+}
+.drf-legend__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c-teal);
+}
 
+.drf-months {
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 700px) {
+  .drf-months {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    align-items: start;
+  }
+}
 .drf-month {
   margin-bottom: 18px;
 }
 .drf-month:last-child {
   margin-bottom: 4px;
+}
+@media (min-width: 700px) {
+  .drf-month {
+    margin-bottom: 0;
+  }
 }
 .drf-month__label {
   font-size: 12.5px;
@@ -503,6 +547,7 @@ onBeforeUnmount(() => {
   color: var(--text-dim);
 }
 .drf-circle {
+  position: relative;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -513,6 +558,16 @@ onBeforeUnmount(() => {
   color: var(--text);
   background: #fff;
   border: 1.5px solid var(--field-border-soft);
+}
+.drf-circle__dot {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--c-teal);
 }
 .drf-circle--mid {
   background: var(--tile-selected);

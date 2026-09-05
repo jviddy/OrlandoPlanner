@@ -4,6 +4,8 @@
  * collapsible sections. Shared by the new-trip gate and the edit screen.
  * Writes straight to the store as you type.
  */
+import { addDays, parseISO, toISO } from '~/composables/useDates'
+
 const store = useTripStore()
 
 const open = reactive<Record<string, boolean>>({})
@@ -29,15 +31,38 @@ function onTripDatesUpdate({ start, end }: { start: string; end: string }) {
 function onStayDatesUpdate(index: number, value: { start: string; end: string }) {
   store.setHotelDates(index, value.start ? value : null)
 }
+
+/** ISO dates already covered by a *different* stay, for the "already booked" dot. */
+function otherStayDates(excludeIndex: number): string[] {
+  const dates: string[] = []
+  store.hotels.forEach((h, idx) => {
+    if (idx === excludeIndex || !h.startDate || !h.endDate) return
+    for (let d = parseISO(h.startDate); toISO(d) <= h.endDate; d = addDays(d, 1)) {
+      dates.push(toISO(d))
+    }
+  })
+  return dates
+}
 const ticketSummary = computed(
   () =>
     `${store.ticketDays.disney || 0} Disney · ${store.ticketDays.universal || 0} Universal`,
 )
-const flightSummary = computed(() =>
-  store.flights.out.trim() || store.flights.back.trim()
-    ? 'Outbound + return set'
-    : 'Not set',
-)
+const flightSummary = computed(() => {
+  const set = store.flights.filter((f) => f.route.trim()).length
+  if (!set) return 'Not set'
+  return `${set} flight${set === 1 ? '' : 's'} set`
+})
+
+function flightLabel(i: number): string {
+  if (i === 0) return 'Outbound'
+  if (i === 1) return 'Return'
+  return `Flight ${i + 1}`
+}
+function flightPlaceholder(i: number): string {
+  if (i === 0) return 'MAN → MCO'
+  if (i === 1) return 'MCO → MAN'
+  return 'Airport → Airport'
+}
 
 function setTicket(key: 'disney' | 'universal', value: string) {
   const n = Math.max(0, Math.min(60, Math.round(Number(value) || 0)))
@@ -107,6 +132,7 @@ function setTicket(key: 'disney' | 'universal', value: string) {
               :end="store.hotels[i]?.endDate ?? ''"
               :min="store.startDate"
               :max="store.endDate"
+              :assigned-dates="otherStayDates(i)"
               placeholder="+ Add dates for this stay (optional)"
               sheet-title="Stay dates"
               @update="onStayDatesUpdate(i, $event)"
@@ -178,26 +204,34 @@ function setTicket(key: 'disney' | 'universal', value: string) {
           <AppIcon :name="open.fly ? 'chevronUp' : 'chevronDown'" :size="14" class="disc__chev" />
         </button>
         <div v-if="open.fly" class="disc__body">
-          <label class="drow">
-            <span>Out</span>
+          <div
+            v-for="(_, i) in Math.max(2, store.flights.length)"
+            :key="i"
+            class="drow"
+          >
+            <span>{{ flightLabel(i) }}</span>
             <input
               class="input input--sm"
               type="text"
-              placeholder="MAN → MCO"
-              :value="store.flights.out"
-              @input="store.updateFields({ flights: { ...store.flights, out: ($event.target as HTMLInputElement).value } })"
+              :placeholder="flightPlaceholder(i)"
+              :value="store.flights[i]?.route ?? ''"
+              @input="store.setFlight(i, { route: ($event.target as HTMLInputElement).value })"
             />
-          </label>
-          <label class="drow">
-            <span>Back</span>
             <input
-              class="input input--sm"
-              type="text"
-              placeholder="MCO → MAN"
-              :value="store.flights.back"
-              @input="store.updateFields({ flights: { ...store.flights, back: ($event.target as HTMLInputElement).value } })"
+              class="input input--sm drow__time"
+              type="time"
+              :value="store.flights[i]?.time ?? ''"
+              @input="store.setFlight(i, { time: ($event.target as HTMLInputElement).value })"
             />
-          </label>
+          </div>
+          <button
+            v-if="store.flights.length < 6"
+            type="button"
+            class="disc__action"
+            @click="store.addFlight()"
+          >
+            + Add another flight
+          </button>
           <label v-if="open.car || store.carHire" class="drow">
             <span>Car hire</span>
             <input
@@ -303,6 +337,10 @@ function setTicket(key: 'disney' | 'universal', value: string) {
 }
 .drow .input {
   flex: 1;
+}
+.drow .drow__time {
+  flex: none;
+  width: 92px;
 }
 .stay {
   display: flex;

@@ -29,9 +29,11 @@ export interface TicketDays {
   universal: number
 }
 
-export interface Flights {
-  out: string
-  back: string
+export interface Flight {
+  /** Free text, e.g. "MAN → MCO". */
+  route: string
+  /** 'HH:MM' 24h, or '' for "no time yet". */
+  time: string
 }
 
 export interface Stay {
@@ -54,7 +56,8 @@ export interface TripState {
   hotels: Stay[]
   ticketDays: TicketDays
   parkHopper: boolean
-  flights: Flights
+  /** [] | [outbound] | [outbound, return] | more, for connections/multi-city. */
+  flights: Flight[]
   carHire: string
 
   days: Day[]
