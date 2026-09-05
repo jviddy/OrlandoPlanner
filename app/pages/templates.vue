@@ -103,6 +103,12 @@ function pick(id: string) {
   flex-direction: column;
   gap: 12px;
 }
+@media (min-width: 700px) {
+  .tp__cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
 .tcard {
   text-align: left;
   border: 1.5px solid var(--warm-border);

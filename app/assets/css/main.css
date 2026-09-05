@@ -82,6 +82,19 @@
   --app-max: 460px;
 }
 
+/* Wider viewports get more breathing room instead of a narrow mobile
+   column stranded in the middle of the screen. */
+@media (min-width: 700px) {
+  :root {
+    --app-max: 620px;
+  }
+}
+@media (min-width: 1100px) {
+  :root {
+    --app-max: 760px;
+  }
+}
+
 /* ---------- reset ---------- */
 *,
 *::before,
