@@ -99,7 +99,9 @@ function setTicket(key: 'disney' | 'universal', value: string) {
               />
             </label>
             <DateRangeField
+              v-if="store.datesValid"
               compact
+              variant="days"
               class="stay__dates"
               :start="store.hotels[i]?.startDate ?? ''"
               :end="store.hotels[i]?.endDate ?? ''"
@@ -109,6 +111,7 @@ function setTicket(key: 'disney' | 'universal', value: string) {
               sheet-title="Stay dates"
               @update="onStayDatesUpdate(i, $event)"
             />
+            <span v-else class="stay__dates-hint">Set your trip dates to add stay dates</span>
           </div>
           <button type="button" class="disc__action" @click="store.addHotel()">
             + Add another stay
@@ -309,6 +312,12 @@ function setTicket(key: 'disney' | 'universal', value: string) {
 .stay__dates {
   align-self: flex-end;
   margin-right: 2px;
+}
+.stay__dates-hint {
+  align-self: flex-end;
+  margin-right: 2px;
+  font-size: 12.5px;
+  color: var(--text-faint);
 }
 .disc__action {
   align-self: flex-start;

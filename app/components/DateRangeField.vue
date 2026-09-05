@@ -1,10 +1,18 @@
 <script setup lang="ts">
 /**
- * A field that opens a bottom-sheet calendar for picking a start + end date
- * together, instead of two separate date boxes. Used for the trip's own
- * dates and for a stay's optional date range (clamped to `min`/`max`).
+ * A field that opens a bottom-sheet picker for choosing a start + end date
+ * together, instead of two separate date boxes.
+ *
+ * Two variants:
+ * - `calendar` (default) — a two-month calendar, for picking dates with no
+ *   fixed bounds (the trip's own arrive/depart).
+ * - `days` — the bounded range (`min`..`max`, both required) drawn as
+ *   Monday-first week-rows of day circles, matching the overview's week grid.
+ *   Used where the range is already clamped to a handful of trip days (a
+ *   stay's optional date range) so there's no reason to show a generic month
+ *   grid full of out-of-range days.
  */
-import { parseISO, toISO, todayUTC } from '~/composables/useDates'
+import { addDays, parseISO, toISO, todayUTC } from '~/composables/useDates'
 
 const props = withDefaults(
   defineProps<{
@@ -15,6 +23,7 @@ const props = withDefaults(
     placeholder?: string
     sheetTitle?: string
     compact?: boolean
+    variant?: 'calendar' | 'days'
   }>(),
   {
     min: '',
@@ -22,6 +31,7 @@ const props = withDefaults(
     placeholder: 'Add dates',
     sheetTitle: 'Select dates',
     compact: false,
+    variant: 'calendar',
   },
 )
 
@@ -74,10 +84,25 @@ function monthGrid(month: Date): (Date | null)[] {
   return cells
 }
 
-const grid = computed(() => monthGrid(viewMonth.value))
-const monthLabel = computed(
-  () => `${MON[viewMonth.value.getUTCMonth()]} ${viewMonth.value.getUTCFullYear()}`,
-)
+/** Two consecutive months, so a range spanning a month-end is fully visible. */
+const monthsToShow = computed(() => {
+  const first = viewMonth.value
+  const second = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 1))
+  return [first, second].map((m) => ({
+    key: `${m.getUTCFullYear()}-${m.getUTCMonth()}`,
+    date: m,
+    label: `${MON[m.getUTCMonth()]} ${m.getUTCFullYear()}`,
+    cells: monthGrid(m),
+  }))
+})
+const navLabel = computed(() => {
+  const [a, b] = monthsToShow.value
+  if (!a || !b) return ''
+  if (a.date.getUTCFullYear() === b.date.getUTCFullYear()) {
+    return `${MON[a.date.getUTCMonth()]} – ${MON[b.date.getUTCMonth()]} ${a.date.getUTCFullYear()}`
+  }
+  return `${a.label} – ${b.label}`
+})
 
 function prevMonth() {
   const d = viewMonth.value
@@ -87,6 +112,28 @@ function nextMonth() {
   const d = viewMonth.value
   viewMonth.value = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))
 }
+
+/** Monday-first week rows spanning `min`..`max` inclusive, for the `days` variant. */
+const dayWeeks = computed(() => {
+  if (props.variant !== 'days' || !props.min || !props.max) return []
+  const start = parseISO(props.min)
+  const days: Date[] = []
+  for (let d = start; toISO(d) <= props.max; d = addDays(d, 1)) days.push(d)
+  const pad = (start.getUTCDay() + 6) % 7
+  const cells: (Date | null)[] = []
+  for (let i = 0; i < pad; i++) cells.push(null)
+  days.forEach((d) => cells.push(d))
+  while (cells.length % 7) cells.push(null)
+  const weeks: (Date | null)[][] = []
+  for (let w = 0; w * 7 < cells.length; w++) weeks.push(cells.slice(w * 7, w * 7 + 7))
+  return weeks
+})
+const boundsLabel = computed(() => {
+  if (props.variant !== 'days' || !props.min || !props.max) return ''
+  const a = parseISO(props.min)
+  const b = parseISO(props.max)
+  return `Within your trip: ${a.getUTCDate()} ${MON[a.getUTCMonth()]} – ${b.getUTCDate()} ${MON[b.getUTCMonth()]}`
+})
 
 function isDisabled(d: Date): boolean {
   const iso = toISO(d)
@@ -165,34 +212,59 @@ onBeforeUnmount(() => {
           <div class="sheet__handle" />
           <div class="sheet__head drf-head">
             <p class="sheet__title">{{ sheetTitle }}</p>
-            <div class="drf-nav">
+            <div v-if="variant === 'calendar'" class="drf-nav">
               <button type="button" class="drf-nav__btn" aria-label="Previous month" @click="prevMonth">
                 <AppIcon name="arrowLeft" :size="16" />
               </button>
-              <p class="drf-nav__label">{{ monthLabel }}</p>
+              <p class="drf-nav__label">{{ navLabel }}</p>
               <button type="button" class="drf-nav__btn drf-nav__btn--next" aria-label="Next month" @click="nextMonth">
                 <AppIcon name="arrowLeft" :size="16" />
               </button>
             </div>
+            <p v-else-if="boundsLabel" class="drf-bounds">{{ boundsLabel }}</p>
           </div>
 
           <div class="sheet__body drf-body">
-            <div class="drf-dow">
-              <span v-for="d in DOW" :key="d">{{ d }}</span>
-            </div>
-            <div class="drf-grid">
-              <button
-                v-for="(d, i) in grid"
-                :key="i"
-                type="button"
-                class="drf-cell"
-                :class="[d ? `drf-cell--${cellState(d)}` : 'drf-cell--empty']"
-                :disabled="!d || isDisabled(d)"
-                @click="pick(d)"
-              >
-                {{ d ? d.getUTCDate() : '' }}
-              </button>
-            </div>
+            <template v-if="variant === 'calendar'">
+              <div v-for="m in monthsToShow" :key="m.key" class="drf-month">
+                <p class="drf-month__label">{{ m.label }}</p>
+                <div class="drf-dow">
+                  <span v-for="d in DOW" :key="d">{{ d }}</span>
+                </div>
+                <div class="drf-grid">
+                  <button
+                    v-for="(d, i) in m.cells"
+                    :key="i"
+                    type="button"
+                    class="drf-cell"
+                    :class="[d ? `drf-cell--${cellState(d)}` : 'drf-cell--empty']"
+                    :disabled="!d || isDisabled(d)"
+                    @click="pick(d)"
+                  >
+                    {{ d ? d.getUTCDate() : '' }}
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <template v-else>
+              <p v-if="!dayWeeks.length" class="drf-empty-hint">Set your trip's dates first.</p>
+              <div v-for="(week, wi) in dayWeeks" :key="wi" class="drf-week">
+                <div v-for="(d, ci) in week" :key="ci" class="drf-daycol">
+                  <template v-if="d">
+                    <span class="drf-daycol__dow">{{ DOW[ci] }}</span>
+                    <button
+                      type="button"
+                      class="drf-circle"
+                      :class="`drf-circle--${cellState(d)}`"
+                      @click="pick(d)"
+                    >
+                      {{ d.getUTCDate() }}
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </template>
           </div>
 
           <div class="sheet__foot">
@@ -345,6 +417,24 @@ onBeforeUnmount(() => {
 .drf-nav__btn--next {
   transform: scaleX(-1);
 }
+.drf-bounds {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 6px;
+}
+
+.drf-month {
+  margin-bottom: 18px;
+}
+.drf-month:last-child {
+  margin-bottom: 4px;
+}
+.drf-month__label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
 
 .drf-dow {
   display: grid;
@@ -387,5 +477,52 @@ onBeforeUnmount(() => {
 .drf-cell--mid {
   background: var(--tile-selected);
   border-radius: 0;
+}
+
+.drf-empty-hint {
+  font-size: 13px;
+  color: var(--text-faint);
+  padding: 20px 4px;
+  text-align: center;
+}
+.drf-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.drf-daycol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.drf-daycol__dow {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.drf-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  background: #fff;
+  border: 1.5px solid var(--field-border-soft);
+}
+.drf-circle--mid {
+  background: var(--tile-selected);
+  border-color: var(--tile-selected);
+  color: var(--text-muted);
+}
+.drf-circle--start,
+.drf-circle--end {
+  background: var(--c-navy);
+  border-color: var(--c-navy);
+  color: #fff;
 }
 </style>
