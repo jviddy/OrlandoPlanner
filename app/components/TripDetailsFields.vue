@@ -18,10 +18,17 @@ const computedLine = computed(() =>
 )
 
 const staySummary = computed(() => {
-  if (store.hotels[1]?.trim()) return 'Split stay · 2 hotels'
-  if (store.hotels[0]?.trim()) return store.hotels[0]
+  if (store.hotels[1]?.name.trim()) return 'Split stay · 2 hotels'
+  if (store.hotels[0]?.name.trim()) return store.hotels[0].name
   return 'Not set'
 })
+
+function onTripDatesUpdate({ start, end }: { start: string; end: string }) {
+  store.updateFields({ startDate: start, endDate: end })
+}
+function onStayDatesUpdate(index: number, value: { start: string; end: string }) {
+  store.setHotelDates(index, value.start ? value : null)
+}
 const ticketSummary = computed(
   () =>
     `${store.ticketDays.disney || 0} Disney · ${store.ticketDays.universal || 0} Universal`,
@@ -51,26 +58,16 @@ function setTicket(key: 'disney' | 'universal', value: string) {
           @input="store.updateFields({ name: ($event.target as HTMLInputElement).value })"
         />
       </label>
-      <div class="tdf__dates">
-        <label class="field">
-          <span>Arrive</span>
-          <input
-            class="input"
-            type="date"
-            :value="store.startDate"
-            @input="store.updateFields({ startDate: ($event.target as HTMLInputElement).value })"
-          />
-        </label>
-        <label class="field">
-          <span>Depart</span>
-          <input
-            class="input"
-            type="date"
-            :value="store.endDate"
-            @input="store.updateFields({ endDate: ($event.target as HTMLInputElement).value })"
-          />
-        </label>
-      </div>
+      <label class="field">
+        <span>Dates</span>
+        <DateRangeField
+          :start="store.startDate"
+          :end="store.endDate"
+          placeholder="Add your dates"
+          sheet-title="Trip dates"
+          @update="onTripDatesUpdate"
+        />
+      </label>
       <p class="tdf__computed">{{ computedLine }}</p>
       <slot name="afterDates" />
     </div>
@@ -90,20 +87,29 @@ function setTicket(key: 'disney' | 'universal', value: string) {
           <AppIcon :name="open.stay ? 'chevronUp' : 'chevronDown'" :size="14" class="disc__chev" />
         </button>
         <div v-if="open.stay" class="disc__body">
-          <label
-            v-for="(_, i) in Math.max(1, store.hotels.length)"
-            :key="i"
-            class="drow"
-          >
-            <span>Hotel {{ i + 1 }}</span>
-            <input
-              class="input input--sm"
-              type="text"
-              :placeholder="i === 0 ? 'Hotel name' : 'Second half of the trip'"
-              :value="store.hotels[i] ?? ''"
-              @input="store.setHotel(i, ($event.target as HTMLInputElement).value)"
+          <div v-for="(_, i) in Math.max(1, store.hotels.length)" :key="i" class="stay">
+            <label class="drow">
+              <span>Hotel {{ i + 1 }}</span>
+              <input
+                class="input input--sm"
+                type="text"
+                placeholder="Hotel name"
+                :value="store.hotels[i]?.name ?? ''"
+                @input="store.setHotel(i, ($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <DateRangeField
+              compact
+              class="stay__dates"
+              :start="store.hotels[i]?.startDate ?? ''"
+              :end="store.hotels[i]?.endDate ?? ''"
+              :min="store.startDate"
+              :max="store.endDate"
+              placeholder="+ Add dates for this stay (optional)"
+              sheet-title="Stay dates"
+              @update="onStayDatesUpdate(i, $event)"
             />
-          </label>
+          </div>
           <button type="button" class="disc__action" @click="store.addHotel()">
             + Add another stay
           </button>
@@ -215,15 +221,6 @@ function setTicket(key: 'disney' | 'universal', value: string) {
   flex-direction: column;
   gap: 14px;
 }
-.tdf__dates {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.tdf__dates .input {
-  font-size: 15px;
-  padding-inline: 12px;
-}
 .tdf__computed {
   font-size: 13px;
   color: var(--text-dim);
@@ -303,6 +300,15 @@ function setTicket(key: 'disney' | 'universal', value: string) {
 }
 .drow .input {
   flex: 1;
+}
+.stay {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stay__dates {
+  align-self: flex-end;
+  margin-right: 2px;
 }
 .disc__action {
   align-self: flex-start;

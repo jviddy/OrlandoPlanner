@@ -45,6 +45,7 @@ export const ICONS = {
     'M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 2 2 0 0 0 0-4Zm10-2v12',
   plane: 'M21 12 3 19.5l3.4-7.5L3 4.5 21 12ZM6.4 12H14',
   pencil: 'M4 20h4L18.5 9.5a2 2 0 0 0-3-3L5 17v3M14 6.5l3 3',
+  calendar: 'M4 5h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM3 10h18M8 3v4M16 3v4',
 } as const
 
 export type IconName = keyof typeof ICONS

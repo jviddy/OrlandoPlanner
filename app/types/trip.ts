@@ -34,6 +34,13 @@ export interface Flights {
   back: string
 }
 
+export interface Stay {
+  name: string
+  /** Optional ISO dates — set only when this stay doesn't cover the whole trip. */
+  startDate?: string
+  endDate?: string
+}
+
 export interface TripState {
   version: number
   /** Flips true once a template has been chosen (trip left the gate). */
@@ -44,7 +51,7 @@ export interface TripState {
   endDate: string
 
   /** Split stay: [] | [hotel1] | [hotel1, hotel2]. */
-  hotels: string[]
+  hotels: Stay[]
   ticketDays: TicketDays
   parkHopper: boolean
   flights: Flights

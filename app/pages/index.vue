@@ -21,7 +21,7 @@ function fixAlert(dayIndex: number | undefined) {
         <header class="ov-head">
           <div class="ov-head__row">
             <NuxtLink to="/edit" class="ov-head__trip">
-              <span class="ov-head__name">{{ store.name }}</span>
+              <span class="ov-head__name">{{ store.displayName }}</span>
               <span class="ov-head__range">
                 {{ store.rangeLabel }}
                 <AppIcon name="pencil" :size="11" class="ov-head__pencil" />

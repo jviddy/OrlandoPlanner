@@ -19,11 +19,13 @@ function uid(): string {
   return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+const DEFAULT_TRIP_NAME = 'My Trip'
+
 function blankState(): TripState {
   return {
     version: VERSION,
     created: false,
-    name: '',
+    name: DEFAULT_TRIP_NAME,
     startDate: '',
     endDate: '',
     hotels: [],
@@ -96,11 +98,13 @@ export const useTripStore = defineStore('orlando-trip', {
 
     datesValid(): boolean {
       return Boolean(
-        this.name.trim() &&
-          this.startD &&
-          this.endD &&
-          this.endD.getTime() >= this.startD.getTime(),
+        this.startD && this.endD && this.endD.getTime() >= this.startD.getTime(),
       )
+    },
+
+    /** Trip name for display, falling back if the user has cleared the field. */
+    displayName(): string {
+      return this.name.trim() || DEFAULT_TRIP_NAME
     },
 
     dayCount(): number {
@@ -305,13 +309,23 @@ export const useTripStore = defineStore('orlando-trip', {
       }
     },
 
-    setHotel(index: number, value: string) {
+    setHotel(index: number, name: string) {
       const next = this.hotels.slice()
-      next[index] = value
+      next[index] = { ...next[index], name }
+      this.hotels = next
+    },
+    /** Set (or clear, passing null) the optional date range for a stay. */
+    setHotelDates(index: number, dates: { start: string; end: string } | null) {
+      const current = this.hotels[index]
+      if (!current) return
+      const next = this.hotels.slice()
+      next[index] = dates
+        ? { name: current.name, startDate: dates.start, endDate: dates.end }
+        : { name: current.name }
       this.hotels = next
     },
     addHotel() {
-      if (this.hotels.length < 4) this.hotels = [...this.hotels, '']
+      if (this.hotels.length < 4) this.hotels = [...this.hotels, { name: '' }]
     },
     removeHotel(index: number) {
       this.hotels = this.hotels.filter((_, i) => i !== index)
