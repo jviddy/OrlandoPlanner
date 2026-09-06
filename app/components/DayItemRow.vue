@@ -2,14 +2,22 @@
 import { parkName } from '~/data/parks'
 import type { DayItem } from '~/types/trip'
 
-const props = defineProps<{ item: DayItem; dayParkId: string | null }>()
+const props = defineProps<{
+  item: DayItem
+  dayParkId: string | null
+  daySecondParkId?: string | null
+}>()
 const emit = defineEmits<{ edit: [] }>()
+const store = useTripStore()
 
 const wrongPark = computed(
-  () => props.item.parkId && props.item.parkId !== props.dayParkId,
+  () =>
+    props.item.parkId &&
+    props.item.parkId !== props.dayParkId &&
+    props.item.parkId !== props.daySecondParkId,
 )
 const sub = computed(() => {
-  if (wrongPark.value) return `⚠ ${parkName(props.item.parkId)}`
+  if (wrongPark.value) return `⚠ ${parkName(props.item.parkId, store.customActivities)}`
   return props.item.state === 'booked' ? 'Confirmed' : 'Not booked yet'
 })
 </script>

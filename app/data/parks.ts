@@ -93,13 +93,44 @@ export const SHEET_GROUPS: { title: string; ids: string[] }[] = [
   { title: 'Off-park', ids: ['pool', 'shop', 'rest', 'travel'] },
 ]
 
-export function resortOf(parkId: string | null | undefined): Resort | null {
+/** A user-defined off-park option: their own label, one of a few icons. */
+export interface CustomActivity {
+  id: string
+  resort: 'off'
+  name: string
+  short: string
+  glyph: string
+}
+
+/** Icon choices offered when creating a custom activity. */
+export const CUSTOM_ACTIVITY_GLYPHS: { id: string; glyph: string }[] = [
+  { id: 'star', glyph: GLYPHS.star },
+  { id: 'heart', glyph: GLYPHS.heart },
+  { id: 'camera', glyph: GLYPHS.camera },
+  { id: 'gift', glyph: GLYPHS.gift },
+]
+
+/** Looks a park up in the fixed catalog, then in this trip's custom activities. */
+export function resolvePark(
+  parkId: string | null | undefined,
+  custom: CustomActivity[] = [],
+): Park | null {
   if (!parkId) return null
-  const park = PARK_BY_ID[parkId]
+  return PARK_BY_ID[parkId] ?? custom.find((c) => c.id === parkId) ?? null
+}
+
+export function resortOf(
+  parkId: string | null | undefined,
+  custom: CustomActivity[] = [],
+): Resort | null {
+  const park = resolvePark(parkId, custom)
   return park ? RESORTS[park.resort] : null
 }
 
-export function parkName(parkId: string | null | undefined): string {
+export function parkName(
+  parkId: string | null | undefined,
+  custom: CustomActivity[] = [],
+): string {
   if (!parkId) return 'Nothing set yet'
-  return PARK_BY_ID[parkId]?.name ?? 'Nothing set yet'
+  return resolvePark(parkId, custom)?.name ?? 'Nothing set yet'
 }

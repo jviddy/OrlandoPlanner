@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { PARK_BY_ID, parkName } from '~/data/parks'
+import { parkName, resolvePark, type CustomActivity } from '~/data/parks'
 import { TEMPLATES, templateParkId } from '~/data/templates'
 import {
   addDays,
@@ -34,6 +34,7 @@ function blankState(): TripState {
     flights: [],
     carHire: '',
     days: [],
+    customActivities: [],
     selectedDay: null,
     sheetOpen: false,
     justSet: null,
@@ -45,9 +46,12 @@ const MON_FULL = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ]
 
-function countResort(days: Day[], resort: string): number {
-  return days.filter((d) => d.parkId && PARK_BY_ID[d.parkId]?.resort === resort)
-    .length
+function countResort(days: Day[], resort: string, custom: CustomActivity[]): number {
+  return days.filter(
+    (d) =>
+      resolvePark(d.parkId, custom)?.resort === resort ||
+      resolvePark(d.secondParkId, custom)?.resort === resort,
+  ).length
 }
 
 interface Counter {
@@ -89,6 +93,7 @@ export const useTripStore = defineStore('orlando-trip', {
       'flights',
       'carHire',
       'days',
+      'customActivities',
     ],
     /**
      * `hotels` used to be `string[]`, and `flights` has gone through two
@@ -111,6 +116,10 @@ export const useTripStore = defineStore('orlando-trip', {
       )
       if (Array.isArray(s.hotels)) {
         s.hotels = s.hotels.map((h: unknown) => (typeof h === 'string' ? { name: h } : h))
+      }
+      if (!Array.isArray(s.customActivities)) s.customActivities = []
+      for (const day of s.days ?? []) {
+        if (day.secondParkId === undefined) day.secondParkId = null
       }
     },
   },
@@ -162,9 +171,9 @@ export const useTripStore = defineStore('orlando-trip', {
       return Math.max(0, diffDays(a, todayUTC()))
     },
 
-    disneyDays: (s): number => countResort(s.days, 'wdw'),
-    universalDays: (s): number => countResort(s.days, 'uor'),
-    offParkDays: (s): number => countResort(s.days, 'off'),
+    disneyDays: (s): number => countResort(s.days, 'wdw', s.customActivities),
+    universalDays: (s): number => countResort(s.days, 'uor', s.customActivities),
+    offParkDays: (s): number => countResort(s.days, 'off', s.customActivities),
     unsetDays: (s): number => s.days.filter((d) => !d.parkId).length,
 
     /**
@@ -188,9 +197,9 @@ export const useTripStore = defineStore('orlando-trip', {
     counters: (s): Counter[] => {
       const tD = s.ticketDays.disney || 0
       const tU = s.ticketDays.universal || 0
-      const d = countResort(s.days, 'wdw')
-      const u = countResort(s.days, 'uor')
-      const off = countResort(s.days, 'off')
+      const d = countResort(s.days, 'wdw', s.customActivities)
+      const u = countResort(s.days, 'uor', s.customActivities)
+      const off = countResort(s.days, 'off', s.customActivities)
       const unset = s.days.filter((x) => !x.parkId).length
       return [
         {
@@ -232,7 +241,7 @@ export const useTripStore = defineStore('orlando-trip', {
       const out: { dayIndex: number; item: DayItem }[] = []
       s.days.forEach((day, dayIndex) => {
         for (const item of day.items) {
-          if (item.parkId && item.parkId !== day.parkId) {
+          if (item.parkId && item.parkId !== day.parkId && item.parkId !== day.secondParkId) {
             out.push({ dayIndex, item })
           }
         }
@@ -257,7 +266,14 @@ export const useTripStore = defineStore('orlando-trip', {
           id: `wrong-${dayIndex}-${item.id}`,
           tone: 'warn',
           title: 'Reservation in the wrong park',
-          body: `Day ${dayIndex + 1} · ${item.title} at ${parkName(item.parkId)} — but this day is set to ${day.parkId ? parkName(day.parkId) : 'nothing'}.`,
+          body: `Day ${dayIndex + 1} · ${item.title} at ${parkName(item.parkId, this.customActivities)} — but this day is set to ${
+            day.parkId
+              ? [day.parkId, day.secondParkId]
+                  .filter((id): id is string => Boolean(id))
+                  .map((id) => parkName(id, this.customActivities))
+                  .join(' + ')
+              : 'nothing'
+          }.`,
           fixDayIndex: dayIndex,
         })
       }
@@ -410,6 +426,7 @@ export const useTripStore = defineStore('orlando-trip', {
         days.push({
           date: iso,
           parkId: carried ? carried.parkId : templateParkId(pattern, i, n),
+          secondParkId: carried?.secondParkId ?? null,
           note: carried?.note ?? '',
           items: carried?.items ?? [],
         })
@@ -434,10 +451,12 @@ export const useTripStore = defineStore('orlando-trip', {
       this.days = this.buildDays(null)
     },
 
-    assignDay(index: number, parkId: string | null) {
+    /** `secondParkId` is only kept when a primary park is also set (a park-hopper day). */
+    assignDay(index: number, parkId: string | null, secondParkId: string | null = null) {
       const day = this.days[index]
       if (!day) return
       day.parkId = parkId
+      day.secondParkId = parkId ? secondParkId : null
       this.justSet = index
       this.sheetOpen = false
     },
@@ -446,6 +465,16 @@ export const useTripStore = defineStore('orlando-trip', {
     },
     clearJustSet() {
       this.justSet = null
+    },
+
+    /** Adds a user-defined off-park option and returns its id. */
+    addCustomActivity(label: string, glyph: string): string {
+      const id = `custom-${uid()}`
+      this.customActivities = [
+        ...this.customActivities,
+        { id, resort: 'off', name: label, short: label, glyph },
+      ]
+      return id
     },
 
     setDayNote(index: number, note: string) {

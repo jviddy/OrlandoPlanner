@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PARK_BY_ID, RESORTS } from '~/data/parks'
+import { RESORTS, resolvePark } from '~/data/parks'
 import { parseISO } from '~/composables/useDates'
 import type { DayItem } from '~/types/trip'
 
@@ -46,7 +46,7 @@ function cancel() {
 /** Dot colour matches the item's own park when it has one, or the day's. */
 function itemDot(item: DayItem, dayParkId: string | null) {
   const effectiveParkId = item.parkId ?? dayParkId
-  const park = effectiveParkId ? PARK_BY_ID[effectiveParkId] : null
+  const park = resolvePark(effectiveParkId, store.customActivities)
   return {
     color: park
       ? RESORTS[park.resort].dot
@@ -60,7 +60,8 @@ function itemDot(item: DayItem, dayParkId: string | null) {
 function cellData(index: number) {
   const day = store.days[index]!
   const d = parseISO(day.date)
-  const park = day.parkId ? PARK_BY_ID[day.parkId] ?? null : null
+  const park = resolvePark(day.parkId, store.customActivities)
+  const park2 = resolvePark(day.secondParkId, store.customActivities)
   // Budget is 3 slots total: all items if 3 or fewer, otherwise the first
   // two plus a "+N" badge for the rest.
   const visibleItems = day.items.length <= 3 ? day.items : day.items.slice(0, 2)
@@ -69,7 +70,8 @@ function cellData(index: number) {
   return {
     dateNumber: d.getUTCDate(),
     parkId: day.parkId,
-    short: park?.short ?? '',
+    secondParkId: day.secondParkId,
+    short: [park?.short, park2?.short].filter(Boolean).join(' + '),
     dots,
     more: extra > 0 ? `+${extra}` : '',
     hotel: store.hotelsForDate(day.date).join(' + '),
@@ -107,6 +109,7 @@ function cellData(index: number) {
             <DayCircle
               :class="{ 'anim-pop': popIndex === cell }"
               :park-id="cellData(cell).parkId"
+              :second-park-id="cellData(cell).secondParkId"
               :date-number="cellData(cell).dateNumber"
               :size="40"
             />

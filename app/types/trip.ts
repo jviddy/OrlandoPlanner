@@ -1,3 +1,5 @@
+import type { CustomActivity } from '~/data/parks'
+
 export type ItemKind = 'dining' | 'fixed'
 export type ItemState = 'booked' | 'idea'
 
@@ -20,6 +22,8 @@ export interface Day {
   date: string
   /** null = unassigned. */
   parkId: string | null
+  /** Optional second park, for a park-hopper day. Only meaningful with `parkId` set. */
+  secondParkId: string | null
   note: string
   items: DayItem[]
 }
@@ -64,6 +68,9 @@ export interface TripState {
   carHire: string
 
   days: Day[]
+
+  /** User-defined off-park options, added from the quick-assign sheet. */
+  customActivities: CustomActivity[]
 
   /** Transient UI: which day the quick-assign sheet / day view is looking at. */
   selectedDay: number | null

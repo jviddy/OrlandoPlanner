@@ -6,8 +6,9 @@ const props = defineProps<{
   kind: ItemKind
   /** Present = editing; absent = adding. */
   item?: DayItem
-  /** The park this day is set to (so "another park" excludes it). */
+  /** The park(s) this day is set to (so "another park" excludes them). */
   dayParkId: string | null
+  daySecondParkId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -15,6 +16,9 @@ const emit = defineEmits<{
   cancel: []
   remove: []
 }>()
+
+const store = useTripStore()
+const otherParkOptions = computed(() => [...PARKS, ...store.customActivities])
 
 const title = ref(props.item?.title ?? '')
 const time = ref(props.item?.time ?? '')
@@ -92,10 +96,10 @@ function submit() {
       <select v-model="otherPark" class="input input--sm">
         <option value="">Same as this day</option>
         <option
-          v-for="p in PARKS"
+          v-for="p in otherParkOptions"
           :key="p.id"
           :value="p.id"
-          :disabled="p.id === dayParkId"
+          :disabled="p.id === dayParkId || p.id === daySecondParkId"
         >
           {{ p.name }}
         </option>

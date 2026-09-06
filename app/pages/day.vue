@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RESORTS, PARK_BY_ID, parkName } from '~/data/parks'
+import { RESORTS, parkName, resolvePark } from '~/data/parks'
 import { parseISO, useDates } from '~/composables/useDates'
 import type { DayItem, ItemKind } from '~/types/trip'
 
@@ -16,9 +16,15 @@ onMounted(() => {
 
 const index = computed(() => store.selectedDay ?? 0)
 const day = computed(() => store.selected)
-const park = computed(() => (day.value?.parkId ? PARK_BY_ID[day.value.parkId] ?? null : null))
+const park = computed(() => resolvePark(day.value?.parkId, store.customActivities))
 const resort = computed(() => (park.value ? RESORTS[park.value.resort] : null))
 const isLight = computed(() => !day.value?.parkId)
+const parkLabel = computed(() =>
+  [day.value?.parkId, day.value?.secondParkId]
+    .filter((id): id is string => Boolean(id))
+    .map((id) => parkName(id, store.customActivities))
+    .join(' + ') || parkName(null),
+)
 
 const headInk = computed(() => {
   if (isLight.value || !resort.value) return 'var(--text)'
@@ -41,11 +47,16 @@ const dateLine = computed(() => {
 
 const warnings = computed(() =>
   (day.value?.items ?? [])
-    .filter((it) => it.parkId && it.parkId !== day.value!.parkId)
+    .filter(
+      (it) =>
+        it.parkId &&
+        it.parkId !== day.value!.parkId &&
+        it.parkId !== day.value!.secondParkId,
+    )
     .map(
       (it) =>
-        `${it.title} at ${parkName(it.parkId)} — but this day is set to ${
-          day.value!.parkId ? parkName(day.value!.parkId) : 'nothing'
+        `${it.title} at ${parkName(it.parkId, store.customActivities)} — but this day is set to ${
+          day.value!.parkId ? parkLabel.value : 'nothing'
         }.`,
     ),
 )
@@ -125,10 +136,16 @@ function removeItem(id: string) {
               aria-label="Change this day"
               @click="store.openSheet(index)"
             >
-              <DayCircle :park-id="day.parkId" :size="56" inverted bob />
+              <DayCircle
+                :park-id="day.parkId"
+                :second-park-id="day.secondParkId"
+                :size="56"
+                inverted
+                bob
+              />
             </button>
             <div class="dv-head__names">
-              <p class="dv-head__park">{{ parkName(day.parkId) }}</p>
+              <p class="dv-head__park">{{ parkLabel }}</p>
               <p class="dv-head__date" :style="{ color: headSub }">{{ dateLine }}</p>
             </div>
           </div>
@@ -152,6 +169,7 @@ function removeItem(id: string) {
                   :kind="g.key"
                   :item="it"
                   :day-park-id="day.parkId"
+                  :day-second-park-id="day.secondParkId"
                   @save="(v) => saveEdit(it.id, v)"
                   @cancel="editingId = null"
                   @remove="removeItem(it.id)"
@@ -160,6 +178,7 @@ function removeItem(id: string) {
                   v-else
                   :item="it"
                   :day-park-id="day.parkId"
+                  :day-second-park-id="day.secondParkId"
                   @edit="editingId = it.id"
                 />
               </template>
@@ -168,6 +187,7 @@ function removeItem(id: string) {
                 v-if="adding[g.key]"
                 :kind="g.key"
                 :day-park-id="day.parkId"
+                :day-second-park-id="day.secondParkId"
                 @save="(v) => saveNew(g.key, v)"
                 @cancel="adding[g.key] = false"
                 @remove="adding[g.key] = false"
