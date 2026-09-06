@@ -4,7 +4,7 @@
  * collapsible sections. Shared by the new-trip gate and the edit screen.
  * Writes straight to the store as you type.
  */
-import { addDays, parseISO, toISO } from '~/composables/useDates'
+import { addDays, diffDays, parseISO, toISO } from '~/composables/useDates'
 
 const store = useTripStore()
 
@@ -30,6 +30,12 @@ function onTripDatesUpdate({ start, end }: { start: string; end: string }) {
 }
 function onStayDatesUpdate(index: number, value: { start: string; end: string }) {
   store.setHotelDates(index, value.start ? value : null)
+}
+
+function stayNights(i: number): number {
+  const h = store.hotels[i]
+  if (!h?.startDate || !h?.endDate) return 0
+  return diffDays(parseISO(h.endDate), parseISO(h.startDate))
 }
 
 /** ISO dates already covered by a *different* stay, for the "already booked" dot. */
@@ -123,20 +129,24 @@ function setTicket(key: 'disney' | 'universal', value: string) {
                 @input="store.setHotel(i, ($event.target as HTMLInputElement).value)"
               />
             </label>
-            <DateRangeField
-              v-if="store.datesValid"
-              compact
-              variant="days"
-              class="stay__dates"
-              :start="store.hotels[i]?.startDate ?? ''"
-              :end="store.hotels[i]?.endDate ?? ''"
-              :min="store.startDate"
-              :max="store.endDate"
-              :assigned-dates="otherStayDates(i)"
-              placeholder="+ Add dates for this stay (optional)"
-              sheet-title="Stay dates"
-              @update="onStayDatesUpdate(i, $event)"
-            />
+            <div v-if="store.datesValid" class="stay__dates-row">
+              <DateRangeField
+                compact
+                variant="days"
+                class="stay__dates"
+                :start="store.hotels[i]?.startDate ?? ''"
+                :end="store.hotels[i]?.endDate ?? ''"
+                :min="store.startDate"
+                :max="store.endDate"
+                :assigned-dates="otherStayDates(i)"
+                placeholder="+ Add dates for this stay (optional)"
+                sheet-title="Stay dates"
+                @update="onStayDatesUpdate(i, $event)"
+              />
+              <span v-if="stayNights(i) > 0" class="stay__nights">
+                · {{ stayNights(i) }} night{{ stayNights(i) === 1 ? '' : 's' }}
+              </span>
+            </div>
             <span v-else class="stay__dates-hint">Set your trip dates to add stay dates</span>
           </div>
           <button type="button" class="disc__action" @click="store.addHotel()">
@@ -204,25 +214,48 @@ function setTicket(key: 'disney' | 'universal', value: string) {
           <AppIcon :name="open.fly ? 'chevronUp' : 'chevronDown'" :size="14" class="disc__chev" />
         </button>
         <div v-if="open.fly" class="disc__body">
-          <div
-            v-for="(_, i) in Math.max(2, store.flights.length)"
-            :key="i"
-            class="drow"
-          >
-            <span>{{ flightLabel(i) }}</span>
-            <input
-              class="input input--sm"
-              type="text"
-              :placeholder="flightPlaceholder(i)"
-              :value="store.flights[i]?.route ?? ''"
-              @input="store.setFlight(i, { route: ($event.target as HTMLInputElement).value })"
-            />
-            <input
-              class="input input--sm drow__time"
-              type="time"
-              :value="store.flights[i]?.time ?? ''"
-              @input="store.setFlight(i, { time: ($event.target as HTMLInputElement).value })"
-            />
+          <div v-for="(_, i) in Math.max(2, store.flights.length)" :key="i" class="flight">
+            <div class="drow">
+              <span>{{ flightLabel(i) }}</span>
+              <input
+                class="input input--sm"
+                type="text"
+                :placeholder="flightPlaceholder(i)"
+                :value="store.flights[i]?.route ?? ''"
+                @input="store.setFlight(i, { route: ($event.target as HTMLInputElement).value })"
+              />
+            </div>
+            <div class="flight__times">
+              <label class="field field--tiny">
+                <span>Date</span>
+                <input
+                  class="input input--sm"
+                  type="date"
+                  :min="store.startDate || undefined"
+                  :max="store.endDate || undefined"
+                  :value="store.flights[i]?.date ?? ''"
+                  @input="store.setFlight(i, { date: ($event.target as HTMLInputElement).value })"
+                />
+              </label>
+              <label class="field field--tiny">
+                <span>Takeoff</span>
+                <input
+                  class="input input--sm"
+                  type="time"
+                  :value="store.flights[i]?.departTime ?? ''"
+                  @input="store.setFlight(i, { departTime: ($event.target as HTMLInputElement).value })"
+                />
+              </label>
+              <label class="field field--tiny">
+                <span>Landing</span>
+                <input
+                  class="input input--sm"
+                  type="time"
+                  :value="store.flights[i]?.arriveTime ?? ''"
+                  @input="store.setFlight(i, { arriveTime: ($event.target as HTMLInputElement).value })"
+                />
+              </label>
+            </div>
           </div>
           <button
             v-if="store.flights.length < 6"
@@ -338,18 +371,40 @@ function setTicket(key: 'disney' | 'universal', value: string) {
 .drow .input {
   flex: 1;
 }
-.drow .drow__time {
-  flex: none;
-  width: 92px;
+.flight {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.flight__times {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.field--tiny > span {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.field--tiny .input {
+  padding: 8px 9px;
 }
 .stay {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.stay__dates {
+.stay__dates-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   align-self: flex-end;
   margin-right: 2px;
+}
+.stay__nights {
+  font-size: 12px;
+  color: var(--text-faint);
+  white-space: nowrap;
 }
 .stay__dates-hint {
   align-self: flex-end;

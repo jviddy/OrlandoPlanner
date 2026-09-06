@@ -138,6 +138,9 @@ button {
   padding: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  /* Without this, two quick taps on any button (e.g. the calendar's month
+     arrows) can register as a double-tap-to-zoom gesture on mobile. */
+  touch-action: manipulation;
 }
 
 input,

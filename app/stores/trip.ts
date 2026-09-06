@@ -91,9 +91,10 @@ export const useTripStore = defineStore('orlando-trip', {
       'days',
     ],
     /**
-     * `hotels` used to be `string[]` and `flights` used to be `{ out, back }`
-     * — reshape anything persisted in those old shapes so existing trips
-     * don't lose data (or crash) after the schema change.
+     * `hotels` used to be `string[]`, and `flights` has gone through two
+     * shapes (`{ out, back }`, then `{ route, time }`) — reshape anything
+     * persisted in an old shape so existing trips don't lose data (or crash)
+     * after a schema change.
      */
     afterHydrate(ctx) {
       const s = ctx.store as any
@@ -103,6 +104,11 @@ export const useTripStore = defineStore('orlando-trip', {
           .filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '')
           .map((route: string) => ({ route, time: '' }))
       }
+      s.flights = s.flights.map((f: any) =>
+        f && typeof f === 'object' && !('departTime' in f)
+          ? { route: f.route ?? '', date: '', departTime: f.time ?? '', arriveTime: '' }
+          : f,
+      )
       if (Array.isArray(s.hotels)) {
         s.hotels = s.hotels.map((h: unknown) => (typeof h === 'string' ? { name: h } : h))
       }
@@ -160,6 +166,24 @@ export const useTripStore = defineStore('orlando-trip', {
     universalDays: (s): number => countResort(s.days, 'uor'),
     offParkDays: (s): number => countResort(s.days, 'off'),
     unsetDays: (s): number => s.days.filter((d) => !d.parkId).length,
+
+    /**
+     * Named hotel(s) covering the night of a given ISO date. If no stay has
+     * explicit dates, a single named stay is assumed to cover the whole
+     * trip (matching how a stay behaves before you set its own dates).
+     */
+    hotelsForDate(): (iso: string) => string[] {
+      const named = this.hotels.filter((h) => h.name.trim())
+      const withDates = named.filter((h) => h.startDate && h.endDate)
+      if (withDates.length) {
+        return (iso: string) =>
+          withDates
+            .filter((h) => iso >= h.startDate! && iso < h.endDate!)
+            .map((h) => h.name.trim())
+      }
+      const whole = named.length === 1 ? [named[0]!.name.trim()] : []
+      return () => whole
+    },
 
     counters: (s): Counter[] => {
       const tD = s.ticketDays.disney || 0
@@ -348,13 +372,28 @@ export const useTripStore = defineStore('orlando-trip', {
       this.hotels = this.hotels.filter((_, i) => i !== index)
     },
 
-    setFlight(index: number, patch: Partial<{ route: string; time: string }>) {
+    setFlight(
+      index: number,
+      patch: Partial<{ route: string; date: string; departTime: string; arriveTime: string }>,
+    ) {
       const next = this.flights.slice()
-      next[index] = { route: '', time: '', ...next[index], ...patch }
+      next[index] = {
+        route: '',
+        date: '',
+        departTime: '',
+        arriveTime: '',
+        ...next[index],
+        ...patch,
+      }
       this.flights = next
     },
     addFlight() {
-      if (this.flights.length < 6) this.flights = [...this.flights, { route: '', time: '' }]
+      if (this.flights.length < 6) {
+        this.flights = [
+          ...this.flights,
+          { route: '', date: '', departTime: '', arriveTime: '' },
+        ]
+      }
     },
     removeFlight(index: number) {
       this.flights = this.flights.filter((_, i) => i !== index)

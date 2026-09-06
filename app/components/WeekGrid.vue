@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { PARK_BY_ID } from '~/data/parks'
+import { PARK_BY_ID, RESORTS } from '~/data/parks'
 import { parseISO } from '~/composables/useDates'
+import type { DayItem } from '~/types/trip'
 
 const store = useTripStore()
 const COL_DOW = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
@@ -42,20 +43,36 @@ function cancel() {
   clearTimeout(pressTimer)
 }
 
+/** Dot colour matches the item's own park when it has one, or the day's. */
+function itemDot(item: DayItem, dayParkId: string | null) {
+  const effectiveParkId = item.parkId ?? dayParkId
+  const park = effectiveParkId ? PARK_BY_ID[effectiveParkId] : null
+  return {
+    color: park
+      ? RESORTS[park.resort].dot
+      : item.kind === 'dining'
+        ? 'var(--dot-dining)'
+        : 'var(--dot-fixed)',
+    title: park ? park.name : item.kind === 'dining' ? 'Dining' : 'Fixed time',
+  }
+}
+
 function cellData(index: number) {
   const day = store.days[index]!
   const d = parseISO(day.date)
   const park = day.parkId ? PARK_BY_ID[day.parkId] ?? null : null
-  const dots = day.items
-    .slice(0, 3)
-    .map((it) => (it.kind === 'dining' ? 'var(--dot-dining)' : 'var(--dot-fixed)'))
-  const extra = day.items.length - dots.length
+  // Budget is 3 slots total: all items if 3 or fewer, otherwise the first
+  // two plus a "+N" badge for the rest.
+  const visibleItems = day.items.length <= 3 ? day.items : day.items.slice(0, 2)
+  const dots = visibleItems.map((it) => itemDot(it, day.parkId))
+  const extra = day.items.length - visibleItems.length
   return {
     dateNumber: d.getUTCDate(),
     parkId: day.parkId,
     short: park?.short ?? '',
     dots,
     more: extra > 0 ? `+${extra}` : '',
+    hotel: store.hotelsForDate(day.date).join(' + '),
   }
 }
 </script>
@@ -96,14 +113,22 @@ function cellData(index: number) {
             <span class="cell__short">{{ cellData(cell).short }}</span>
             <span class="cell__dots">
               <span
-                v-for="(c, di) in cellData(cell).dots"
+                v-for="(dot, di) in cellData(cell).dots"
                 :key="di"
                 class="cell__dot"
-                :style="{ background: c }"
+                :title="dot.title"
+                :style="{ background: dot.color }"
               />
               <span v-if="cellData(cell).more" class="cell__more">{{
                 cellData(cell).more
               }}</span>
+            </span>
+            <span
+              v-if="cellData(cell).hotel"
+              class="cell__hotel"
+              :title="cellData(cell).hotel"
+            >
+              {{ cellData(cell).hotel }}
             </span>
           </button>
         </template>
@@ -197,5 +222,17 @@ function cellData(index: number) {
   font-weight: 700;
   color: var(--text-dim);
   line-height: 1;
+}
+.cell__hotel {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--text-dim);
+  line-height: 1.1;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  margin-top: 1px;
 }
 </style>

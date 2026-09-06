@@ -31,6 +31,7 @@ export default defineNuxtConfig({
             'Plan an Orlando theme-park trip: see the whole holiday as a grid of days, set each day, and keep dining and fixed-time plans in one place.',
         },
         { name: 'theme-color', content: '#fdfaf3' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
       ],
       link: [

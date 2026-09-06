@@ -16,7 +16,15 @@ function pick(parkId: string) {
 function clearDay() {
   if (store.selectedDay !== null) store.clearDay(store.selectedDay)
 }
+/**
+ * Closing normally fades the sheet out — nice on this page, but a full
+ * navigation swaps the whole screen underneath at the same time, so the
+ * fading sheet is briefly left stacked on top of the new page. Skip the
+ * animation for this one case so "Open day" reads as instant.
+ */
+const instantClose = ref(false)
 function openDay() {
+  instantClose.value = true
   store.closeSheet()
   navigateTo('/day')
 }
@@ -27,6 +35,7 @@ function onKey(e: KeyboardEvent) {
 watch(
   () => store.sheetOpen,
   (open) => {
+    if (open) instantClose.value = false
     if (typeof window === 'undefined') return
     if (open) window.addEventListener('keydown', onKey)
     else window.removeEventListener('keydown', onKey)
@@ -38,7 +47,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Transition name="sheet">
+  <Transition name="sheet" :duration="instantClose ? 0 : undefined">
     <div v-if="store.sheetOpen" class="sheet-root">
       <div class="sheet-scrim" @click="store.closeSheet()" />
       <div class="sheet" role="dialog" aria-modal="true" :aria-label="title">

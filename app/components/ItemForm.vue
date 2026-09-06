@@ -29,6 +29,12 @@ const placeholder = computed(() =>
 
 const canSave = computed(() => title.value.trim().length > 0)
 
+const MEAL_PRESETS = [
+  { label: 'Breakfast', time: '08:00' },
+  { label: 'Lunch', time: '12:30' },
+  { label: 'Dinner', time: '18:00' },
+]
+
 function submit() {
   if (!canSave.value) return
   emit('save', {
@@ -53,6 +59,19 @@ function submit() {
         autofocus
       />
     </label>
+
+    <div v-if="kind === 'dining'" class="iform__presets">
+      <button
+        v-for="p in MEAL_PRESETS"
+        :key="p.label"
+        type="button"
+        class="chip"
+        :class="{ 'chip--on': time === p.time }"
+        @click="time = p.time"
+      >
+        {{ p.label }}
+      </button>
+    </div>
 
     <div class="iform__row">
       <label class="field">
@@ -113,10 +132,34 @@ function submit() {
   border-radius: var(--r-row);
   padding: 13px;
 }
+.iform__presets {
+  display: flex;
+  gap: 6px;
+}
+.chip {
+  padding: 7px 12px;
+  border-radius: var(--r-pill);
+  background: #f2f4f9;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1.5px solid transparent;
+}
+.chip--on {
+  background: var(--tile-selected);
+  color: var(--c-navy);
+  border-color: var(--c-navy);
+}
 .iform__row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+.iform__row > .field {
+  /* Grid items default to min-width: auto, so a native time input's own
+     intrinsic width can push past its 1fr track and overlap the next
+     column instead of shrinking to fit. */
+  min-width: 0;
 }
 .iform__actions {
   display: flex;

@@ -32,8 +32,11 @@ export interface TicketDays {
 export interface Flight {
   /** Free text, e.g. "MAN → MCO". */
   route: string
+  /** ISO date, or '' if not set. */
+  date: string
   /** 'HH:MM' 24h, or '' for "no time yet". */
-  time: string
+  departTime: string
+  arriveTime: string
 }
 
 export interface Stay {
