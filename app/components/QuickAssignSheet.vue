@@ -67,6 +67,18 @@ function openDay() {
   navigateTo('/day')
 }
 
+/**
+ * A `duration: 0` CSS-transition override can fail to fire its completion
+ * event in some browsers, leaving Vue waiting forever to remove the leaving
+ * element — which then sits full-screen over every page after it,
+ * `pointer-events` and all, silently eating scroll/click input app-wide.
+ * Switching to JS-hook mode for this one case and calling `done()`
+ * ourselves is the documented, reliable way to skip a transition.
+ */
+function onLeave(_el: Element, done: () => void) {
+  if (instantClose.value) done()
+}
+
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') store.closeSheet()
 }
@@ -92,7 +104,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Transition name="sheet" :duration="instantClose ? 0 : undefined">
+  <Transition name="sheet" :css="!instantClose" @leave="onLeave">
     <div v-if="store.sheetOpen" class="sheet-root">
       <div class="sheet-scrim" @click="store.closeSheet()" />
       <div class="sheet" role="dialog" aria-modal="true" :aria-label="title">

@@ -90,14 +90,16 @@ function cancel() {
               :size="40"
             />
             <span class="cell__short">{{ dayCell(cell).short }}</span>
-            <span class="cell__dots">
+            <span v-if="dayCell(cell).items.length" class="cell__items">
               <span
-                v-for="(dot, di) in dayCell(cell).dots"
-                :key="di"
-                class="cell__dot"
-                :title="dot.title"
-                :style="{ background: dot.color }"
-              />
+                v-for="(it, ii) in dayCell(cell).items"
+                :key="ii"
+                class="cell__item"
+                :title="it.title"
+                :style="{ color: it.color }"
+              >
+                {{ it.label }}
+              </span>
               <span v-if="dayCell(cell).more" class="cell__more">{{
                 dayCell(cell).more
               }}</span>
@@ -185,16 +187,22 @@ function cancel() {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.cell__dots {
+.cell__items {
   display: flex;
-  gap: 2px;
-  height: 5px;
+  flex-direction: column;
   align-items: center;
+  gap: 1px;
+  width: 100%;
 }
-.cell__dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
+.cell__item {
+  max-width: 100%;
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
 }
 .cell__more {
   font-size: 8px;

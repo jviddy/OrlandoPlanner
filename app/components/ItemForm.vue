@@ -155,14 +155,21 @@ function submit() {
   border-color: var(--c-navy);
 }
 .iform__row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Stacked by default — a native time input's own intrinsic minimum
+     width can still exceed a narrow phone's half-width column even with
+     min-width: 0 on the grid item, so side by side only once there's
+     room to spare (same breakpoint the app shell itself widens at). */
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
+@media (min-width: 700px) {
+  .iform__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
 .iform__row > .field {
-  /* Grid items default to min-width: auto, so a native time input's own
-     intrinsic width can push past its 1fr track and overlap the next
-     column instead of shrinking to fit. */
   min-width: 0;
 }
 .iform__actions {

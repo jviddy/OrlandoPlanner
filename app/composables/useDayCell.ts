@@ -2,8 +2,12 @@ import { RESORTS, resolvePark } from '~/data/parks'
 import { parseISO } from '~/composables/useDates'
 import type { DayItem } from '~/types/trip'
 
-export interface DayCellDot {
+export interface DayCellItem {
+  /** The restaurant/activity name itself. */
+  label: string
+  /** Colour matches the item's own park when it has one, or the day's. */
   color: string
+  /** Fuller text for a hover tooltip — name plus its park. */
   title: string
 }
 
@@ -12,7 +16,7 @@ export interface DayCellData {
   parkId: string | null
   secondParkId: string | null
   short: string
-  dots: DayCellDot[]
+  items: DayCellItem[]
   more: string
   hotel: string
 }
@@ -21,17 +25,17 @@ export interface DayCellData {
 export function useDayCell() {
   const store = useTripStore()
 
-  /** Dot colour matches the item's own park when it has one, or the day's. */
-  function itemDot(item: DayItem, dayParkId: string | null): DayCellDot {
+  function cellItem(item: DayItem, dayParkId: string | null): DayCellItem {
     const effectiveParkId = item.parkId ?? dayParkId
     const park = resolvePark(effectiveParkId, store.customActivities)
     return {
+      label: item.title,
       color: park
         ? RESORTS[park.resort].dot
         : item.kind === 'dining'
           ? 'var(--dot-dining)'
           : 'var(--dot-fixed)',
-      title: park ? park.name : item.kind === 'dining' ? 'Dining' : 'Fixed time',
+      title: park ? `${item.title} — ${park.name}` : item.title,
     }
   }
 
@@ -43,14 +47,14 @@ export function useDayCell() {
     // Budget is 3 slots total: all items if 3 or fewer, otherwise the first
     // two plus a "+N" badge for the rest.
     const visibleItems = day.items.length <= 3 ? day.items : day.items.slice(0, 2)
-    const dots = visibleItems.map((it) => itemDot(it, day.parkId))
+    const items = visibleItems.map((it) => cellItem(it, day.parkId))
     const extra = day.items.length - visibleItems.length
     return {
       dateNumber: d.getUTCDate(),
       parkId: day.parkId,
       secondParkId: day.secondParkId,
       short: [park?.short, park2?.short].filter(Boolean).join(' + '),
-      dots,
+      items,
       more: extra > 0 ? `+${extra}` : '',
       hotel: store.hotelsForDate(day.date).join(' + '),
     }
