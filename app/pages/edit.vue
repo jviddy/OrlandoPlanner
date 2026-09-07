@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { WeekStart } from '~/types/trip'
+
 useHead({ title: 'Edit trip · Orlando Planner' })
 
 const store = useTripStore()
@@ -6,6 +8,12 @@ const store = useTripStore()
 onMounted(() => {
   if (!store.hasTrip) navigateTo('/new', { replace: true })
 })
+
+const weekStartOptions: { value: WeekStart; label: string }[] = [
+  { value: 'sunday', label: 'Sunday' },
+  { value: 'monday', label: 'Monday' },
+  { value: 'tripDay1', label: 'Day 1 of my trip' },
+]
 
 const confirmReset = ref(false)
 function reset() {
@@ -30,6 +38,22 @@ function reset() {
         </header>
 
         <TripDetailsFields />
+
+        <div class="edit__section">
+          <p class="group-label">Week starts on</p>
+          <div class="segmented">
+            <button
+              v-for="opt in weekStartOptions"
+              :key="opt.value"
+              type="button"
+              class="segmented__btn"
+              :class="{ 'segmented__btn--on': store.weekStart === opt.value }"
+              @click="store.updateFields({ weekStart: opt.value })"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
 
         <div class="edit__danger">
           <hr />
@@ -79,6 +103,30 @@ function reset() {
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-muted);
+}
+.edit__section {
+  padding: 4px 20px 20px;
+}
+.segmented {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.segmented__btn {
+  flex: 1;
+  padding: 10px 6px;
+  border-radius: var(--r-sheet-tile);
+  background: #f2f4f9;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  border: 1.5px solid transparent;
+}
+.segmented__btn--on {
+  background: var(--tile-selected);
+  color: var(--c-navy);
+  border-color: var(--c-navy);
 }
 .edit__danger {
   padding: 4px 20px 28px;

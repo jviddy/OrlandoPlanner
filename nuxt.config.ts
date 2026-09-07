@@ -60,6 +60,8 @@ export default defineNuxtConfig({
     presets: [
       { from: '~/stores/trip', imports: ['useTripStore'] },
       { from: '~/composables/useDates', imports: ['useDates'] },
+      { from: '~/composables/useDayCell', imports: ['useDayCell'] },
+      { from: '~/composables/useViewMode', imports: ['useViewMode'] },
     ],
   },
 

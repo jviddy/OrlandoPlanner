@@ -51,6 +51,9 @@ export const ICONS = {
   plane: 'M21 12 3 19.5l3.4-7.5L3 4.5 21 12ZM6.4 12H14',
   pencil: 'M4 20h4L18.5 9.5a2 2 0 0 0-3-3L5 17v3M14 6.5l3 3',
   calendar: 'M4 5h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM3 10h18M8 3v4M16 3v4',
+  grid: 'M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z',
+  list: 'M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01',
+  share: 'M12 15V4m0 0 3.5 3.5M12 4 8.5 7.5M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6',
 } as const
 
 export type IconName = keyof typeof ICONS

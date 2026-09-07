@@ -2,6 +2,7 @@
 useHead({ title: 'Orlando Trip Planner' })
 
 const store = useTripStore()
+const { viewMode } = useViewMode()
 
 onMounted(() => {
   if (!store.hasTrip) navigateTo('/new', { replace: true })
@@ -47,7 +48,27 @@ function fixAlert(dayIndex: number | undefined) {
             @action="fixAlert(a.fixDayIndex)"
           />
 
-          <WeekGrid />
+          <div class="view-toggle">
+            <button
+              type="button"
+              class="view-toggle__btn"
+              :class="{ 'view-toggle__btn--on': viewMode === 'grid' }"
+              @click="viewMode = 'grid'"
+            >
+              <AppIcon name="grid" :size="14" /> Grid
+            </button>
+            <button
+              type="button"
+              class="view-toggle__btn"
+              :class="{ 'view-toggle__btn--on': viewMode === 'list' }"
+              @click="viewMode = 'list'"
+            >
+              <AppIcon name="list" :size="14" /> List
+            </button>
+          </div>
+
+          <WeekGrid v-if="viewMode === 'grid'" />
+          <DayList v-else />
 
           <div class="hint">
             <AppIcon name="info" :size="15" />
@@ -144,6 +165,29 @@ function fixAlert(dayIndex: number | undefined) {
 }
 .ov-alert + .weeks {
   margin-top: 3px;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.view-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  border: 1.5px solid var(--warm-border);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.view-toggle__btn--on {
+  background: var(--c-navy);
+  border-color: var(--c-navy);
+  color: #fff;
 }
 
 .hint {

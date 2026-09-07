@@ -28,6 +28,7 @@ function blankState(): TripState {
     name: DEFAULT_TRIP_NAME,
     startDate: '',
     endDate: '',
+    weekStart: 'monday',
     hotels: [],
     ticketDays: { disney: 0, universal: 0 },
     parkHopper: false,
@@ -87,6 +88,7 @@ export const useTripStore = defineStore('orlando-trip', {
       'name',
       'startDate',
       'endDate',
+      'weekStart',
       'hotels',
       'ticketDays',
       'parkHopper',
@@ -118,6 +120,7 @@ export const useTripStore = defineStore('orlando-trip', {
         s.hotels = s.hotels.map((h: unknown) => (typeof h === 'string' ? { name: h } : h))
       }
       if (!Array.isArray(s.customActivities)) s.customActivities = []
+      if (!s.weekStart) s.weekStart = 'monday'
       for (const day of s.days ?? []) {
         if (day.secondParkId === undefined) day.secondParkId = null
       }
@@ -313,7 +316,12 @@ export const useTripStore = defineStore('orlando-trip', {
     weeks(): WeekView[] {
       if (!this.days.length || !this.firstDate) return []
       const start = this.firstDate
-      const pad = (start.getUTCDay() + 6) % 7
+      const pad =
+        this.weekStart === 'tripDay1'
+          ? 0
+          : this.weekStart === 'sunday'
+            ? start.getUTCDay()
+            : (start.getUTCDay() + 6) % 7
 
       const cells: (number | null)[] = []
       for (let i = 0; i < pad; i++) cells.push(null)
@@ -350,6 +358,7 @@ export const useTripStore = defineStore('orlando-trip', {
           | 'name'
           | 'startDate'
           | 'endDate'
+          | 'weekStart'
           | 'hotels'
           | 'ticketDays'
           | 'parkHopper'

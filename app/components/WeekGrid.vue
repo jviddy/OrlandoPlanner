@@ -1,10 +1,21 @@
 <script setup lang="ts">
-import { RESORTS, resolvePark } from '~/data/parks'
-import { parseISO } from '~/composables/useDates'
-import type { DayItem } from '~/types/trip'
-
 const store = useTripStore()
-const COL_DOW = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+const { dayCell } = useDayCell()
+
+const DOW_FROM_SUNDAY = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+/**
+ * The letters across the top of each week row. For the two calendar-aligned
+ * modes this is just the fixed order; for `tripDay1` there's no padding at
+ * all (see the store's `weeks` getter), so every row advances in exact
+ * multiples of 7 days and column 0 always lands back on the trip's own
+ * start weekday — so a fixed, anchored header still works.
+ */
+const colDow = computed(() => {
+  if (store.weekStart === 'sunday') return DOW_FROM_SUNDAY
+  if (store.weekStart === 'monday') return [...DOW_FROM_SUNDAY.slice(1), DOW_FROM_SUNDAY[0]!]
+  const anchor = store.firstDate ? store.firstDate.getUTCDay() : 0
+  return Array.from({ length: 7 }, (_, i) => DOW_FROM_SUNDAY[(anchor + i) % 7]!)
+})
 
 let pressTimer: ReturnType<typeof setTimeout> | undefined
 let longFired = false
@@ -42,41 +53,6 @@ function end(index: number) {
 function cancel() {
   clearTimeout(pressTimer)
 }
-
-/** Dot colour matches the item's own park when it has one, or the day's. */
-function itemDot(item: DayItem, dayParkId: string | null) {
-  const effectiveParkId = item.parkId ?? dayParkId
-  const park = resolvePark(effectiveParkId, store.customActivities)
-  return {
-    color: park
-      ? RESORTS[park.resort].dot
-      : item.kind === 'dining'
-        ? 'var(--dot-dining)'
-        : 'var(--dot-fixed)',
-    title: park ? park.name : item.kind === 'dining' ? 'Dining' : 'Fixed time',
-  }
-}
-
-function cellData(index: number) {
-  const day = store.days[index]!
-  const d = parseISO(day.date)
-  const park = resolvePark(day.parkId, store.customActivities)
-  const park2 = resolvePark(day.secondParkId, store.customActivities)
-  // Budget is 3 slots total: all items if 3 or fewer, otherwise the first
-  // two plus a "+N" badge for the rest.
-  const visibleItems = day.items.length <= 3 ? day.items : day.items.slice(0, 2)
-  const dots = visibleItems.map((it) => itemDot(it, day.parkId))
-  const extra = day.items.length - visibleItems.length
-  return {
-    dateNumber: d.getUTCDate(),
-    parkId: day.parkId,
-    secondParkId: day.secondParkId,
-    short: [park?.short, park2?.short].filter(Boolean).join(' + '),
-    dots,
-    more: extra > 0 ? `+${extra}` : '',
-    hotel: store.hotelsForDate(day.date).join(' + '),
-  }
-}
 </script>
 
 <template>
@@ -89,7 +65,7 @@ function cellData(index: number) {
       <div class="week__grid">
         <template v-for="(cell, ci) in week.cells" :key="ci">
           <div v-if="cell === null" class="cell cell--blank" aria-hidden="true">
-            <span class="cell__dow">{{ COL_DOW[ci] }}</span>
+            <span class="cell__dow">{{ colDow[ci] }}</span>
           </div>
           <button
             v-else
@@ -105,33 +81,33 @@ function cellData(index: number) {
             @keydown.enter.prevent="store.openSheet(cell)"
             @keydown.space.prevent="store.openSheet(cell)"
           >
-            <span class="cell__dow">{{ COL_DOW[ci] }}</span>
+            <span class="cell__dow">{{ colDow[ci] }}</span>
             <DayCircle
               :class="{ 'anim-pop': popIndex === cell }"
-              :park-id="cellData(cell).parkId"
-              :second-park-id="cellData(cell).secondParkId"
-              :date-number="cellData(cell).dateNumber"
+              :park-id="dayCell(cell).parkId"
+              :second-park-id="dayCell(cell).secondParkId"
+              :date-number="dayCell(cell).dateNumber"
               :size="40"
             />
-            <span class="cell__short">{{ cellData(cell).short }}</span>
+            <span class="cell__short">{{ dayCell(cell).short }}</span>
             <span class="cell__dots">
               <span
-                v-for="(dot, di) in cellData(cell).dots"
+                v-for="(dot, di) in dayCell(cell).dots"
                 :key="di"
                 class="cell__dot"
                 :title="dot.title"
                 :style="{ background: dot.color }"
               />
-              <span v-if="cellData(cell).more" class="cell__more">{{
-                cellData(cell).more
+              <span v-if="dayCell(cell).more" class="cell__more">{{
+                dayCell(cell).more
               }}</span>
             </span>
             <span
-              v-if="cellData(cell).hotel"
+              v-if="dayCell(cell).hotel"
               class="cell__hotel"
-              :title="cellData(cell).hotel"
+              :title="dayCell(cell).hotel"
             >
-              {{ cellData(cell).hotel }}
+              {{ dayCell(cell).hotel }}
             </span>
           </button>
         </template>

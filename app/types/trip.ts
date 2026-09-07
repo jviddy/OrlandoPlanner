@@ -1,5 +1,7 @@
 import type { CustomActivity } from '~/data/parks'
 
+export type WeekStart = 'sunday' | 'monday' | 'tripDay1'
+
 export type ItemKind = 'dining' | 'fixed'
 export type ItemState = 'booked' | 'idea'
 
@@ -58,6 +60,8 @@ export interface TripState {
   name: string
   startDate: string
   endDate: string
+  /** Which day starts a row in the overview grid. */
+  weekStart: WeekStart
 
   /** Split stay: [] | [hotel1] | [hotel1, hotel2]. */
   hotels: Stay[]
