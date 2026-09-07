@@ -3,6 +3,7 @@ useHead({ title: 'Orlando Trip Planner' })
 
 const store = useTripStore()
 const { viewMode } = useViewMode()
+const shareSheetRef = ref<{ open: () => void } | null>(null)
 
 onMounted(() => {
   if (!store.hasTrip) navigateTo('/new', { replace: true })
@@ -28,13 +29,25 @@ function fixAlert(dayIndex: number | undefined) {
                 <AppIcon name="pencil" :size="11" class="ov-head__pencil" />
               </span>
             </NuxtLink>
-            <span class="countdown">
-              <span class="countdown__num">{{ store.sleepsToGo }}</span>
-              <span class="countdown__label">Sleeps to go</span>
-            </span>
+            <div class="ov-head__actions">
+              <button
+                type="button"
+                class="ov-head__share"
+                aria-label="Share this trip"
+                @click="shareSheetRef?.open()"
+              >
+                <AppIcon name="share" :size="16" />
+              </button>
+              <span class="countdown">
+                <span class="countdown__num">{{ store.sleepsToGo }}</span>
+                <span class="countdown__label">Sleeps to go</span>
+              </span>
+            </div>
           </div>
           <CounterRow />
         </header>
+
+        <ShareSheet ref="shareSheetRef" />
 
         <div class="scroll ov-body">
           <AlertCard
@@ -131,6 +144,26 @@ function fixAlert(dayIndex: number | undefined) {
 }
 .ov-head__pencil {
   opacity: 0.7;
+}
+
+.ov-head__actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ov-head__share {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #f2f4f9;
+  color: var(--text-muted);
+}
+.ov-head__share:active {
+  transform: scale(0.94);
 }
 
 .countdown {
