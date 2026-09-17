@@ -6,6 +6,14 @@ const route = useRoute()
 const router = useRouter()
 const selectedIndex = computed(() => store.selectedDay ?? 0)
 const selectedDay = computed(() => store.days[selectedIndex.value] ?? null)
+const board = ref<HTMLElement | null>(null)
+const nextUnsetIndex = computed(() => {
+  for (let offset = 1; offset < store.days.length; offset++) {
+    const index = (selectedIndex.value + offset) % store.days.length
+    if (!store.days[index]?.parkId) return index
+  }
+  return -1
+})
 
 function routeIndex(): number {
   const id = typeof route.query.day === 'string' ? route.query.day : ''
@@ -25,17 +33,35 @@ function openDetails(index: number) {
   navigateTo({ path: '/day', query: { day: day.id } })
 }
 function nextUnset() {
-  const total = store.days.length
-  for (let offset = 1; offset <= total; offset++) {
-    const index = (selectedIndex.value + offset) % total
-    if (!store.days[index]?.parkId) { select(index); return }
+  if (nextUnsetIndex.value >= 0) select(nextUnsetIndex.value)
+}
+function scrollBoardToSelected() {
+  nextTick(() => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    board.value?.querySelector<HTMLElement>('.plan-card--selected')
+      ?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'center' })
+  })
+}
+function onPlanKeydown(event: KeyboardEvent) {
+  if (store.sheetOpen || event.altKey || event.ctrlKey || event.metaKey) return
+  const target = event.target as HTMLElement | null
+  if (target?.closest('input, textarea, select, button, [contenteditable="true"]')) return
+  if (event.key === 'ArrowLeft' && selectedIndex.value > 0) {
+    event.preventDefault()
+    select(selectedIndex.value - 1)
+  } else if (event.key === 'ArrowRight' && selectedIndex.value < store.days.length - 1) {
+    event.preventDefault()
+    select(selectedIndex.value + 1)
   }
 }
 onMounted(() => {
   if (!store.hasTrip) return navigateTo('/new', { replace: true })
   select(routeIndex())
+  window.addEventListener('keydown', onPlanKeydown)
 })
 watch(() => route.query.day, () => { if (store.hasTrip) store.selectDay(routeIndex()) })
+watch(selectedIndex, scrollBoardToSelected)
+onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
 </script>
 
 <template>
@@ -45,7 +71,7 @@ watch(() => route.query.day, () => { if (store.hasTrip) store.selectDay(routeInd
         <header class="plan-head">
           <div class="plan-head__trip">
             <div><p>{{ store.displayName }}</p><span>{{ store.rangeLabel }}</span></div>
-            <button v-if="store.unsetDays" type="button" @click="nextUnset">Next unset · {{ store.unsetDays }} left</button>
+            <button v-if="nextUnsetIndex >= 0" type="button" @click="nextUnset">Next unset · {{ store.unsetDays }} left</button>
           </div>
           <TripNav active="plan" />
         </header>
@@ -57,7 +83,7 @@ watch(() => route.query.day, () => { if (store.hasTrip) store.selectDay(routeInd
             <button type="button" :disabled="selectedIndex === store.days.length - 1" @click="select(selectedIndex + 1)">Next →</button>
           </div>
         </div>
-        <div class="plan-board" aria-label="Trip plan board">
+        <div ref="board" class="plan-board" aria-label="Trip plan board">
           <PlanDayCard v-for="(day, index) in store.days" :key="day.id" :index="index" :selected="index === selectedIndex" @select="select(index)" @change="store.openSheet(index)" @details="openDetails(index)" />
         </div>
       </template>

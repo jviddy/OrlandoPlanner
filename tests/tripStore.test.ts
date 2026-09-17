@@ -26,4 +26,53 @@ describe('trip assignment history', () => {
     store.setDayActivities(0, null)
     expect(store.undo).toBeNull()
   })
+
+  it('copies a movable plan without moving date-fixed detail and supports undo', () => {
+    const store = useTripStore()
+    store.$patch(blank14DayTrip())
+    store.days[0]!.parkId = 'magic-kingdom'
+    store.days[0]!.secondParkId = 'epcot'
+    store.days[0]!.note = 'Take the early bus'
+    store.days[0]!.items = [{
+      id: 'booking-1',
+      title: 'Breakfast booking',
+      time: '08:00',
+      kind: 'dining',
+      state: 'booked',
+      anchor: 'date',
+      parkId: 'magic-kingdom',
+    }, {
+      id: 'idea-1',
+      title: 'Watch the parade',
+      time: '',
+      kind: 'fixed',
+      state: 'idea',
+      anchor: 'plan',
+      parkId: 'magic-kingdom',
+    }]
+    store.days[1]!.parkId = 'rest'
+    store.days[1]!.note = 'Original note'
+    store.days[1]!.items = [{
+      id: 'booking-2',
+      title: 'Hotel check-in',
+      time: '15:00',
+      kind: 'fixed',
+      state: 'booked',
+      anchor: 'date',
+      parkId: null,
+    }]
+
+    store.copyDayPlan(0, 1)
+
+    expect(store.days[1]).toMatchObject({ parkId: 'magic-kingdom', secondParkId: 'epcot' })
+    expect(store.days[1]!.note).toBe('Take the early bus')
+    expect(store.days[1]!.items.map((item) => item.title)).toEqual(['Hotel check-in', 'Watch the parade'])
+    expect(store.days[1]!.items[1]!.id).not.toBe('idea-1')
+    expect(store.undo?.label).toBe('Copied plan to day 2')
+
+    store.undoLastChange()
+    expect(store.days[1]).toMatchObject({ parkId: 'rest', secondParkId: null })
+    expect(store.days[1]!.note).toBe('Original note')
+    expect(store.days[1]!.items.map((item) => item.id)).toEqual(['booking-2'])
+  })
 })

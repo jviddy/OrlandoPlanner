@@ -2,9 +2,11 @@
 import {
   CUSTOM_ACTIVITY_GLYPHS,
   GENERIC_ACTIVITY_IDS,
+  PARKS,
   PARK_BY_ID,
   RESORTS,
   SHEET_GROUPS,
+  resolvePark,
 } from '~/data/parks'
 import { parseISO, useDates } from '~/composables/useDates'
 
@@ -25,12 +27,52 @@ const title = computed(() => {
  */
 const selection = ref<string[]>([])
 const openGroups = ref<Set<string>>(new Set())
+const hopperMode = ref(false)
+const searchQuery = ref('')
+const autoAdvance = ref(false)
+
+const activityCatalog = computed(() => [...PARKS, ...store.customActivities])
+const searchResults = computed(() => {
+  const query = searchQuery.value.trim().toLocaleLowerCase()
+  if (!query) return []
+  return activityCatalog.value
+    .filter((activity) => `${activity.name} ${activity.short}`.toLocaleLowerCase().includes(query))
+    .slice(0, 16)
+})
+const usedChoices = computed(() => {
+  const counts = new Map<string, number>()
+  for (const day of store.days) {
+    for (const id of [day.parkId, day.secondParkId]) {
+      if (id) counts.set(id, (counts.get(id) ?? 0) + 1)
+    }
+  }
+  return [...counts]
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => id)
+    .filter((id) => !GENERIC_ACTIVITY_IDS.includes(id as typeof GENERIC_ACTIVITY_IDS[number]))
+    .slice(0, 5)
+})
+const nearbyDays = computed(() => {
+  if (store.selectedDay === null) return []
+  return [-1, 0, 1]
+    .map((offset) => ({ offset, day: store.days[store.selectedDay! + offset] }))
+    .filter((entry) => entry.day)
+})
+const fixedAnchorCount = computed(() => store.selected?.items.filter((item) => item.anchor === 'date').length ?? 0)
+const previousPlan = computed(() => {
+  if (store.selectedDay === null || store.selectedDay < 1) return null
+  const day = store.days[store.selectedDay - 1]
+  return day && (day.parkId || day.note.trim() || day.items.some((item) => item.anchor === 'plan'))
+    ? day
+    : null
+})
 
 function syncSelectionFromDay() {
   const day = store.selected
   selection.value = day
     ? [day.parkId, day.secondParkId].filter((id): id is string => Boolean(id))
     : []
+  hopperMode.value = Boolean(day?.secondParkId)
 }
 
 function resetOpenGroups() {
@@ -53,27 +95,51 @@ function toggleGroup(key: string) {
   openGroups.value = next
 }
 
-function toggle(parkId: string) {
-  if (selection.value.includes(parkId)) {
-    selection.value = selection.value.filter((id) => id !== parkId)
-  } else {
-    const next = [...selection.value, parkId]
-    selection.value = next.length > 2 ? next.slice(-2) : next
-  }
+function choose(parkId: string) {
   if (store.selectedDay === null) return
-  const [first, second] = selection.value
-  store.setDayActivities(store.selectedDay, first ?? null, second ?? null)
+  const [primary, second] = selection.value
+  const wasUnset = !primary
+
+  if (!primary) selection.value = [parkId]
+  else if (hopperMode.value && parkId !== primary) {
+    selection.value = second === parkId ? [primary] : [primary, parkId]
+  } else if (parkId === primary) selection.value = []
+  else selection.value = [parkId]
+
+  const [first, nextSecond] = selection.value
+  if (!nextSecond && hopperMode.value && first !== primary) hopperMode.value = false
+  store.setDayActivities(store.selectedDay, first ?? null, nextSecond ?? null)
+  if (autoAdvance.value && wasUnset && first && !hopperMode.value) nextTick(moveToNextUnset)
 }
 function clearDay() {
   selection.value = []
+  hopperMode.value = false
   if (store.selectedDay !== null) store.setDayActivities(store.selectedDay, null)
+}
+function markRestDay() {
+  if (store.selectedDay === null) return
+  hopperMode.value = false
+  selection.value = ['rest']
+  store.setDayActivities(store.selectedDay, 'rest')
+}
+function copyPreviousPlan() {
+  if (store.selectedDay === null || !previousPlan.value) return
+  store.copyDayPlan(store.selectedDay - 1, store.selectedDay)
+  syncSelectionFromDay()
+}
+function removeSecondPark() {
+  const primary = selection.value[0]
+  if (store.selectedDay === null || !primary) return
+  selection.value = [primary]
+  hopperMode.value = false
+  store.setDayActivities(store.selectedDay, primary, null)
 }
 
 const previousAvailable = computed(() => (store.selectedDay ?? 0) > 0)
 const nextAvailable = computed(() => (store.selectedDay ?? 0) < store.days.length - 1)
 const nextUnsetIndex = computed(() => {
   if (store.selectedDay === null || !store.days.length) return -1
-  for (let offset = 1; offset <= store.days.length; offset++) {
+  for (let offset = 1; offset < store.days.length; offset++) {
     const index = (store.selectedDay + offset) % store.days.length
     if (!store.days[index]?.parkId) return index
   }
@@ -111,7 +177,7 @@ function saveCustomActivity() {
   const label = customLabel.value.trim()
   if (!label) return
   const glyph = CUSTOM_ACTIVITY_GLYPHS.find((g) => g.id === customGlyphId.value)!.glyph
-  toggle(store.addCustomActivity(label, glyph))
+  choose(store.addCustomActivity(label, glyph))
   customOpen.value = false
 }
 /**
@@ -151,6 +217,7 @@ watch(
     if (open) {
       instantClose.value = false
       customOpen.value = false
+      searchQuery.value = ''
       syncSelectionFromDay()
       resetOpenGroups()
     }
@@ -173,7 +240,7 @@ onBeforeUnmount(() => {
         <div class="sheet__head">
           <p class="sheet__title">{{ title }}</p>
           <p class="sheet__sub">
-            Tap up to two activities. Changes save automatically.
+            Choose the main plan, then add a second park only when you need one.
           </p>
           <div class="sheet__nav" aria-label="Move between trip days">
             <button type="button" :disabled="!previousAvailable" @click="moveDay(-1)">← Previous</button>
@@ -187,8 +254,99 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="sheet__body">
+          <div class="decision-context" aria-label="Planning context">
+            <div class="nearby-days">
+              <div v-for="entry in nearbyDays" :key="entry.day!.id" :class="{ 'nearby-day--current': entry.offset === 0 }">
+                <span>{{ entry.offset === -1 ? 'Before' : entry.offset === 1 ? 'After' : 'This day' }}</span>
+                <strong>{{ entry.day!.parkId ? resolvePark(entry.day!.parkId, store.customActivities)?.short : 'Unset' }}</strong>
+              </div>
+            </div>
+            <p class="trip-counts">
+              {{ store.disneyDays }} Disney<span v-if="store.ticketDays.disney"> / {{ store.ticketDays.disney }} tickets</span>
+              · {{ store.universalDays }} Universal<span v-if="store.ticketDays.universal"> / {{ store.ticketDays.universal }} tickets</span>
+              · {{ store.unsetDays }} unset
+            </p>
+            <p v-if="fixedAnchorCount" class="anchor-note">{{ fixedAnchorCount }} date-fixed {{ fixedAnchorCount === 1 ? 'booking stays' : 'bookings stay' }} on this day.</p>
+          </div>
+
+          <div v-if="selection[0]" class="selected-plan">
+            <div>
+              <span>Main plan</span>
+              <strong>{{ resolvePark(selection[0], store.customActivities)?.name }}</strong>
+            </div>
+            <div v-if="selection[1]">
+              <span>Second park</span>
+              <strong>{{ resolvePark(selection[1], store.customActivities)?.name }}</strong>
+              <button type="button" @click="removeSecondPark">Remove</button>
+            </div>
+            <button
+              v-else
+              type="button"
+              class="hopper-button"
+              :class="{ 'hopper-button--on': hopperMode }"
+              @click="hopperMode = !hopperMode"
+            >
+              {{ hopperMode ? 'Choose the second park below' : '+ Add park hopper' }}
+            </button>
+            <p v-if="hopperMode && !store.parkHopper" class="hopper-hint">Your trip settings are not currently marked as park hopper.</p>
+          </div>
+
+          <div class="planning-actions">
+            <button type="button" :disabled="!previousPlan" @click="copyPreviousPlan">Copy previous</button>
+            <button type="button" @click="markRestDay">Mark rest day</button>
+            <button type="button" :disabled="!selection.length" @click="clearDay">Clear plan</button>
+          </div>
+
+          <label class="auto-advance">
+            <input v-model="autoAdvance" type="checkbox" />
+            <span>Advance to the next unset day after choosing</span>
+          </label>
+
+          <label class="activity-search">
+            <span class="sr-only">Search activities</span>
+            <input v-model="searchQuery" type="search" placeholder="Search parks and activities" />
+          </label>
+
+          <div v-if="searchQuery.trim()" class="sgroup">
+            <p class="sgroup__label">Search results</p>
+            <div v-if="searchResults.length" class="sgroup__grid">
+              <button
+                v-for="activity in searchResults"
+                :key="activity.id"
+                type="button"
+                class="tile"
+                :class="{ 'tile--on': selection.includes(activity.id) }"
+                :aria-pressed="selection.includes(activity.id)"
+                @click="choose(activity.id)"
+              >
+                <DayCircle :park-id="activity.id" :size="42" />
+                <span class="tile__label">{{ activity.short }}</span>
+              </button>
+            </div>
+            <p v-else class="search-empty">No matching activities.</p>
+          </div>
+
+          <div v-if="!searchQuery.trim() && usedChoices.length" class="sgroup sgroup--used">
+            <p class="sgroup__label">Used in this trip</p>
+            <div class="sgroup__grid">
+              <button
+                v-for="pid in usedChoices"
+                :key="pid"
+                type="button"
+                class="tile"
+                :class="{ 'tile--on': selection.includes(pid) }"
+                :aria-pressed="selection.includes(pid)"
+                @click="choose(pid)"
+              >
+                <DayCircle :park-id="pid" :size="42" />
+                <span class="tile__label">{{ resolvePark(pid, store.customActivities)?.short }}</span>
+              </button>
+            </div>
+          </div>
+
+          <template v-if="!searchQuery.trim()">
           <div class="sgroup sgroup--quick">
-            <p class="sgroup__label">Quick choices</p>
+            <p class="sgroup__label">Rest and off-park</p>
             <div class="sgroup__grid">
               <button
                 v-for="pid in GENERIC_ACTIVITY_IDS"
@@ -198,7 +356,7 @@ onBeforeUnmount(() => {
                 :class="{ 'tile--on': selection.includes(pid) }"
                 :aria-pressed="selection.includes(pid)"
                 :title="PARK_BY_ID[pid]?.name"
-                @click="toggle(pid)"
+                @click="choose(pid)"
               >
                 <DayCircle :park-id="pid" :size="42" />
                 <span class="tile__label">{{ PARK_BY_ID[pid]?.short }}</span>
@@ -210,7 +368,7 @@ onBeforeUnmount(() => {
                 class="tile"
                 :class="{ 'tile--on': selection.includes(c.id) }"
                 :aria-pressed="selection.includes(c.id)"
-                @click="toggle(c.id)"
+                @click="choose(c.id)"
               >
                 <DayCircle :park-id="c.id" :size="42" />
                 <span class="tile__label">{{ c.short }}</span>
@@ -288,7 +446,7 @@ onBeforeUnmount(() => {
                     :class="{ 'tile--on': selection.includes(pid) }"
                     :aria-pressed="selection.includes(pid)"
                     :title="PARK_BY_ID[pid]?.name"
-                    @click="toggle(pid)"
+                    @click="choose(pid)"
                   >
                     <DayCircle :park-id="pid" :size="42" />
                     <span class="tile__label">{{ PARK_BY_ID[pid]?.short }}</span>
@@ -297,12 +455,10 @@ onBeforeUnmount(() => {
               </div>
             </section>
           </div>
+          </template>
         </div>
 
         <div class="sheet__foot">
-          <button type="button" class="sheet__btn sheet__btn--ghost" @click="clearDay">
-            Clear day
-          </button>
           <button type="button" class="sheet__btn sheet__btn--ghost" @click="openDay">
             Open day
           </button>
@@ -406,6 +562,44 @@ onBeforeUnmount(() => {
 .sheet__body::-webkit-scrollbar {
   display: none;
 }
+.decision-context {
+  margin: 0 2px 12px;
+  padding: 10px;
+  border-radius: 13px;
+  background: #f7f4ed;
+}
+.nearby-days { display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; }
+.nearby-days > div { min-width:0; padding:7px; border-radius:9px; background:rgba(255,255,255,.7); }
+.nearby-days span { display:block; color:var(--text-dim); font-size:9px; font-weight:700; text-transform:uppercase; }
+.nearby-days strong { display:block; margin-top:2px; overflow:hidden; color:var(--text-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.nearby-day--current { box-shadow:inset 0 0 0 1.5px var(--c-navy); }
+.nearby-day--current strong { color:var(--c-navy); }
+.trip-counts { margin-top:8px; color:var(--text-muted); font-size:10.5px; line-height:1.4; text-align:center; }
+.anchor-note { margin-top:5px; color:#8a6518; font-size:10.5px; font-weight:600; text-align:center; }
+.selected-plan {
+  display:grid;
+  gap:7px;
+  margin:0 2px 10px;
+  padding:11px 12px;
+  border:1px solid var(--field-border-soft);
+  border-radius:13px;
+}
+.selected-plan > div { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:3px 10px; }
+.selected-plan span { color:var(--text-dim); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.selected-plan strong { grid-column:1; color:var(--text); font-size:12px; }
+.selected-plan div button { grid-column:2; grid-row:1 / span 2; color:#a04738; font-size:10px; font-weight:700; }
+.hopper-button { justify-self:start; padding:7px 10px; border-radius:999px; background:#eef1f7; color:var(--c-navy); font-size:11px; font-weight:700; }
+.hopper-button--on { background:var(--c-navy); color:#fff; }
+.hopper-hint { color:#9a6c18; font-size:10.5px; }
+.planning-actions { display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; margin:0 2px 10px; }
+.planning-actions button { min-height:38px; padding:6px; border-radius:10px; background:#f2f4f9; color:var(--c-navy); font-size:10.5px; font-weight:700; }
+.planning-actions button:disabled { color:var(--text-dim); }
+.auto-advance { display:flex; align-items:center; gap:8px; margin:0 7px 12px; color:var(--text-muted); font-size:11px; }
+.auto-advance input { width:16px; height:16px; accent-color:var(--c-navy); }
+.activity-search { display:block; margin:0 2px 13px; }
+.activity-search input { width:100%; height:42px; padding:0 13px; border:1.5px solid var(--field-border-soft); border-radius:12px; background:#fff; color:var(--text); font:inherit; }
+.activity-search input:focus { border-color:var(--c-navy); outline:2px solid rgba(23,35,58,.12); }
+.search-empty { padding:12px 6px; color:var(--text-faint); font-size:12px; }
 .sgroup {
   margin-bottom: 12px;
 }
@@ -415,6 +609,7 @@ onBeforeUnmount(() => {
 .sgroup--quick .sgroup__grid {
   grid-template-columns: repeat(5, 1fr);
 }
+.sgroup--used .sgroup__grid { grid-template-columns:repeat(5, 1fr); }
 .sgroup__label {
   font-size: 10.5px;
   font-weight: 700;
@@ -594,6 +789,12 @@ onBeforeUnmount(() => {
 .sheet__btn--go:disabled {
   background: #c2c8d6;
   cursor: not-allowed;
+}
+
+@media (min-width: 900px) {
+  .sheet { left:auto; top:0; width:min(460px, 42vw); max-width:none; max-height:none; border-radius:22px 0 0 22px; padding-top:12px; }
+  .sheet__handle { display:none; }
+  .sheet__head { padding-top:8px; }
 }
 
 .sheet-leave-active {

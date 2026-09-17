@@ -487,6 +487,39 @@ export const useTripStore = defineStore('orlando-trip', {
       day.secondParkId = nextSecond
       this.justSet = index
     },
+    /** Copy the movable plan while leaving date-fixed bookings on their original dates. */
+    copyDayPlan(sourceIndex: number, targetIndex: number) {
+      const source = this.days[sourceIndex]
+      const target = this.days[targetIndex]
+      if (!source || !target) return
+      const sourceIdeas = source.items.filter((item) => item.anchor === 'plan')
+      const targetIdeas = target.items.filter((item) => item.anchor === 'plan')
+      const comparableItems = (items: DayItem[]) => items.map(({ id: _id, ...item }) => item)
+      const samePlan = source.parkId === target.parkId
+        && source.secondParkId === target.secondParkId
+        && source.note === target.note
+        && JSON.stringify(comparableItems(sourceIdeas)) === JSON.stringify(comparableItems(targetIdeas))
+      if (samePlan) return
+      this.undo = {
+        label: `Copied plan to day ${targetIndex + 1}`,
+        days: [{
+          dayId: target.id,
+          parkId: target.parkId,
+          secondParkId: target.secondParkId,
+          note: target.note,
+          items: target.items.map((item) => ({ ...item })),
+        }],
+      }
+      target.parkId = source.parkId
+      target.secondParkId = source.parkId ? source.secondParkId : null
+      target.note = source.note
+      target.items = [
+        ...target.items.filter((item) => item.anchor === 'date'),
+        ...sourceIdeas.map((item) => ({ ...item, id: uid() })),
+      ]
+      this.sortDayItems(targetIndex)
+      this.justSet = targetIndex
+    },
     /** `secondParkId` is only kept when a primary park is also set (a park-hopper day). */
     assignDay(index: number, parkId: string | null, secondParkId: string | null = null) {
       this.setDayActivities(index, parkId, secondParkId)
@@ -592,6 +625,8 @@ export const useTripStore = defineStore('orlando-trip', {
         if (!day) continue
         day.parkId = previous.parkId
         day.secondParkId = previous.secondParkId
+        if (previous.note !== undefined) day.note = previous.note
+        if (previous.items !== undefined) day.items = previous.items.map((item) => ({ ...item }))
         this.justSet = index
       }
       this.undo = null

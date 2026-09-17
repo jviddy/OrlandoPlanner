@@ -1,6 +1,6 @@
 # Orlando Planner — pre-accounts implementation plan
 
-Status: **ready to implement**
+Status: **implementation in progress**
 
 Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
 
@@ -10,11 +10,13 @@ Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
 - **Slice 1 in progress:** schema version 2, stable trip/day/stay/flight IDs, item anchors, tested legacy
   migration, date-impact calculation, removed-day recovery, and single-step assignment Undo are
   implemented. Repository wiring remains.
-- **Slice 2 in progress:** Overview/Plan navigation, stable day URLs, mobile date rail, selected-day
-  panel, desktop horizontal board, Previous/Next, and Next unset are implemented. Keyboard polish and
-  richer planning controls remain.
-- **Slice 3 started:** the assignment sheet can move through Previous, Next, and Next unset without
-  closing, and immediate changes expose Undo both inside and outside the sheet.
+- **Slice 2 substantially complete:** Overview/Plan navigation, stable day URLs, mobile date rail,
+  selected-day panel, desktop horizontal board, Previous/Next, Next unset, arrow-key navigation,
+  focus movement, reduced-motion handling, and selected-card centring are implemented.
+- **Slice 3 in progress:** the responsive assignment editor stays open across Previous, Next, and Next
+  unset; puts used choices, rest/off-park choices, and searchable groups near the decision; makes park
+  hopping explicit; shows nearby-day, ticket-count, and fixed-booking context; and supports copy
+  previous, rest, clear, optional auto-advance, and Undo. Multi-select batch fill remains.
 
 This plan turns the product direction in
 [`next steps for orlandoPlanner.md`](./next%20steps%20for%20orlandoPlanner.md) into an ordered set of

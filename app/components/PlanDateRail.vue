@@ -15,6 +15,12 @@ function centreSelected() {
   })
 }
 
+function moveFocus(index: number) {
+  const bounded = Math.max(0, Math.min(store.days.length - 1, index))
+  emit('select', bounded)
+  nextTick(() => rail.value?.querySelectorAll<HTMLButtonElement>('button')[bounded]?.focus())
+}
+
 watch(() => props.selectedIndex, centreSelected)
 onMounted(centreSelected)
 </script>
@@ -30,6 +36,10 @@ onMounted(centreSelected)
       :aria-current="index === selectedIndex ? 'date' : undefined"
       :aria-label="`Day ${index + 1}, ${day.date}`"
       @click="emit('select', index)"
+      @keydown.left.prevent="moveFocus(index - 1)"
+      @keydown.right.prevent="moveFocus(index + 1)"
+      @keydown.home.prevent="moveFocus(0)"
+      @keydown.end.prevent="moveFocus(store.days.length - 1)"
     >
       <span>{{ dow(parseISO(day.date)) }}</span>
       <strong>{{ parseISO(day.date).getUTCDate() }}</strong>

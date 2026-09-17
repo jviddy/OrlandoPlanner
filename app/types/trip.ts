@@ -65,6 +65,9 @@ export interface UndoEntry {
     dayId: string
     parkId: string | null
     secondParkId: string | null
+    /** Present for commands that also change the rest of the movable plan. */
+    note?: string
+    items?: DayItem[]
   }>
 }
 
