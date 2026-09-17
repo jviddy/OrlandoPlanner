@@ -59,6 +59,15 @@ export interface Stay {
   endDate?: string
 }
 
+export interface UndoEntry {
+  label: string
+  days: Array<{
+    dayId: string
+    parkId: string | null
+    secondParkId: string | null
+  }>
+}
+
 export interface TripState {
   version: number
   /** Stable identity used by the repository boundary and future URLs. */
@@ -96,4 +105,6 @@ export interface TripState {
   sheetOpen: boolean
   /** Day index to play the "pop" animation on after an assignment. */
   justSet: number | null
+  /** Transient single-step history for immediate planning actions. */
+  undo: UndoEntry | null
 }

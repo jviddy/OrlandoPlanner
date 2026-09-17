@@ -37,6 +37,7 @@ function base(name: string, start: string, length: number): TripState {
     selectedDay: null,
     sheetOpen: false,
     justSet: null,
+    undo: null,
   }
 }
 

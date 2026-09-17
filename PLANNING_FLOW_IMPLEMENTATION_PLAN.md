@@ -8,11 +8,13 @@ Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
 
 - **Slice 0 complete:** baseline journey audit and 14-, 17-, and 21-day fixtures added.
 - **Slice 1 in progress:** schema version 2, stable trip/day/stay/flight IDs, item anchors, tested legacy
-  migration, date-impact calculation, and removed-day recovery are implemented. Repository wiring and
-  assignment Undo remain.
+  migration, date-impact calculation, removed-day recovery, and single-step assignment Undo are
+  implemented. Repository wiring remains.
 - **Slice 2 in progress:** Overview/Plan navigation, stable day URLs, mobile date rail, selected-day
   panel, desktop horizontal board, Previous/Next, and Next unset are implemented. Keyboard polish and
   richer planning controls remain.
+- **Slice 3 started:** the assignment sheet can move through Previous, Next, and Next unset without
+  closing, and immediate changes expose Undo both inside and outside the sheet.
 
 This plan turns the product direction in
 [`next steps for orlandoPlanner.md`](./next%20steps%20for%20orlandoPlanner.md) into an ordered set of

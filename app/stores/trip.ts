@@ -53,6 +53,7 @@ function blankState(): TripState {
     selectedDay: null,
     sheetOpen: false,
     justSet: null,
+    undo: null,
   }
 }
 
@@ -476,8 +477,14 @@ export const useTripStore = defineStore('orlando-trip', {
     setDayActivities(index: number, parkId: string | null, secondParkId: string | null = null) {
       const day = this.days[index]
       if (!day) return
+      const nextSecond = parkId ? secondParkId : null
+      if (day.parkId === parkId && day.secondParkId === nextSecond) return
+      this.undo = {
+        label: `Changed day ${index + 1}`,
+        days: [{ dayId: day.id, parkId: day.parkId, secondParkId: day.secondParkId }],
+      }
       day.parkId = parkId
-      day.secondParkId = parkId ? secondParkId : null
+      day.secondParkId = nextSecond
       this.justSet = index
     },
     /** `secondParkId` is only kept when a primary park is also set (a park-hopper day). */
@@ -575,6 +582,22 @@ export const useTripStore = defineStore('orlando-trip', {
     },
     clearRecovery() {
       this.recovery = { removedDays: [], updatedAt: '' }
+    },
+    undoLastChange() {
+      const entry = this.undo
+      if (!entry) return
+      for (const previous of entry.days) {
+        const index = this.days.findIndex((day) => day.id === previous.dayId)
+        const day = this.days[index]
+        if (!day) continue
+        day.parkId = previous.parkId
+        day.secondParkId = previous.secondParkId
+        this.justSet = index
+      }
+      this.undo = null
+    },
+    clearUndo() {
+      this.undo = null
     },
   },
 })

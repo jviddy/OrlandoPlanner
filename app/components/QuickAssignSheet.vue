@@ -9,6 +9,8 @@ import {
 import { parseISO, useDates } from '~/composables/useDates'
 
 const store = useTripStore()
+const route = useRoute()
+const router = useRouter()
 const { dayMon } = useDates()
 
 const title = computed(() => {
@@ -23,6 +25,13 @@ const title = computed(() => {
  */
 const selection = ref<string[]>([])
 const openGroups = ref<Set<string>>(new Set())
+
+function syncSelectionFromDay() {
+  const day = store.selected
+  selection.value = day
+    ? [day.parkId, day.secondParkId].filter((id): id is string => Boolean(id))
+    : []
+}
 
 function resetOpenGroups() {
   const next = new Set(
@@ -58,6 +67,35 @@ function toggle(parkId: string) {
 function clearDay() {
   selection.value = []
   if (store.selectedDay !== null) store.setDayActivities(store.selectedDay, null)
+}
+
+const previousAvailable = computed(() => (store.selectedDay ?? 0) > 0)
+const nextAvailable = computed(() => (store.selectedDay ?? 0) < store.days.length - 1)
+const nextUnsetIndex = computed(() => {
+  if (store.selectedDay === null || !store.days.length) return -1
+  for (let offset = 1; offset <= store.days.length; offset++) {
+    const index = (store.selectedDay + offset) % store.days.length
+    if (!store.days[index]?.parkId) return index
+  }
+  return -1
+})
+
+function selectDay(index: number) {
+  const day = store.days[index]
+  if (!day) return
+  store.selectDay(index)
+  if (route.path === '/plan') router.replace({ path: '/plan', query: { day: day.id } })
+}
+function moveDay(direction: -1 | 1) {
+  if (store.selectedDay === null) return
+  selectDay(store.selectedDay + direction)
+}
+function moveToNextUnset() {
+  if (nextUnsetIndex.value >= 0) selectDay(nextUnsetIndex.value)
+}
+function undoLastChange() {
+  store.undoLastChange()
+  syncSelectionFromDay()
 }
 
 const customOpen = ref(false)
@@ -108,15 +146,12 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') store.closeSheet()
 }
 watch(
-  () => store.sheetOpen,
-  (open) => {
+  () => [store.sheetOpen, store.selectedDay] as const,
+  ([open]) => {
     if (open) {
       instantClose.value = false
       customOpen.value = false
-      const day = store.selected
-      selection.value = day
-        ? [day.parkId, day.secondParkId].filter((id): id is string => Boolean(id))
-        : []
+      syncSelectionFromDay()
       resetOpenGroups()
     }
     if (typeof window === 'undefined') return
@@ -140,6 +175,15 @@ onBeforeUnmount(() => {
           <p class="sheet__sub">
             Tap up to two activities. Changes save automatically.
           </p>
+          <div class="sheet__nav" aria-label="Move between trip days">
+            <button type="button" :disabled="!previousAvailable" @click="moveDay(-1)">← Previous</button>
+            <button type="button" :disabled="nextUnsetIndex < 0" @click="moveToNextUnset">Next unset</button>
+            <button type="button" :disabled="!nextAvailable" @click="moveDay(1)">Next →</button>
+          </div>
+          <div v-if="store.undo" class="sheet__undo" role="status" aria-live="polite">
+            <span>{{ store.undo.label }}</span>
+            <button type="button" @click="undoLastChange">Undo</button>
+          </div>
         </div>
 
         <div class="sheet__body">
@@ -311,6 +355,36 @@ onBeforeUnmount(() => {
 .sheet__head {
   padding: 0 20px 10px;
 }
+.sheet__nav {
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:5px;
+  margin-top:10px;
+}
+.sheet__nav button {
+  min-height:34px;
+  padding:6px;
+  border-radius:var(--r-pill);
+  background:#f2f4f9;
+  color:var(--c-navy);
+  font-size:11px;
+  font-weight:700;
+}
+.sheet__nav button:disabled { color:var(--text-dim); cursor:default; }
+.sheet__undo {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:7px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#17233a;
+  color:#fff;
+  font-size:11px;
+  font-weight:600;
+}
+.sheet__undo button { color:#ffd36a; font-weight:800; }
 .sheet__title {
   font: 700 18px var(--font-display);
   color: var(--text);
