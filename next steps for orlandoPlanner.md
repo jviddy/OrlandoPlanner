@@ -2,7 +2,13 @@
 
 Status: **working plan to expand and work through**
 
-Last updated: 11 September 2026
+Last updated: 17 September 2026
+
+Implementation plan: [`PLANNING_FLOW_IMPLEMENTATION_PLAN.md`](./PLANNING_FLOW_IMPLEMENTATION_PLAN.md)
+
+The implementation plan fixes the responsive Overview/Plan direction, safe editing semantics, build
+order, test gates, and the boundary before accounts and collaboration. It also adds the Social Share
+Studio needed to turn privacy-safe trip images into a marketing loop for Orlando-planning groups.
 
 This turns the current ideas into an ordered roadmap. It is deliberately more specific about
 outcomes and decisions than implementation: the first job is to agree how planning should feel,
@@ -12,12 +18,13 @@ then build the smallest useful slice, and only then lock the backend around it.
 
 1. Make the trip-planning workflow feel continuous and obvious.
 2. Redesign the trip page, including a horizontal day-planning view that adapts properly to mobile.
-3. Turn [`BACKEND_PLAN.md`](./BACKEND_PLAN.md) into an implementation-ready backend and roles plan.
-4. Replace the current one-size-fits-all setup with three clear starting routes.
+3. Replace the current one-size-fits-all setup with three clear starting routes.
+4. Build a privacy-aware Social Share Studio for readable Facebook-group images and captions.
+5. Prove anonymous persistence, then stop before user accounts and collaboration begin.
 
-Priority controls build order, not all discovery. The setup routes are part of the overall workflow,
-and their data needs affect the backend, so we should sketch them early while leaving their detailed
-implementation until priority 4.
+Priority controls build order, not all discovery. The setup routes and social sharing are part of the
+overall workflow, and their data needs affect the backend. Accounts, roles, invitations, and
+collaboration are explicitly outside this implementation phase.
 
 ## Product journey we are aiming for
 
