@@ -7,11 +7,16 @@ definePageMeta({ pageTransition: { name: 'slide', mode: 'default' } })
 useHead({ title: 'Day · Orlando Planner' })
 
 const store = useTripStore()
+const route = useRoute()
+const router = useRouter()
 const { dowDayMon } = useDates()
 
 onMounted(() => {
   if (!store.hasTrip) return navigateTo('/', { replace: true })
-  if (store.selectedDay === null) navigateTo('/', { replace: true })
+  const routeDayId = typeof route.query.day === 'string' ? route.query.day : ''
+  if (routeDayId) store.selectDayById(routeDayId)
+  if (store.selectedDay === null) store.selectDay(0)
+  syncDayUrl()
 })
 
 const index = computed(() => store.selectedDay ?? 0)
@@ -83,6 +88,18 @@ function itemsOf(kind: ItemKind): DayItem[] {
 const adding = reactive<Record<ItemKind, boolean>>({ dining: false, fixed: false })
 const editingId = ref<string | null>(null)
 
+function syncDayUrl() {
+  const selected = store.selectedDay === null ? null : store.days[store.selectedDay]
+  if (selected && route.query.day !== selected.id) {
+    router.replace({ path: '/day', query: { day: selected.id } })
+  }
+}
+
+function stepDay(direction: -1 | 1) {
+  store.stepDay(direction)
+  syncDayUrl()
+}
+
 function startAdd(kind: ItemKind) {
   editingId.value = null
   adding[kind] = true
@@ -115,7 +132,7 @@ function removeItem(id: string) {
                 type="button"
                 class="dv-head__link dv-head__link--dim"
                 :disabled="index === 0"
-                @click="store.stepDay(-1)"
+                @click="stepDay(-1)"
               >
                 Prev
               </button>
@@ -123,7 +140,7 @@ function removeItem(id: string) {
                 type="button"
                 class="dv-head__link dv-head__link--dim"
                 :disabled="index === store.days.length - 1"
-                @click="store.stepDay(1)"
+                @click="stepDay(1)"
               >
                 Next
               </button>

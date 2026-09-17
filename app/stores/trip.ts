@@ -15,8 +15,14 @@ import {
   todayUTC,
 } from '~/composables/useDates'
 import type { Day, DayItem, TripState } from '~/types/trip'
+import {
+  createStableId,
+  migratePersistedTrip,
+  refitDaysWithRecovery,
+  TRIP_SCHEMA_VERSION,
+} from '~/utils/tripSchema'
 
-const VERSION = 1
+const VERSION = TRIP_SCHEMA_VERSION
 
 function uid(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -30,6 +36,7 @@ const DEFAULT_TRIP_NAME = 'My Trip'
 function blankState(): TripState {
   return {
     version: VERSION,
+    tripId: createStableId('trip'),
     created: false,
     name: DEFAULT_TRIP_NAME,
     startDate: '',
@@ -42,6 +49,7 @@ function blankState(): TripState {
     carHire: '',
     days: [],
     customActivities: [],
+    recovery: { removedDays: [], updatedAt: '' },
     selectedDay: null,
     sheetOpen: false,
     justSet: null,
@@ -90,6 +98,7 @@ export const useTripStore = defineStore('orlando-trip', {
   persist: {
     pick: [
       'version',
+      'tripId',
       'created',
       'name',
       'startDate',
@@ -102,6 +111,7 @@ export const useTripStore = defineStore('orlando-trip', {
       'carHire',
       'days',
       'customActivities',
+      'recovery',
     ],
     /**
      * `hotels` used to be `string[]`, and `flights` has gone through two
@@ -110,26 +120,7 @@ export const useTripStore = defineStore('orlando-trip', {
      * after a schema change.
      */
     afterHydrate(ctx) {
-      const s = ctx.store as any
-      if (!Array.isArray(s.flights)) {
-        const old = s.flights ?? {}
-        s.flights = [old.out, old.back]
-          .filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '')
-          .map((route: string) => ({ route, time: '' }))
-      }
-      s.flights = s.flights.map((f: any) =>
-        f && typeof f === 'object' && !('departTime' in f)
-          ? { route: f.route ?? '', date: '', departTime: f.time ?? '', arriveTime: '' }
-          : f,
-      )
-      if (Array.isArray(s.hotels)) {
-        s.hotels = s.hotels.map((h: unknown) => (typeof h === 'string' ? { name: h } : h))
-      }
-      if (!Array.isArray(s.customActivities)) s.customActivities = []
-      if (!s.weekStart) s.weekStart = 'monday'
-      for (const day of s.days ?? []) {
-        if (day.secondParkId === undefined) day.secondParkId = null
-      }
+      Object.assign(ctx.store, migratePersistedTrip(ctx.store))
     },
   },
 
@@ -354,6 +345,7 @@ export const useTripStore = defineStore('orlando-trip', {
         ? null
         : (this.days[this.selectedDay] ?? null)
     },
+    dayIndexById: (s) => (id: string): number => s.days.findIndex((day) => day.id === id),
   },
 
   actions: {
@@ -383,7 +375,7 @@ export const useTripStore = defineStore('orlando-trip', {
 
     setHotel(index: number, name: string) {
       const next = this.hotels.slice()
-      next[index] = { ...next[index], name }
+      next[index] = { id: next[index]?.id ?? createStableId('stay'), ...next[index], name }
       this.hotels = next
     },
     /** Set (or clear, passing null) the optional date range for a stay. */
@@ -392,12 +384,14 @@ export const useTripStore = defineStore('orlando-trip', {
       if (!current) return
       const next = this.hotels.slice()
       next[index] = dates
-        ? { name: current.name, startDate: dates.start, endDate: dates.end }
-        : { name: current.name }
+        ? { id: current.id, name: current.name, startDate: dates.start, endDate: dates.end }
+        : { id: current.id, name: current.name }
       this.hotels = next
     },
     addHotel() {
-      if (this.hotels.length < 4) this.hotels = [...this.hotels, { name: '' }]
+      if (this.hotels.length < 4) {
+        this.hotels = [...this.hotels, { id: createStableId('stay'), name: '' }]
+      }
     },
     removeHotel(index: number) {
       this.hotels = this.hotels.filter((_, i) => i !== index)
@@ -409,6 +403,7 @@ export const useTripStore = defineStore('orlando-trip', {
     ) {
       const next = this.flights.slice()
       next[index] = {
+        id: next[index]?.id ?? createStableId('flight'),
         route: '',
         date: '',
         departTime: '',
@@ -422,7 +417,7 @@ export const useTripStore = defineStore('orlando-trip', {
       if (this.flights.length < 6) {
         this.flights = [
           ...this.flights,
-          { route: '', date: '', departTime: '', arriveTime: '' },
+          { id: createStableId('flight'), route: '', date: '', departTime: '', arriveTime: '' },
         ]
       }
     },
@@ -439,6 +434,7 @@ export const useTripStore = defineStore('orlando-trip', {
         const iso = toISO(addDays(this.startD, i))
         const carried = prev.get(iso)
         days.push({
+          id: carried?.id ?? createStableId('day'),
           date: iso,
           parkId: carried ? carried.parkId : templateParkId(pattern, i, n),
           secondParkId: carried?.secondParkId ?? null,
@@ -463,7 +459,17 @@ export const useTripStore = defineStore('orlando-trip', {
 
     /** Re-fit the day array to the current date range, keeping days by date. */
     refitDays() {
-      this.days = this.buildDays(null)
+      const result = refitDaysWithRecovery(
+        this.days,
+        this.recovery.removedDays,
+        this.startDate,
+        this.endDate,
+      )
+      this.days = result.days
+      this.recovery = {
+        removedDays: result.removedDays,
+        updatedAt: result.archiveChanged ? new Date().toISOString() : this.recovery.updatedAt,
+      }
     },
 
     /** Update a day's activities without changing the quick-assign sheet state. */
@@ -511,6 +517,10 @@ export const useTripStore = defineStore('orlando-trip', {
     selectDay(index: number) {
       this.selectedDay = Math.max(0, Math.min(this.days.length - 1, index))
     },
+    selectDayById(id: string) {
+      const index = this.days.findIndex((day) => day.id === id)
+      if (index >= 0) this.selectedDay = index
+    },
     stepDay(dir: -1 | 1) {
       if (this.selectedDay === null) return
       this.selectDay(this.selectedDay + dir)
@@ -518,7 +528,7 @@ export const useTripStore = defineStore('orlando-trip', {
 
     addItem(
       index: number,
-      partial: Omit<DayItem, 'id'> & Partial<Pick<DayItem, 'id'>>,
+      partial: Omit<DayItem, 'id' | 'anchor'> & Partial<Pick<DayItem, 'id' | 'anchor'>>,
     ) {
       const day = this.days[index]
       if (!day) return
@@ -528,6 +538,7 @@ export const useTripStore = defineStore('orlando-trip', {
         time: partial.time ?? '',
         kind: partial.kind,
         state: partial.state,
+        anchor: partial.anchor ?? (partial.kind === 'fixed' || partial.state === 'booked' ? 'date' : 'plan'),
         parkId: partial.parkId ?? null,
       })
       this.sortDayItems(index)
@@ -561,6 +572,9 @@ export const useTripStore = defineStore('orlando-trip', {
 
     resetTrip() {
       this.$reset()
+    },
+    clearRecovery() {
+      this.recovery = { removedDays: [], updatedAt: '' }
     },
   },
 })

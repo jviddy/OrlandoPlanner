@@ -43,7 +43,7 @@ const { dow, time12 } = useDates()
     </div>
 
     <div v-else class="share-rows">
-      <div v-for="(day, i) in store.days" :key="day.date" class="share-row">
+      <div v-for="(day, i) in store.days" :key="day.id" class="share-row">
         <div class="share-row__date">
           <span class="share-row__dow">{{ dow(parseISO(day.date)) }}</span>
           <span class="share-row__num">{{ dayCell(i).dateNumber }}</span>

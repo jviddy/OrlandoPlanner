@@ -35,7 +35,7 @@ watch(
 
 function openDay(index: number) {
   store.selectDay(index)
-  navigateTo('/day')
+  navigateTo({ path: '/plan', query: { day: store.days[index]!.id } })
 }
 
 function start(index: number) {

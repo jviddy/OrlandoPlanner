@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "created": true,
+  "name": "Legacy family trip",
+  "startDate": "2027-08-01",
+  "endDate": "2027-08-03",
+  "hotels": ["Pop Century"],
+  "ticketDays": { "disney": 2, "universal": 1 },
+  "parkHopper": false,
+  "flights": { "out": "MAN → MCO", "back": "MCO → MAN" },
+  "carHire": "MCO pickup",
+  "days": [
+    {
+      "date": "2027-08-01",
+      "parkId": null,
+      "note": "Arrival day",
+      "items": [
+        {
+          "id": "legacy-flight-item",
+          "title": "Land at MCO",
+          "time": "15:10",
+          "kind": "fixed",
+          "state": "booked",
+          "parkId": null
+        }
+      ]
+    },
+    {
+      "date": "2027-08-02",
+      "parkId": "magic-kingdom",
+      "secondParkId": null,
+      "note": "",
+      "items": [
+        {
+          "id": "legacy-meal-item",
+          "title": "Crystal Palace",
+          "time": "12:30",
+          "kind": "dining",
+          "state": "booked",
+          "parkId": "magic-kingdom"
+        }
+      ]
+    },
+    {
+      "date": "2027-08-03",
+      "parkId": "epcot",
+      "note": "Try the festival booths",
+      "items": [
+        {
+          "id": "legacy-idea-item",
+          "title": "Watch fireworks",
+          "time": "",
+          "kind": "dining",
+          "state": "idea",
+          "parkId": "epcot"
+        }
+      ]
+    }
+  ],
+  "customActivities": []
+}

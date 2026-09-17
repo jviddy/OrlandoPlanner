@@ -62,6 +62,10 @@ export default defineNuxtConfig({
       { from: '~/composables/useDates', imports: ['useDates'] },
       { from: '~/composables/useDayCell', imports: ['useDayCell'] },
       { from: '~/composables/useViewMode', imports: ['useViewMode'] },
+      {
+        from: '~/utils/tripSchema',
+        imports: ['createStableId', 'dateRangeImpact', 'migratePersistedTrip', 'refitDaysWithRecovery'],
+      },
     ],
   },
 
@@ -70,7 +74,7 @@ export default defineNuxtConfig({
     preset: 'cloudflare-pages',
     prerender: {
       crawlLinks: true,
-      routes: ['/', '/new', '/templates', '/edit', '/day', '/crowds', '/when-to-go'],
+      routes: ['/', '/new', '/templates', '/edit', '/day', '/plan', '/crowds', '/when-to-go'],
     },
   },
 

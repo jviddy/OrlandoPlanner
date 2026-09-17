@@ -74,6 +74,7 @@ app/
   data/glyphs.ts            park glyphs (placeholder) + UI icons (single swap point)
   pages/                    index, new, templates, day, edit
   stores/trip.ts            the whole app state (Trip / Day / DayItem) + derived values
+  utils/tripSchema.ts       persisted-data migration, stable IDs, date-impact and recovery rules
   types/trip.ts             the TripState/Day/DayItem/Stay/Flight types
 ```
 

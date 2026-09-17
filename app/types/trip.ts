@@ -4,6 +4,7 @@ export type WeekStart = 'sunday' | 'monday' | 'tripDay1'
 
 export type ItemKind = 'dining' | 'fixed'
 export type ItemState = 'booked' | 'idea'
+export type ItemAnchor = 'date' | 'plan'
 
 export interface DayItem {
   id: string
@@ -12,6 +13,8 @@ export interface DayItem {
   time: string
   kind: ItemKind
   state: ItemState
+  /** Date-fixed bookings stay on their real date; movable ideas travel with a future day reorder. */
+  anchor: ItemAnchor
   /**
    * Set only when the item belongs to a different park than its day
    * (that mismatch is what raises the "reservation in the wrong park" alert).
@@ -20,6 +23,8 @@ export interface DayItem {
 }
 
 export interface Day {
+  /** Stable local identity. The calendar date may change in later planning workflows. */
+  id: string
   /** ISO date, yyyy-mm-dd. */
   date: string
   /** null = unassigned. */
@@ -36,6 +41,7 @@ export interface TicketDays {
 }
 
 export interface Flight {
+  id: string
   /** Free text, e.g. "MAN → MCO". */
   route: string
   /** ISO date, or '' if not set. */
@@ -46,6 +52,7 @@ export interface Flight {
 }
 
 export interface Stay {
+  id: string
   name: string
   /** Optional ISO dates — set only when this stay doesn't cover the whole trip. */
   startDate?: string
@@ -54,6 +61,8 @@ export interface Stay {
 
 export interface TripState {
   version: number
+  /** Stable identity used by the repository boundary and future URLs. */
+  tripId: string
   /** Flips true once a template has been chosen (trip left the gate). */
   created: boolean
 
@@ -75,6 +84,12 @@ export interface TripState {
 
   /** User-defined off-park options, added from the quick-assign sheet. */
   customActivities: CustomActivity[]
+
+  /** Days removed by a date-range change, retained so the user can recover them. */
+  recovery: {
+    removedDays: Day[]
+    updatedAt: string
+  }
 
   /** Transient UI: which day the quick-assign sheet / day view is looking at. */
   selectedDay: number | null

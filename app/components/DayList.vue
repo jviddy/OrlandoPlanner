@@ -7,13 +7,13 @@ const { dow } = useDates()
 
 function openDay(index: number) {
   store.selectDay(index)
-  navigateTo('/day')
+  navigateTo({ path: '/plan', query: { day: store.days[index]!.id } })
 }
 </script>
 
 <template>
   <div class="daylist">
-    <div v-for="(day, i) in store.days" :key="day.date" class="drow">
+    <div v-for="(day, i) in store.days" :key="day.id" class="drow">
       <button type="button" class="drow__main" @click="store.openSheet(i)">
         <span class="drow__date">
           <span class="drow__dow">{{ dow(parseISO(day.date)) }}</span>
@@ -35,7 +35,7 @@ function openDay(index: number) {
       <button
         type="button"
         class="drow__open"
-        aria-label="Open day"
+        aria-label="Open day in Plan"
         @click="openDay(i)"
       >
         <AppIcon name="arrowLeft" :size="14" />

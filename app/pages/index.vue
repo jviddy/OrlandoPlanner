@@ -12,7 +12,7 @@ onMounted(() => {
 function fixAlert(dayIndex: number | undefined) {
   if (dayIndex === undefined) return
   store.selectDay(dayIndex)
-  navigateTo('/day')
+  navigateTo({ path: '/plan', query: { day: store.days[dayIndex]!.id } })
 }
 </script>
 
@@ -45,6 +45,7 @@ function fixAlert(dayIndex: number | undefined) {
             </div>
           </div>
           <CounterRow />
+          <TripNav active="overview" />
           <NuxtLink to="/when-to-go">Find the best time to travel →</NuxtLink>
         </header>
 

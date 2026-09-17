@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",
+    "test": "vitest run",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "nuxt": "^4.5.2",
     "typescript": "^5.9.2",
+    "vitest": "^3.2.7",
     "vue-tsc": "^2.2.0",
     "wrangler": "^4.26.0"
   }

@@ -84,9 +84,10 @@ function saveCustomActivity() {
  */
 const instantClose = ref(false)
 function openDay() {
+  const dayId = store.selectedDay === null ? null : store.days[store.selectedDay]?.id
   store.closeSheet()
   instantClose.value = true
-  navigateTo('/day')
+  navigateTo(dayId ? { path: '/plan', query: { day: dayId } } : '/plan')
 }
 
 /**

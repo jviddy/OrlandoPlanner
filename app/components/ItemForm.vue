@@ -46,6 +46,7 @@ function submit() {
     time: time.value,
     kind: props.kind,
     state: state.value,
+    anchor: props.kind === 'fixed' || state.value === 'booked' ? 'date' : 'plan',
     parkId: otherPark.value || null,
   })
 }
