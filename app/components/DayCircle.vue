@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { GLYPHS } from '~/data/glyphs'
-import { RESORTS, resolvePark } from '~/data/parks'
+import { RESORTS, resolvePark, type Park, type Resort } from '~/data/parks'
 
 const store = useTripStore()
 
@@ -65,12 +65,30 @@ function ink(r: { key: string; fg: string; bg: string } | null): string {
 const glyphSize = computed(() => Math.round(props.size * (isSplit.value ? 0.36 : 0.52)))
 const sw = computed(() => props.strokeWidth ?? (park.value ? 1.7 : 2.2))
 const glyph = computed(() => park.value?.glyph ?? GLYPHS.plus)
+
+function iconStyle(activity: Park | null, activityResort: Resort | null) {
+  if (!activity?.icon) return undefined
+  return {
+    width: `${glyphSize.value}px`,
+    height: `${glyphSize.value}px`,
+    backgroundColor: ink(activityResort),
+    maskImage: `url("${activity.icon}")`,
+    WebkitMaskImage: `url("${activity.icon}")`,
+  }
+}
 </script>
 
 <template>
   <span class="circle" :style="style">
     <template v-if="isSplit">
+      <span
+        v-if="park!.icon"
+        class="circle__glyph circle__glyph--a circle__mask"
+        :style="iconStyle(park, resort)"
+        aria-hidden="true"
+      />
       <svg
+        v-else
         class="circle__glyph circle__glyph--a"
         :width="glyphSize"
         :height="glyphSize"
@@ -82,9 +100,16 @@ const glyph = computed(() => park.value?.glyph ?? GLYPHS.plus)
         stroke-linejoin="round"
         aria-hidden="true"
       >
-        <path :d="park!.glyph" />
+        <path :d="park!.glyph ?? GLYPHS.plus" />
       </svg>
+      <span
+        v-if="park2!.icon"
+        class="circle__glyph circle__glyph--b circle__mask"
+        :style="iconStyle(park2, resort2)"
+        aria-hidden="true"
+      />
       <svg
+        v-else
         class="circle__glyph circle__glyph--b"
         :width="glyphSize"
         :height="glyphSize"
@@ -96,9 +121,16 @@ const glyph = computed(() => park.value?.glyph ?? GLYPHS.plus)
         stroke-linejoin="round"
         aria-hidden="true"
       >
-        <path :d="park2!.glyph" />
+        <path :d="park2!.glyph ?? GLYPHS.plus" />
       </svg>
     </template>
+    <span
+      v-else-if="park?.icon"
+      class="circle__mask"
+      :class="{ 'anim-bob': bob }"
+      :style="iconStyle(park, resort)"
+      aria-hidden="true"
+    />
     <svg
       v-else
       :class="{ 'anim-bob': bob }"
@@ -133,6 +165,16 @@ const glyph = computed(() => park.value?.glyph ?? GLYPHS.plus)
 }
 .circle__glyph {
   position: absolute;
+}
+.circle__mask {
+  display: block;
+  flex: none;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
 }
 .circle__glyph--a {
   top: 24%;

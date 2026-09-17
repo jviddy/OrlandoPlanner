@@ -1,0 +1,454 @@
+{
+  "schemaVersion": 1,
+  "artworkVersion": 2,
+  "viewBox": "0 0 32 32",
+  "strokeWidth": 2,
+  "groups": {
+    "disney": {
+      "name": "Walt Disney World Resort",
+      "color": "#1680d8"
+    },
+    "universal": {
+      "name": "Universal Orlando Resort",
+      "color": "#7650cf"
+    },
+    "seaworld": {
+      "name": "SeaWorld Orlando",
+      "color": "#12a59c"
+    },
+    "legoland": {
+      "name": "LEGOLAND / Winter Haven",
+      "color": "#bd8a00"
+    },
+    "busch-gardens": {
+      "name": "Busch Gardens / Tampa",
+      "color": "#328345"
+    },
+    "wildlife": {
+      "name": "Animals & Wildlife",
+      "color": "#c26722"
+    },
+    "science": {
+      "name": "Space & Science",
+      "color": "#287daf"
+    },
+    "icon-park": {
+      "name": "ICON Park / International Drive",
+      "color": "#ca4581"
+    },
+    "rides": {
+      "name": "Other Theme Parks & Rides",
+      "color": "#8651b3"
+    },
+    "indoor": {
+      "name": "Museums & Indoor Attractions",
+      "color": "#7854ad"
+    },
+    "nature": {
+      "name": "Nature & Outdoor",
+      "color": "#487f54"
+    }
+  },
+  "attractions": [
+    {
+      "id": "magic-kingdom",
+      "name": "Magic Kingdom Park",
+      "group": "disney",
+      "type": "Theme Park",
+      "motif": "Storybook castle",
+      "icon": "/icons/attractions/disney/magic-kingdom.svg"
+    },
+    {
+      "id": "epcot",
+      "name": "EPCOT",
+      "group": "disney",
+      "type": "Theme Park",
+      "motif": "World globe",
+      "icon": "/icons/attractions/disney/epcot.svg"
+    },
+    {
+      "id": "hollywood-studios",
+      "name": "Disney's Hollywood Studios",
+      "group": "disney",
+      "type": "Theme Park",
+      "motif": "Movie camera",
+      "icon": "/icons/attractions/disney/hollywood-studios.svg"
+    },
+    {
+      "id": "animal-kingdom",
+      "name": "Disney's Animal Kingdom Theme Park",
+      "group": "disney",
+      "type": "Theme Park",
+      "motif": "Safari elephant",
+      "icon": "/icons/attractions/disney/animal-kingdom.svg"
+    },
+    {
+      "id": "typhoon-lagoon",
+      "name": "Disney's Typhoon Lagoon",
+      "group": "disney",
+      "type": "Water Park",
+      "motif": "Surfing wave",
+      "icon": "/icons/attractions/disney/typhoon-lagoon.svg"
+    },
+    {
+      "id": "blizzard-beach",
+      "name": "Disney's Blizzard Beach",
+      "group": "disney",
+      "type": "Water Park",
+      "motif": "Snowy mountain and pool",
+      "icon": "/icons/attractions/disney/blizzard-beach.svg"
+    },
+    {
+      "id": "disney-springs",
+      "name": "Disney Springs",
+      "group": "disney",
+      "type": "Shopping / Dining / Entertainment",
+      "motif": "Shopping bag",
+      "icon": "/icons/attractions/disney/disney-springs.svg"
+    },
+    {
+      "id": "boardwalk",
+      "name": "Disney's BoardWalk",
+      "group": "disney",
+      "type": "Dining / Entertainment",
+      "motif": "Pier and lamp",
+      "icon": "/icons/attractions/disney/boardwalk.svg"
+    },
+    {
+      "id": "universal-studios",
+      "name": "Universal Studios Florida",
+      "group": "universal",
+      "type": "Theme Park",
+      "motif": "Film clapperboard",
+      "icon": "/icons/attractions/universal/universal-studios.svg"
+    },
+    {
+      "id": "islands-of-adventure",
+      "name": "Universal Islands of Adventure",
+      "group": "universal",
+      "type": "Theme Park",
+      "motif": "Adventure island and palm",
+      "icon": "/icons/attractions/universal/islands-of-adventure.svg"
+    },
+    {
+      "id": "epic-universe",
+      "name": "Universal Epic Universe",
+      "group": "universal",
+      "type": "Theme Park",
+      "motif": "Ringed planet",
+      "icon": "/icons/attractions/universal/epic-universe.svg"
+    },
+    {
+      "id": "volcano-bay",
+      "name": "Universal Volcano Bay",
+      "group": "universal",
+      "type": "Water Park",
+      "motif": "Volcano and water",
+      "icon": "/icons/attractions/universal/volcano-bay.svg"
+    },
+    {
+      "id": "citywalk",
+      "name": "Universal CityWalk",
+      "group": "universal",
+      "type": "Shopping / Dining / Entertainment",
+      "motif": "Evening music",
+      "icon": "/icons/attractions/universal/citywalk.svg"
+    },
+    {
+      "id": "seaworld-orlando",
+      "name": "SeaWorld Orlando",
+      "group": "seaworld",
+      "type": "Theme Park / Animals",
+      "motif": "Sea turtle",
+      "icon": "/icons/attractions/seaworld/seaworld-orlando.svg"
+    },
+    {
+      "id": "aquatica",
+      "name": "Aquatica Orlando",
+      "group": "seaworld",
+      "type": "Water Park",
+      "motif": "Water slide",
+      "icon": "/icons/attractions/seaworld/aquatica.svg"
+    },
+    {
+      "id": "discovery-cove",
+      "name": "Discovery Cove",
+      "group": "seaworld",
+      "type": "Animal Experience / Water",
+      "motif": "Snorkel and mask",
+      "icon": "/icons/attractions/seaworld/discovery-cove.svg"
+    },
+    {
+      "id": "legoland-florida",
+      "name": "LEGOLAND Florida Resort",
+      "group": "legoland",
+      "type": "Theme Park",
+      "motif": "Stacked toy blocks",
+      "icon": "/icons/attractions/legoland/legoland-florida.svg"
+    },
+    {
+      "id": "legoland-water-park",
+      "name": "LEGOLAND Florida Water Park",
+      "group": "legoland",
+      "type": "Water Park",
+      "motif": "Floating play block",
+      "icon": "/icons/attractions/legoland/legoland-water-park.svg"
+    },
+    {
+      "id": "peppa-pig-theme-park",
+      "name": "PEPPA PIG Theme Park Florida",
+      "group": "legoland",
+      "type": "Theme Park",
+      "motif": "Farm pig",
+      "icon": "/icons/attractions/legoland/peppa-pig-theme-park.svg"
+    },
+    {
+      "id": "busch-gardens-tampa-bay",
+      "name": "Busch Gardens Tampa Bay",
+      "group": "busch-gardens",
+      "type": "Theme Park / Animals",
+      "motif": "Roller coaster",
+      "icon": "/icons/attractions/busch-gardens/busch-gardens-tampa-bay.svg"
+    },
+    {
+      "id": "adventure-island",
+      "name": "Adventure Island",
+      "group": "busch-gardens",
+      "type": "Water Park",
+      "motif": "Pool ladder",
+      "icon": "/icons/attractions/busch-gardens/adventure-island.svg"
+    },
+    {
+      "id": "gatorland",
+      "name": "Gatorland",
+      "group": "wildlife",
+      "type": "Wildlife / Adventure",
+      "motif": "Alligator",
+      "icon": "/icons/attractions/wildlife/gatorland.svg"
+    },
+    {
+      "id": "central-florida-zoo",
+      "name": "Central Florida Zoo & Botanical Gardens",
+      "group": "wildlife",
+      "type": "Zoo",
+      "motif": "Animal paw",
+      "icon": "/icons/attractions/wildlife/central-florida-zoo.svg"
+    },
+    {
+      "id": "wild-florida",
+      "name": "Wild Florida",
+      "group": "wildlife",
+      "type": "Wildlife / Airboats",
+      "motif": "Airboat",
+      "icon": "/icons/attractions/wildlife/wild-florida.svg"
+    },
+    {
+      "id": "safari-wilderness",
+      "name": "Safari Wilderness",
+      "group": "wildlife",
+      "type": "Wildlife Safari",
+      "motif": "Safari binoculars",
+      "icon": "/icons/attractions/wildlife/safari-wilderness.svg"
+    },
+    {
+      "id": "zootampa",
+      "name": "ZooTampa at Lowry Park",
+      "group": "wildlife",
+      "type": "Zoo",
+      "motif": "Giraffe",
+      "icon": "/icons/attractions/wildlife/zootampa.svg"
+    },
+    {
+      "id": "florida-aquarium",
+      "name": "The Florida Aquarium",
+      "group": "wildlife",
+      "type": "Aquarium",
+      "motif": "Tropical fish",
+      "icon": "/icons/attractions/wildlife/florida-aquarium.svg"
+    },
+    {
+      "id": "clearwater-marine-aquarium",
+      "name": "Clearwater Marine Aquarium",
+      "group": "wildlife",
+      "type": "Aquarium / Marine Rescue",
+      "motif": "Dolphin",
+      "icon": "/icons/attractions/wildlife/clearwater-marine-aquarium.svg"
+    },
+    {
+      "id": "kennedy-space-center",
+      "name": "Kennedy Space Center Visitor Complex",
+      "group": "science",
+      "type": "Space / Museum",
+      "motif": "Space rocket",
+      "icon": "/icons/attractions/science/kennedy-space-center.svg"
+    },
+    {
+      "id": "orlando-science-center",
+      "name": "Orlando Science Center",
+      "group": "science",
+      "type": "Science Museum",
+      "motif": "Atom",
+      "icon": "/icons/attractions/science/orlando-science-center.svg"
+    },
+    {
+      "id": "mosi",
+      "name": "Museum of Science & Industry (MOSI)",
+      "group": "science",
+      "type": "Science Museum",
+      "motif": "Science flask",
+      "icon": "/icons/attractions/science/mosi.svg"
+    },
+    {
+      "id": "orlando-eye",
+      "name": "The Orlando Eye",
+      "group": "icon-park",
+      "type": "Observation Wheel",
+      "motif": "Observation wheel",
+      "icon": "/icons/attractions/icon-park/orlando-eye.svg"
+    },
+    {
+      "id": "sea-life-orlando",
+      "name": "SEA LIFE Orlando Aquarium",
+      "group": "icon-park",
+      "type": "Aquarium",
+      "motif": "Jellyfish",
+      "icon": "/icons/attractions/icon-park/sea-life-orlando.svg"
+    },
+    {
+      "id": "madame-tussauds",
+      "name": "Madame Tussauds Orlando",
+      "group": "icon-park",
+      "type": "Wax Museum",
+      "motif": "Portrait on a plinth",
+      "icon": "/icons/attractions/icon-park/madame-tussauds.svg"
+    },
+    {
+      "id": "museum-of-illusions",
+      "name": "Museum of Illusions Orlando",
+      "group": "icon-park",
+      "type": "Interactive Museum",
+      "motif": "Perspective cube",
+      "icon": "/icons/attractions/icon-park/museum-of-illusions.svg"
+    },
+    {
+      "id": "fun-spot-orlando",
+      "name": "Fun Spot America Orlando",
+      "group": "rides",
+      "type": "Amusement Park",
+      "motif": "Go kart",
+      "icon": "/icons/attractions/rides/fun-spot-orlando.svg"
+    },
+    {
+      "id": "fun-spot-kissimmee",
+      "name": "Fun Spot America Kissimmee",
+      "group": "rides",
+      "type": "Amusement Park",
+      "motif": "Looping coaster",
+      "icon": "/icons/attractions/rides/fun-spot-kissimmee.svg"
+    },
+    {
+      "id": "old-town-kissimmee",
+      "name": "Old Town Kissimmee",
+      "group": "rides",
+      "type": "Entertainment / Rides",
+      "motif": "Vintage car",
+      "icon": "/icons/attractions/rides/old-town-kissimmee.svg"
+    },
+    {
+      "id": "orlando-starflyer",
+      "name": "Orlando StarFlyer",
+      "group": "rides",
+      "type": "Thrill Ride",
+      "motif": "Chair swing ride",
+      "icon": "/icons/attractions/rides/orlando-starflyer.svg"
+    },
+    {
+      "id": "wonderworks",
+      "name": "WonderWorks Orlando",
+      "group": "indoor",
+      "type": "Interactive / Science",
+      "motif": "Hands-on science bulb",
+      "icon": "/icons/attractions/indoor/wonderworks.svg"
+    },
+    {
+      "id": "titanic-exhibition",
+      "name": "Titanic: The Artifact Exhibition",
+      "group": "indoor",
+      "type": "Museum",
+      "motif": "Ocean liner",
+      "icon": "/icons/attractions/indoor/titanic-exhibition.svg"
+    },
+    {
+      "id": "ripleys-orlando",
+      "name": "Ripley's Believe It or Not! Orlando",
+      "group": "indoor",
+      "type": "Museum",
+      "motif": "Curiosity and discovery",
+      "icon": "/icons/attractions/indoor/ripleys-orlando.svg"
+    },
+    {
+      "id": "crayola-experience",
+      "name": "Crayola Experience Orlando",
+      "group": "indoor",
+      "type": "Children's / Interactive",
+      "motif": "Two plain crayons",
+      "icon": "/icons/attractions/indoor/crayola-experience.svg"
+    },
+    {
+      "id": "dezerland-park",
+      "name": "Dezerland Park Orlando",
+      "group": "indoor",
+      "type": "Indoor Entertainment",
+      "motif": "Classic motor car",
+      "icon": "/icons/attractions/indoor/dezerland-park.svg"
+    },
+    {
+      "id": "glazer-childrens-museum",
+      "name": "Glazer Children's Museum",
+      "group": "indoor",
+      "type": "Children's Museum",
+      "motif": "Childrens building shapes",
+      "icon": "/icons/attractions/indoor/glazer-childrens-museum.svg"
+    },
+    {
+      "id": "wekiwa-springs",
+      "name": "Wekiwa Springs State Park",
+      "group": "nature",
+      "type": "Nature / Swimming",
+      "motif": "Trees beside a spring",
+      "icon": "/icons/attractions/nature/wekiwa-springs.svg"
+    },
+    {
+      "id": "kelly-park-rock-springs",
+      "name": "Kelly Park / Rock Springs",
+      "group": "nature",
+      "type": "Nature / Tubing",
+      "motif": "River tubing",
+      "icon": "/icons/attractions/nature/kelly-park-rock-springs.svg"
+    },
+    {
+      "id": "boggy-creek-airboats",
+      "name": "Boggy Creek Airboat Adventures",
+      "group": "nature",
+      "type": "Airboats / Wildlife",
+      "motif": "Airboat through reeds",
+      "icon": "/icons/attractions/nature/boggy-creek-airboats.svg"
+    },
+    {
+      "id": "winter-park-boat-tour",
+      "name": "Winter Park Scenic Boat Tour",
+      "group": "nature",
+      "type": "Boat Tour",
+      "motif": "Canopied sightseeing boat",
+      "icon": "/icons/attractions/nature/winter-park-boat-tour.svg"
+    },
+    {
+      "id": "tampa-riverwalk",
+      "name": "Tampa Riverwalk",
+      "group": "nature",
+      "type": "Sightseeing / Walking",
+      "motif": "Riverside footbridge",
+      "icon": "/icons/attractions/nature/tampa-riverwalk.svg"
+    }
+  ]
+}

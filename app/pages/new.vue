@@ -18,6 +18,7 @@ function next() {
       <div class="scroll">
         <header class="gate__head">
           <p class="eyebrow">New trip</p>
+          <NuxtLink to="/crowds">Explore the crowd calendar →</NuxtLink>
           <h1>Let's get the bones in.</h1>
           <p class="gate__lede">
             Name and dates are all we need. The rest sharpens the warnings later.

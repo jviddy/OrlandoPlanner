@@ -45,6 +45,7 @@ function fixAlert(dayIndex: number | undefined) {
             </div>
           </div>
           <CounterRow />
+          <NuxtLink to="/when-to-go">Find the best time to travel →</NuxtLink>
         </header>
 
         <ShareSheet ref="shareSheetRef" />

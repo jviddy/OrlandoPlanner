@@ -1,0 +1,58 @@
+# Orlando resorts to track. `parks` is a seed: ingest_static refreshes park
+# existence from the API and will add newly-appearing parks automatically, but
+# the short `key` codes and the water_park flag come from here.
+
+history_start: "2021-05"        # earliest month backfill will attempt
+clean_history_start: "2022-06"  # projector ignores days before this (COVID distortion)
+forward_months: 8               # weekly pull: current month + this many ahead
+project_horizon_days: 400       # project hours this far past the published horizon
+calendar_start: "2022-01-01"    # first date the categorised calendar file covers (kept fixed so history stays for comparison)
+calendar_end: "2029-01-31"      # last date the categorised calendar file covers
+request_per_sec: 4              # client-side throttle (API ceiling is 300 / 60s)
+dump_raw: false                 # also write raw JSON to data/raw/ (gitignored)
+
+resorts:
+  - key: WDW
+    id: e957da41-3552-4cf6-b636-5babc5cbc4e5
+    name: "Walt Disney World® Resort"
+    slug: waltdisneyworldresort
+    parks:
+      - { key: MK, id: 75ea578a-adc8-4116-a54d-dccb60765ef9, name: Magic Kingdom Park }
+      - { key: EP, id: 47f90d2c-e191-4239-a466-5892ef59a88b, name: EPCOT }
+      - { key: HS, id: 288747d1-8b4f-4a64-867e-ea7c9b27bad8, name: "Disney's Hollywood Studios" }
+      - { key: AK, id: 1c84a229-8862-4648-9c71-378ddd2c7693, name: "Disney's Animal Kingdom Theme Park" }
+      - { key: TL, id: b070cbc5-feaa-4b87-a8c1-f94cca037a18, name: "Disney's Typhoon Lagoon Water Park", water_park: true }
+      - { key: BB, id: ead53ea5-22e5-4095-9a83-8c29300d7c63, name: "Disney's Blizzard Beach Water Park", water_park: true }
+
+  - key: UOR
+    id: 89db5d43-c434-4097-b71f-f6869f495a22
+    name: Universal Orlando Resort
+    slug: universalresort_orlando
+    parks:
+      - { key: USF, id: eb3f4560-2383-4a36-9152-6b3e5ed6bc57, name: Universal Studios Florida }
+      - { key: IOA, id: 267615cc-8943-4c2a-ae2c-5da728ca591f, name: Universal Islands of Adventure }
+      - { key: EPU, id: 12dbb85b-265f-44e6-bccf-f1faa17211fc, name: Universal Epic Universe, young: true }
+      - { key: VB, id: fe78a026-b91b-470c-b906-9d2266b692da, name: Universal Volcano Bay, water_park: true }
+
+  - key: SEA
+    id: 643e837e-b244-4663-8d3a-148c26ecba9c
+    name: SeaWorld Parks and Resorts Orlando
+    slug: seaworldorlandoresort
+    parks:
+      - { key: SW, id: 27d64dee-d85e-48dc-ad6d-8077445cd946, name: SeaWorld Orlando }
+      - { key: AQ, id: 9e2867f8-68eb-454f-b367-0ed0fd72d72a, name: Aquatica Orlando, water_park: true }
+      - { key: DC, id: 91f5c7f3-373b-42e1-9f24-f769e4a3f7da, name: Discovery Cove Orlando }
+
+  - key: LLF
+    id: 7a4adf8d-8c3f-4300-b277-19707e4f8e12
+    name: LEGOLAND Florida
+    slug: legolandorlandoresort
+    parks:
+      - { key: LEGO, id: bb285952-7e52-4a07-a312-d0a1ed91a9ac, name: LEGOLAND Florida }
+
+  - key: PP
+    id: 4a2cc72e-04ef-4108-ab63-6d8416263efd
+    name: Peppa Pig Theme Park
+    slug: peppapigthemeparkfloridadestination
+    parks:
+      - { key: PEPPA, id: 90d49146-8ae8-4f74-b2e6-2c91f3be6067, name: Peppa Pig Theme Park }

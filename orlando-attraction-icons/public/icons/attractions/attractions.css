@@ -1,0 +1,42 @@
+/* All backgrounds live here, never in the SVG artwork. */
+:root {
+  --attraction-icon-size: 48px;
+  --attraction-icon-art-size: 28px;
+  --attraction-color-other: #8651b3;
+  --attraction-color-disney: #1680d8;
+  --attraction-color-universal: #7650cf;
+  --attraction-color-seaworld: #12a59c;
+  --attraction-color-legoland: #bd8a00;
+  --attraction-color-busch-gardens: #328345;
+  --attraction-color-wildlife: #c26722;
+  --attraction-color-science: #287daf;
+  --attraction-color-icon-park: #ca4581;
+  --attraction-color-rides: #8651b3;
+  --attraction-color-indoor: #7854ad;
+  --attraction-color-nature: #487f54;
+}
+.attraction-icon {
+  width: var(--attraction-icon-size);
+  height: var(--attraction-icon-size);
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: var(--attraction-group-color, var(--attraction-color-other));
+}
+.attraction-icon img, .attraction-icon > svg {
+  width: var(--attraction-icon-art-size);
+  height: var(--attraction-icon-art-size);
+  display: block;
+}
+.attraction-icon--disney { --attraction-group-color: var(--attraction-color-disney); }
+.attraction-icon--universal { --attraction-group-color: var(--attraction-color-universal); }
+.attraction-icon--seaworld { --attraction-group-color: var(--attraction-color-seaworld); }
+.attraction-icon--legoland { --attraction-group-color: var(--attraction-color-legoland); }
+.attraction-icon--busch-gardens { --attraction-group-color: var(--attraction-color-busch-gardens); }
+.attraction-icon--wildlife { --attraction-group-color: var(--attraction-color-wildlife); }
+.attraction-icon--science { --attraction-group-color: var(--attraction-color-science); }
+.attraction-icon--icon-park { --attraction-group-color: var(--attraction-color-icon-park); }
+.attraction-icon--rides { --attraction-group-color: var(--attraction-color-rides); }
+.attraction-icon--indoor { --attraction-group-color: var(--attraction-color-indoor); }
+.attraction-icon--nature { --attraction-group-color: var(--attraction-color-nature); }

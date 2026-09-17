@@ -1,0 +1,29 @@
+# Hand-set starting assumptions, NOT fitted coefficients or validated forecasts.
+version: calendar-baseline-1
+baseline: 2.0
+seasons:
+  NYE: 2.5
+  CHRISTMAS_PEAK: 2.3
+  THANKSGIVING_WK: 1.5
+  EASTER_WK: 1.4
+  PRESIDENTS_WK: 1.0
+  JULY4_WK: 1.2
+  MEMORIAL_WKND: 0.8
+  LABOR_WKND: 0.7
+  MLK_WKND: 0.7
+  JERSEY_WEEK: 0.5
+  SUMMER_PEAK: 0.7
+  SPRING_SHOULDER: 0.3
+  EARLY_DEC: -0.2
+  JAN_LULL: -0.8
+  FALL_OFFPEAK: -0.6
+  LATE_SUMMER: -0.3
+weekday: [0, 0, 0, 0, 0.2, 0.5, 0.3]
+# School/holiday signals overlap seasons: take the strongest of the three,
+# rather than adding all of them and counting the same holiday repeatedly.
+us_school: 0.7
+uk_school: 0.2
+brazil_school: 0.2
+school_cap: 0.9
+holiday_near: 0.6
+holiday_day: 0.8

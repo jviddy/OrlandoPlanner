@@ -1,0 +1,54 @@
+# Season and event windows used by the projector (parkdata/calendar_model.py).
+# `anchor` values are resolved per-year in code from parkdata.calendar_model.anchors().
+# Dates are MM-DD. A window that starts after it ends wraps the new year.
+
+# Named seasons — attached to every date as `season_tag`. First match wins,
+# so list the tightest windows first.
+seasons:
+  - { tag: LABOR_WKND,      anchor: LABOR, from: -3, to: 1 }
+  - { tag: JULY4_WK,        anchor: JULY4, from: -3, to: 3 }
+  - { tag: NYE,             start: "12-29", end: "01-01" }
+  - { tag: CHRISTMAS_PEAK,  start: "12-21", end: "12-28" }
+  - { tag: EARLY_DEC,       start: "12-01", end: "12-20" }
+  - { tag: THANKSGIVING_WK, anchor: THANKSGIVING, from: -2, to: 4 }
+  - { tag: JERSEY_WEEK,     start: "11-05", end: "11-14" }
+  - { tag: MLK_WKND,        anchor: MLK, from: -3, to: 0 }
+  - { tag: PRESIDENTS_WK,   anchor: PRESIDENTS, from: -3, to: 5 }
+  - { tag: JAN_LULL,        start: "01-06", end: "02-08" }
+  - { tag: EASTER_WK,       anchor: EASTER, from: -8, to: 8 }
+  - { tag: SPRING_SHOULDER, start: "02-20", end: "04-25" }
+  - { tag: MEMORIAL_WKND,   anchor: MEMORIAL, from: -3, to: 1 }
+  - { tag: SUMMER_PEAK,     start: "06-08", end: "08-10" }
+  - { tag: LATE_SUMMER,     start: "08-11", end: "09-02" }
+  - { tag: FALL_OFFPEAK,    start: "09-03", end: "11-04" }
+
+# Event windows — attached as `event_window` when the park key is in `parks`.
+# Used both to match analog days and to bound forward event instantiation.
+event_windows:
+  - { tag: WDW_HALLOWEEN, start: "08-08", end: "10-31", parks: [MK] }
+  - { tag: WDW_HOLIDAY,   start: "11-08", end: "12-31", parks: [MK, EP, HS, AK] }
+  - { tag: WDW_AFTERHOURS, start: "01-05", end: "05-15", parks: [MK, EP, HS] }
+  - { tag: UOR_HHN,       start: "08-29", end: "11-02", parks: [USF, IOA] }
+  - { tag: UOR_HOLIDAY,   start: "11-15", end: "01-04", parks: [USF, IOA, EPU] }
+  - { tag: SEA_HOS,       start: "09-05", end: "11-02", parks: [SW] }
+  - { tag: SEA_CHRISTMAS, start: "11-14", end: "12-31", parks: [SW] }
+
+# Coarse US school-break buckets — a weak feature, but helps off-anchor days.
+school_breaks:
+  - { tag: SUMMER_BREAK, start: "06-05", end: "08-12" }
+  - { tag: WINTER_BREAK, start: "12-20", end: "01-03" }
+  - { tag: SPRING_BREAK, anchor: EASTER, from: -18, to: 10 }
+
+# EPCOT festival seasons — APPROXIMATE, shift ~1-2 weeks year to year. These
+# don't change park hours or gate entry; they're context for the crowd model
+# (Food & Wine weekends especially). Refine against announced dates.
+festivals:
+  - { tag: ARTS,             start: "01-14", end: "02-23" }
+  - { tag: FLOWER_AND_GARDEN, start: "02-25", end: "07-06" }
+  - { tag: FOOD_AND_WINE,    start: "08-27", end: "11-22" }
+  - { tag: HOLIDAYS,         start: "11-28", end: "12-30" }
+
+# Broad theme-park overlays (all major parks), for the calendar file.
+overlays:
+  - { tag: HALLOWEEN_SEASON, start: "08-15", end: "10-31" }
+  - { tag: HOLIDAY_SEASON,   start: "11-08", end: "01-04" }

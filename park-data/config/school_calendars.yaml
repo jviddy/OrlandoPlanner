@@ -1,0 +1,48 @@
+# APPROXIMATE, rule-based school-vacation windows for the three source markets
+# that drive Orlando attendance: US, UK (England pattern), Brazil.
+#
+# These are FIRST-CUT RULES, not real calendars. Each `rules:` entry is a window
+# spec understood by parkdata.calendar_model.in_window:
+#   {start: "MM-DD", end: "MM-DD"}        - fixed dates (end < start wraps the year)
+#   {anchor: NAME, from: <int>, to: <int>} - days relative to a named anchor
+#     (anchors: EASTER, PRESIDENTS, MEMORIAL, THANKSGIVING, LABOR, ... see calendar_model.anchors)
+#
+# As you collect real per-year dates, add them under `explicit:` — an explicit
+# entry whose [start,end] contains the date WINS over the rules for that region.
+# See FACTORS.md ("Replacing the school-calendar rules").
+
+us:
+  regions: [NE, SOUTH, MIDWEST, WEST, FL]   # documentation only
+  rules:
+    - { label: WINTER,       start: "12-20", end: "01-03" }
+    - { label: THANKSGIVING, anchor: THANKSGIVING, from: -1, to: 2 }
+    # Presidents' / "ski" week — mainly Northeast districts.
+    - { label: PRESIDENTS,   anchor: PRESIDENTS, from: 0, to: 4, regions: [NE] }
+    # Spring break is very spread out. South/Florida skew mid-March; the broad
+    # national mass clusters around Easter. Both windows are deliberately wide.
+    - { label: SPRING,       start: "03-09", end: "03-22", regions: [SOUTH, FL] }
+    - { label: SPRING,       anchor: EASTER, from: -12, to: 6 }
+    - { label: SUMMER,       start: "06-08", end: "08-16" }
+
+uk:
+  regions: [ENGLAND]                        # Scotland/NI differ; not modelled yet
+  rules:
+    - { label: FEB_HALF_TERM, anchor: PRESIDENTS, from: 0, to: 4 }   # ~week of 3rd Mon Feb
+    - { label: EASTER,        anchor: EASTER, from: -11, to: 11 }
+    - { label: MAY_HALF_TERM, anchor: MEMORIAL, from: 0, to: 4 }     # spring bank holiday week
+    - { label: SUMMER,        start: "07-23", end: "09-01" }
+    - { label: OCT_HALF_TERM, start: "10-24", end: "10-31" }
+    - { label: CHRISTMAS,     start: "12-20", end: "01-02" }
+
+brazil:
+  regions: [BR]
+  rules:
+    - { label: SUMMER,   start: "12-13", end: "02-01" }              # long summer férias
+    - { label: CARNIVAL, anchor: EASTER, from: -51, to: -44 }        # Carnival week (~Ash Wed)
+    - { label: WINTER,   start: "07-01", end: "07-31" }              # July winter férias
+
+# Real per-year dates go here as you gather them. Region must match a top-level
+# key (us / uk / brazil). label is free text used in the calendar file columns.
+explicit: []
+#   - { region: uk, label: FEB_HALF_TERM, start: "2027-02-15", end: "2027-02-19", note: "England, most LAs" }
+#   - { region: us, label: SPRING, start: "2027-03-15", end: "2027-03-19", regions: [FL], note: "Orange County FL" }

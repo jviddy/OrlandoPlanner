@@ -1,5 +1,11 @@
 import { defineStore } from 'pinia'
-import { parkName, resolvePark, type CustomActivity } from '~/data/parks'
+import {
+  RESORTS,
+  parkName,
+  resolvePark,
+  type CustomActivity,
+  type ResortKey,
+} from '~/data/parks'
 import { TEMPLATES, templateParkId } from '~/data/templates'
 import {
   addDays,
@@ -47,7 +53,7 @@ const MON_FULL = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ]
 
-function countResort(days: Day[], resort: string, custom: CustomActivity[]): number {
+function countResort(days: Day[], resort: ResortKey, custom: CustomActivity[]): number {
   return days.filter(
     (d) =>
       resolvePark(d.parkId, custom)?.resort === resort ||
@@ -174,8 +180,8 @@ export const useTripStore = defineStore('orlando-trip', {
       return Math.max(0, diffDays(a, todayUTC()))
     },
 
-    disneyDays: (s): number => countResort(s.days, 'wdw', s.customActivities),
-    universalDays: (s): number => countResort(s.days, 'uor', s.customActivities),
+    disneyDays: (s): number => countResort(s.days, 'disney', s.customActivities),
+    universalDays: (s): number => countResort(s.days, 'universal', s.customActivities),
     offParkDays: (s): number => countResort(s.days, 'off', s.customActivities),
     unsetDays: (s): number => s.days.filter((d) => !d.parkId).length,
 
@@ -200,8 +206,8 @@ export const useTripStore = defineStore('orlando-trip', {
     counters: (s): Counter[] => {
       const tD = s.ticketDays.disney || 0
       const tU = s.ticketDays.universal || 0
-      const d = countResort(s.days, 'wdw', s.customActivities)
-      const u = countResort(s.days, 'uor', s.customActivities)
+      const d = countResort(s.days, 'disney', s.customActivities)
+      const u = countResort(s.days, 'universal', s.customActivities)
       const off = countResort(s.days, 'off', s.customActivities)
       const unset = s.days.filter((x) => !x.parkId).length
       return [
@@ -210,15 +216,15 @@ export const useTripStore = defineStore('orlando-trip', {
           value: tD ? `${d}/${tD}` : String(d),
           bg: '#eef3fc',
           border: '#dbe5f7',
-          dot: '#0b3d91',
-          numInk: tD && d > tD ? '#c1442f' : '#0b3d91',
+          dot: RESORTS.disney.dot,
+          numInk: tD && d > tD ? '#c1442f' : RESORTS.disney.dot,
         },
         {
           label: 'Universal',
           value: tU ? `${u}/${tU}` : String(u),
           bg: '#fdefec',
           border: '#f8dcd6',
-          dot: '#f45d48',
+          dot: RESORTS.universal.dot,
           numInk: tU && u > tU ? '#c1442f' : '#5b6577',
         },
         {
@@ -460,13 +466,17 @@ export const useTripStore = defineStore('orlando-trip', {
       this.days = this.buildDays(null)
     },
 
-    /** `secondParkId` is only kept when a primary park is also set (a park-hopper day). */
-    assignDay(index: number, parkId: string | null, secondParkId: string | null = null) {
+    /** Update a day's activities without changing the quick-assign sheet state. */
+    setDayActivities(index: number, parkId: string | null, secondParkId: string | null = null) {
       const day = this.days[index]
       if (!day) return
       day.parkId = parkId
       day.secondParkId = parkId ? secondParkId : null
       this.justSet = index
+    },
+    /** `secondParkId` is only kept when a primary park is also set (a park-hopper day). */
+    assignDay(index: number, parkId: string | null, secondParkId: string | null = null) {
+      this.setDayActivities(index, parkId, secondParkId)
       this.sheetOpen = false
     },
     clearDay(index: number) {

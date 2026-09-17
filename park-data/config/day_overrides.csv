@@ -1,0 +1,13 @@
+# Sparse manual corrections to the categorised calendar file.
+# Long format: one row = set one column on one date. Anything here WINS over the
+# generated value, and `note` is appended to the row's `override_note`.
+#
+# Use it to pin things the rules can't know yet: confirmed runDisney weekends,
+# announced festival dates, big conventions, hurricane closures, new-ride opening
+# dates, real school-break dates for a specific year, etc.
+#
+# columns: date, field, value, checked_on, source, note
+# example:
+# 2027-01-08,marathon_weekend,WDW_MARATHON,2026-09-08,rundisney.com,"2027 Marathon Weekend Jan 6-10"
+# 2027-01-09,marathon_weekend,WDW_MARATHON,2026-09-08,rundisney.com,
+date,field,value,checked_on,source,note

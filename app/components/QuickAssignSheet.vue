@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { CUSTOM_ACTIVITY_GLYPHS, PARK_BY_ID, SHEET_GROUPS } from '~/data/parks'
+import {
+  CUSTOM_ACTIVITY_GLYPHS,
+  GENERIC_ACTIVITY_IDS,
+  PARK_BY_ID,
+  RESORTS,
+  SHEET_GROUPS,
+} from '~/data/parks'
 import { parseISO, useDates } from '~/composables/useDates'
 
 const store = useTripStore()
@@ -7,35 +13,51 @@ const { dayMon } = useDates()
 
 const title = computed(() => {
   const day = store.selected
-  return day ? `Set ${dayMon(parseISO(day.date))}` : 'Set the day'
+  return day ? `Choose for ${dayMon(parseISO(day.date))}` : 'Choose activities'
 })
 
 /**
- * Working selection while the sheet is open — up to two park ids, in the
- * order tapped (first = primary/first half, second = park-hopper half).
- * Seeded from the day's current assignment each time the sheet opens, and
- * only written back to the store on "Set day" / "Open day", so a fresh
- * sheet you close without tapping anything changes nothing.
+ * Up to two park ids in the order tapped (first = primary/first half,
+ * second = park-hopper half). Each change is saved immediately so every
+ * way of closing the sheet keeps the latest selection.
  */
 const selection = ref<string[]>([])
+const openGroups = ref<Set<string>>(new Set())
+
+function resetOpenGroups() {
+  const next = new Set(
+    SHEET_GROUPS.filter((group) => group.defaultOpen).map((group) => group.key),
+  )
+  // If this day already uses an activity from a normally collapsed group,
+  // reveal it when reopening the picker so its selected state is not hidden.
+  for (const id of selection.value) {
+    const selectedGroup = SHEET_GROUPS.find((group) => group.ids.includes(id))
+    if (selectedGroup) next.add(selectedGroup.key)
+  }
+  openGroups.value = next
+}
+
+function toggleGroup(key: string) {
+  const next = new Set(openGroups.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  openGroups.value = next
+}
 
 function toggle(parkId: string) {
   if (selection.value.includes(parkId)) {
     selection.value = selection.value.filter((id) => id !== parkId)
-    return
+  } else {
+    const next = [...selection.value, parkId]
+    selection.value = next.length > 2 ? next.slice(-2) : next
   }
-  const next = [...selection.value, parkId]
-  selection.value = next.length > 2 ? next.slice(-2) : next
-}
-
-function commit() {
   if (store.selectedDay === null) return
   const [first, second] = selection.value
-  store.assignDay(store.selectedDay, first ?? null, second ?? null)
+  store.setDayActivities(store.selectedDay, first ?? null, second ?? null)
 }
 function clearDay() {
   selection.value = []
-  if (store.selectedDay !== null) store.clearDay(store.selectedDay)
+  if (store.selectedDay !== null) store.setDayActivities(store.selectedDay, null)
 }
 
 const customOpen = ref(false)
@@ -62,7 +84,7 @@ function saveCustomActivity() {
  */
 const instantClose = ref(false)
 function openDay() {
-  commit()
+  store.closeSheet()
   instantClose.value = true
   navigateTo('/day')
 }
@@ -73,10 +95,12 @@ function openDay() {
  * element — which then sits full-screen over every page after it,
  * `pointer-events` and all, silently eating scroll/click input app-wide.
  * Switching to JS-hook mode for this one case and calling `done()`
- * ourselves is the documented, reliable way to skip a transition.
+ * ourselves is the reliable way to skip a transition. Only attach this
+ * callback for instant closes: a two-argument leave hook makes Vue wait
+ * for done() even when CSS transitions are enabled.
  */
 function onLeave(_el: Element, done: () => void) {
-  if (instantClose.value) done()
+  done()
 }
 
 function onKey(e: KeyboardEvent) {
@@ -92,6 +116,7 @@ watch(
       selection.value = day
         ? [day.parkId, day.secondParkId].filter((id): id is string => Boolean(id))
         : []
+      resetOpenGroups()
     }
     if (typeof window === 'undefined') return
     if (open) window.addEventListener('keydown', onKey)
@@ -104,7 +129,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Transition name="sheet" :css="!instantClose" @leave="onLeave">
+  <Transition name="sheet" :css="!instantClose" :on-leave="instantClose ? onLeave : undefined">
     <div v-if="store.sheetOpen" class="sheet-root">
       <div class="sheet-scrim" @click="store.closeSheet()" />
       <div class="sheet" role="dialog" aria-modal="true" :aria-label="title">
@@ -112,46 +137,46 @@ onBeforeUnmount(() => {
         <div class="sheet__head">
           <p class="sheet__title">{{ title }}</p>
           <p class="sheet__sub">
-            Tap up to two (park hopper), then Set day. Long-press the circle next time
-            to skip straight into the day.
+            Tap up to two activities. Changes save automatically.
           </p>
         </div>
 
         <div class="sheet__body">
-          <div v-for="group in SHEET_GROUPS" :key="group.title" class="sgroup">
-            <p class="sgroup__label">{{ group.title }}</p>
+          <div class="sgroup sgroup--quick">
+            <p class="sgroup__label">Quick choices</p>
             <div class="sgroup__grid">
               <button
-                v-for="pid in group.ids"
+                v-for="pid in GENERIC_ACTIVITY_IDS"
                 :key="pid"
                 type="button"
                 class="tile"
                 :class="{ 'tile--on': selection.includes(pid) }"
+                :aria-pressed="selection.includes(pid)"
+                :title="PARK_BY_ID[pid]?.name"
                 @click="toggle(pid)"
               >
                 <DayCircle :park-id="pid" :size="42" />
                 <span class="tile__label">{{ PARK_BY_ID[pid]?.short }}</span>
               </button>
-              <template v-if="group.title === 'Off-park'">
-                <button
-                  v-for="c in store.customActivities"
-                  :key="c.id"
-                  type="button"
-                  class="tile"
-                  :class="{ 'tile--on': selection.includes(c.id) }"
-                  @click="toggle(c.id)"
-                >
-                  <DayCircle :park-id="c.id" :size="42" />
-                  <span class="tile__label">{{ c.short }}</span>
-                </button>
-                <button type="button" class="tile" @click="openCustomForm">
-                  <span class="tile__add"><AppIcon name="plus" :size="18" /></span>
-                  <span class="tile__label">Custom</span>
-                </button>
-              </template>
+              <button
+                v-for="c in store.customActivities"
+                :key="c.id"
+                type="button"
+                class="tile"
+                :class="{ 'tile--on': selection.includes(c.id) }"
+                :aria-pressed="selection.includes(c.id)"
+                @click="toggle(c.id)"
+              >
+                <DayCircle :park-id="c.id" :size="42" />
+                <span class="tile__label">{{ c.short }}</span>
+              </button>
+              <button type="button" class="tile" @click="openCustomForm">
+                <span class="tile__add"><AppIcon name="plus" :size="18" /></span>
+                <span class="tile__label">Custom</span>
+              </button>
             </div>
 
-            <div v-if="group.title === 'Off-park' && customOpen" class="custom-form">
+            <div v-if="customOpen" class="custom-form">
               <input
                 v-model="customLabel"
                 class="input input--sm"
@@ -189,6 +214,44 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
+
+          <div class="activity-groups">
+            <section v-for="group in SHEET_GROUPS" :key="group.key" class="accordion">
+              <button
+                type="button"
+                class="accordion__trigger"
+                :aria-expanded="openGroups.has(group.key)"
+                :aria-controls="`activity-group-${group.key}`"
+                @click="toggleGroup(group.key)"
+              >
+                <span class="accordion__dot" :style="{ background: RESORTS[group.key].bg }" />
+                <span>{{ group.title }}</span>
+                <span class="accordion__count">{{ group.ids.length }}</span>
+                <span class="accordion__chevron" :class="{ 'accordion__chevron--open': openGroups.has(group.key) }" aria-hidden="true">⌄</span>
+              </button>
+              <div
+                v-show="openGroups.has(group.key)"
+                :id="`activity-group-${group.key}`"
+                class="accordion__panel"
+              >
+                <div class="sgroup__grid">
+                  <button
+                    v-for="pid in group.ids"
+                    :key="pid"
+                    type="button"
+                    class="tile"
+                    :class="{ 'tile--on': selection.includes(pid) }"
+                    :aria-pressed="selection.includes(pid)"
+                    :title="PARK_BY_ID[pid]?.name"
+                    @click="toggle(pid)"
+                  >
+                    <DayCircle :park-id="pid" :size="42" />
+                    <span class="tile__label">{{ PARK_BY_ID[pid]?.short }}</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
 
         <div class="sheet__foot">
@@ -198,13 +261,8 @@ onBeforeUnmount(() => {
           <button type="button" class="sheet__btn sheet__btn--ghost" @click="openDay">
             Open day
           </button>
-          <button
-            type="button"
-            class="sheet__btn sheet__btn--go"
-            :disabled="!selection.length"
-            @click="commit"
-          >
-            Set day
+          <button type="button" class="sheet__btn sheet__btn--go" @click="store.closeSheet()">
+            Close
           </button>
         </div>
       </div>
@@ -214,9 +272,11 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .sheet-root {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  height: 100dvh;
   z-index: 40;
+  overflow: hidden;
 }
 .sheet-scrim {
   position: absolute;
@@ -229,10 +289,13 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100%;
+  max-width: var(--app-max);
+  margin-inline: auto;
   background: #fff;
   border-radius: 22px 22px 0 0;
   padding: 8px 0 max(26px, env(safe-area-inset-bottom));
-  max-height: 78%;
+  max-height: min(78dvh, 720px);
   display: flex;
   flex-direction: column;
   animation: sheetUp 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
@@ -258,7 +321,10 @@ onBeforeUnmount(() => {
 }
 .sheet__body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 0 14px;
   scrollbar-width: none;
 }
@@ -267,6 +333,12 @@ onBeforeUnmount(() => {
 }
 .sgroup {
   margin-bottom: 12px;
+}
+.sgroup--quick {
+  padding-bottom: 4px;
+}
+.sgroup--quick .sgroup__grid {
+  grid-template-columns: repeat(5, 1fr);
 }
 .sgroup__label {
   font-size: 10.5px;
@@ -280,6 +352,58 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
+}
+.activity-groups {
+  margin: 0 -2px 12px;
+  border-top: 1px solid var(--field-border-soft);
+}
+.accordion {
+  border-bottom: 1px solid var(--field-border-soft);
+}
+.accordion__trigger {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 8px;
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+}
+.accordion__trigger:active {
+  background: #f7f8fb;
+}
+.accordion__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.accordion__count {
+  min-width: 23px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f1f3f7;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+}
+.accordion__chevron {
+  color: var(--text-faint);
+  font-size: 18px;
+  line-height: 1;
+  text-align: center;
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+.accordion__chevron--open {
+  transform: rotate(0deg);
+}
+.accordion__panel {
+  padding: 0 4px 8px;
 }
 .tile {
   display: flex;
@@ -303,6 +427,10 @@ onBeforeUnmount(() => {
   color: var(--text-muted);
   line-height: 1.15;
   text-align: center;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 .tile__add {
   width: 42px;
@@ -364,6 +492,7 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
 }
 .sheet__foot {
+  flex: none;
   padding: 6px 20px 0;
   display: flex;
   gap: 10px;

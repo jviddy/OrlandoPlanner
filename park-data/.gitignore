@@ -1,0 +1,18 @@
+# build / env
+.venv/
+__pycache__/
+*.egg-info/
+build/
+dist/
+
+# sqlite sidecars (the .sqlite itself IS committed)
+data/parkdata.sqlite-wal
+data/parkdata.sqlite-shm
+
+# local raw-response dump (opt-in via config.dump_raw)
+data/raw/
+
+# ParkCrowds annual HTTP cache and SQLite sidecars
+data/parkcrowds/cache/
+data/parkcrowds/*.sqlite-wal
+data/parkcrowds/*.sqlite-shm

@@ -1,0 +1,14 @@
+# Hand-maintained. Ticketed-event prices are NOT in the API.
+# series: HALLOWEEN_PARTY | CHRISTMAS_PARTY | AFTER_HOURS
+# price is USD, before tax, typical (mid-range night). weekend nights run higher.
+# The projector reads the newest row on/before a target date and applies
+# `yoy_pct` per year of extrapolation; projected prices are always confidence=low.
+park_key,series,effective_from,price,yoy_pct
+MK,HALLOWEEN_PARTY,2023-08-01,109,8
+MK,HALLOWEEN_PARTY,2024-08-01,119,8
+MK,HALLOWEEN_PARTY,2025-08-01,129,8
+MK,CHRISTMAS_PARTY,2023-11-01,159,7
+MK,CHRISTMAS_PARTY,2024-11-01,169,7
+MK,CHRISTMAS_PARTY,2025-11-01,179,7
+MK,AFTER_HOURS,2024-01-01,145,6
+MK,AFTER_HOURS,2025-01-01,155,6
