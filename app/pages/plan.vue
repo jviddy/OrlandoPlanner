@@ -75,7 +75,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
         <header class="plan-head">
           <div class="plan-head__trip">
             <div><p>{{ store.displayName }}</p><span>{{ store.rangeLabel }}</span></div>
-            <button v-if="nextUnsetIndex >= 0" type="button" @click="nextUnset">Next unset · {{ store.unsetDays }} left</button>
+            <div class="plan-head__actions">
+              <NuxtLink to="/templates?reapply=1&return=plan">Starting shape</NuxtLink>
+              <button v-if="nextUnsetIndex >= 0" type="button" @click="nextUnset">Next unset · {{ store.unsetDays }} left</button>
+            </div>
           </div>
           <TripNav active="plan" />
         </header>
@@ -105,6 +108,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
 .plan-head__trip { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .plan-head__trip p { font:700 20px/1.1 var(--font-display); color:var(--text); }
 .plan-head__trip span { display:block; margin-top:3px; color:var(--text-faint); font-size:11.5px; }
+.plan-head__actions { display:flex; align-items:center; gap:8px; }
+.plan-head__actions a { color:var(--c-navy); font-size:11px; font-weight:700; }
 .plan-head__trip button { flex:none; padding:8px 10px; border-radius:var(--r-pill); background:var(--c-navy); color:#fff; font-size:11px; font-weight:700; }
 .plan-mobile { padding:4px 14px 90px; }
 .plan-mobile :deep(.plan-card) { margin-inline:auto; }

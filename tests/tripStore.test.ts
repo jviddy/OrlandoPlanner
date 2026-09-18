@@ -106,3 +106,35 @@ describe('trip assignment history', () => {
     expect(store.days[2]!.parkId).toBe('pool')
   })
 })
+
+describe('starting shape safety', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+
+  it('fills only unset days by default', () => {
+    const store = useTripStore()
+    store.$patch(blank14DayTrip())
+    store.days[2]!.parkId = 'ak'
+
+    store.applyTemplate('disney')
+
+    expect(store.days[2]!.parkId).toBe('ak')
+    expect(store.days[1]!.parkId).toBe('mk')
+  })
+
+  it('replaces movable content while retaining fixed bookings', () => {
+    const store = useTripStore()
+    store.$patch(blank14DayTrip())
+    store.days[2]!.parkId = 'ak'
+    store.days[2]!.note = 'Old plan'
+    store.days[2]!.items = [
+      { id: 'fixed', title: 'Dinner', time: '18:00', kind: 'dining', state: 'booked', anchor: 'date' },
+      { id: 'idea', title: 'Old idea', time: '', kind: 'idea', state: 'idea', anchor: 'plan' },
+    ]
+
+    store.applyTemplate('disney', 'replace-movable')
+
+    expect(store.days[2]!.parkId).toBe('ep')
+    expect(store.days[2]!.note).toBe('')
+    expect(store.days[2]!.items.map((item) => item.id)).toEqual(['fixed'])
+  })
+})

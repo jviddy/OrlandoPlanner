@@ -13,10 +13,10 @@ function copyDetails(): TripDetailsDraft {
     startDate: store.startDate,
     endDate: store.endDate,
     weekStart: store.weekStart,
-    hotels: structuredClone(store.hotels),
+    hotels: store.hotels.map((hotel) => ({ ...hotel })),
     ticketDays: { ...store.ticketDays },
     parkHopper: store.parkHopper,
-    flights: structuredClone(store.flights),
+    flights: store.flights.map((flight) => ({ ...flight })),
     carHire: store.carHire,
   }
 }
@@ -54,9 +54,9 @@ function save() {
   }
   store.updateFields({
     ...draft,
-    hotels: structuredClone(draft.hotels),
+    hotels: draft.hotels.map((hotel) => ({ ...hotel })),
     ticketDays: { ...draft.ticketDays },
-    flights: structuredClone(draft.flights),
+    flights: draft.flights.map((flight) => ({ ...flight })),
   })
   navigateTo('/')
 }
@@ -282,5 +282,4 @@ function save() {
 .edit__dialog p { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
 .edit__dialog-actions { display: flex; gap: 10px; margin-top: 18px; }
 .edit__dialog-actions .cta { flex: 1; }
-}
 </style>

@@ -46,7 +46,10 @@ function fixAlert(dayIndex: number | undefined) {
           </div>
           <CounterRow />
           <TripNav active="overview" />
-          <NuxtLink to="/when-to-go">Find the best time to travel →</NuxtLink>
+          <div class="ov-head__links">
+            <NuxtLink to="/templates?reapply=1">Fill unset days from a starting shape →</NuxtLink>
+            <NuxtLink to="/when-to-go">Find the best time to travel →</NuxtLink>
+          </div>
         </header>
 
         <ShareSheet ref="shareSheetRef" />
@@ -147,6 +150,7 @@ function fixAlert(dayIndex: number | undefined) {
 .ov-head__pencil {
   opacity: 0.7;
 }
+.ov-head__links { display: flex; flex-wrap: wrap; gap: 5px 16px; font-size: 12px; }
 
 .ov-head__actions {
   flex: none;

@@ -447,12 +447,27 @@ export const useTripStore = defineStore('orlando-trip', {
       return days
     },
 
-    applyTemplate(id: string) {
+    applyTemplate(id: string, strategy: 'fill-unset' | 'replace-movable' = 'fill-unset') {
       const tpl = TEMPLATES.find((t) => t.id === id)
       if (!tpl || !this.datesValid) return
-      // Fresh layout: ignore any carried days from a previous template choice.
-      this.days = []
-      this.days = this.buildDays(tpl.pattern)
+      if (!this.created || !this.days.length) {
+        this.days = []
+        this.days = this.buildDays(tpl.pattern)
+      } else {
+        this.days = this.days.map((day, index) => {
+          const suggested = templateParkId(tpl.pattern, index, this.days.length)
+          if (strategy === 'fill-unset') {
+            return day.parkId || day.secondParkId ? day : { ...day, parkId: suggested }
+          }
+          return {
+            ...day,
+            parkId: suggested,
+            secondParkId: null,
+            note: '',
+            items: day.items.filter((item) => item.anchor === 'date'),
+          }
+        })
+      }
       this.created = true
       this.selectedDay = null
       this.sheetOpen = false
