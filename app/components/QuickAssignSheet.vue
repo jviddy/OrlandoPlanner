@@ -30,6 +30,8 @@ const openGroups = ref<Set<string>>(new Set())
 const hopperMode = ref(false)
 const searchQuery = ref('')
 const autoAdvance = ref(false)
+const batchOpen = ref(false)
+const batchTargets = ref<Set<number>>(new Set())
 
 const activityCatalog = computed(() => [...PARKS, ...store.customActivities])
 const searchResults = computed(() => {
@@ -66,6 +68,11 @@ const previousPlan = computed(() => {
     ? day
     : null
 })
+const currentHasPlan = computed(() => Boolean(
+  store.selected?.parkId
+  || store.selected?.note.trim()
+  || store.selected?.items.some((item) => item.anchor === 'plan'),
+))
 
 function syncSelectionFromDay() {
   const day = store.selected
@@ -126,6 +133,22 @@ function copyPreviousPlan() {
   if (store.selectedDay === null || !previousPlan.value) return
   store.copyDayPlan(store.selectedDay - 1, store.selectedDay)
   syncSelectionFromDay()
+}
+function openBatchFill() {
+  batchTargets.value = new Set()
+  batchOpen.value = true
+}
+function toggleBatchTarget(index: number) {
+  const next = new Set(batchTargets.value)
+  if (next.has(index)) next.delete(index)
+  else next.add(index)
+  batchTargets.value = next
+}
+function applyBatchFill() {
+  if (store.selectedDay === null || !batchTargets.value.size) return
+  store.copyDayPlanToMany(store.selectedDay, [...batchTargets.value])
+  batchOpen.value = false
+  batchTargets.value = new Set()
 }
 function removeSecondPark() {
   const primary = selection.value[0]
@@ -217,6 +240,8 @@ watch(
     if (open) {
       instantClose.value = false
       customOpen.value = false
+      batchOpen.value = false
+      batchTargets.value = new Set()
       searchQuery.value = ''
       syncSelectionFromDay()
       resetOpenGroups()
@@ -294,7 +319,32 @@ onBeforeUnmount(() => {
           <div class="planning-actions">
             <button type="button" :disabled="!previousPlan" @click="copyPreviousPlan">Copy previous</button>
             <button type="button" @click="markRestDay">Mark rest day</button>
+            <button type="button" :disabled="!currentHasPlan" @click="openBatchFill">Fill days</button>
             <button type="button" :disabled="!selection.length" @click="clearDay">Clear plan</button>
+          </div>
+
+          <div v-if="batchOpen" class="batch-fill">
+            <div class="batch-fill__head">
+              <div><strong>Fill selected days</strong><span>Date-fixed bookings on those days will stay in place.</span></div>
+              <button type="button" aria-label="Cancel fill selected days" @click="batchOpen = false">×</button>
+            </div>
+            <div class="batch-fill__days" aria-label="Days to fill">
+              <button
+                v-for="(day, index) in store.days"
+                :key="day.id"
+                type="button"
+                :disabled="index === store.selectedDay"
+                :class="{ 'batch-fill__day--on': batchTargets.has(index) }"
+                :aria-pressed="batchTargets.has(index)"
+                :aria-label="`Day ${index + 1}, ${day.date}`"
+                @click="toggleBatchTarget(index)"
+              >
+                <span>Day {{ index + 1 }}</span><strong>{{ parseISO(day.date).getUTCDate() }}</strong>
+              </button>
+            </div>
+            <button type="button" class="batch-fill__apply" :disabled="!batchTargets.size" @click="applyBatchFill">
+              {{ batchTargets.size ? `Fill ${batchTargets.size} ${batchTargets.size === 1 ? 'day' : 'days'}` : 'Choose days to fill' }}
+            </button>
           </div>
 
           <label class="auto-advance">
@@ -591,9 +641,22 @@ onBeforeUnmount(() => {
 .hopper-button { justify-self:start; padding:7px 10px; border-radius:999px; background:#eef1f7; color:var(--c-navy); font-size:11px; font-weight:700; }
 .hopper-button--on { background:var(--c-navy); color:#fff; }
 .hopper-hint { color:#9a6c18; font-size:10.5px; }
-.planning-actions { display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; margin:0 2px 10px; }
+.planning-actions { display:grid; grid-template-columns:repeat(2, 1fr); gap:5px; margin:0 2px 10px; }
 .planning-actions button { min-height:38px; padding:6px; border-radius:10px; background:#f2f4f9; color:var(--c-navy); font-size:10.5px; font-weight:700; }
 .planning-actions button:disabled { color:var(--text-dim); }
+.batch-fill { margin:0 2px 12px; padding:11px; border:1.5px solid #d9deea; border-radius:13px; background:#f8f9fb; }
+.batch-fill__head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.batch-fill__head strong { display:block; color:var(--text); font-size:12px; }
+.batch-fill__head span { display:block; margin-top:2px; color:var(--text-faint); font-size:10px; line-height:1.35; }
+.batch-fill__head > button { width:26px; height:26px; border-radius:50%; background:#e9ecf2; color:var(--text-muted); font-size:18px; line-height:1; }
+.batch-fill__days { display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; max-height:150px; margin-top:10px; overflow-y:auto; }
+.batch-fill__days button { min-height:46px; padding:5px 2px; border:1px solid var(--field-border-soft); border-radius:9px; background:#fff; color:var(--text-muted); }
+.batch-fill__days button:disabled { background:#e9ecf2; color:var(--text-dim); }
+.batch-fill__days span { display:block; font-size:8.5px; font-weight:700; text-transform:uppercase; }
+.batch-fill__days strong { display:block; margin-top:1px; font:700 14px var(--font-display); }
+.batch-fill__days .batch-fill__day--on { border-color:var(--c-navy); background:var(--c-navy); color:#fff; }
+.batch-fill__apply { width:100%; min-height:38px; margin-top:9px; border-radius:10px; background:var(--c-navy); color:#fff; font-size:11px; font-weight:700; }
+.batch-fill__apply:disabled { background:#c9ced9; }
 .auto-advance { display:flex; align-items:center; gap:8px; margin:0 7px 12px; color:var(--text-muted); font-size:11px; }
 .auto-advance input { width:16px; height:16px; accent-color:var(--c-navy); }
 .activity-search { display:block; margin:0 2px 13px; }

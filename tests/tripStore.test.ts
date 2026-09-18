@@ -75,4 +75,24 @@ describe('trip assignment history', () => {
     expect(store.days[1]!.note).toBe('Original note')
     expect(store.days[1]!.items.map((item) => item.id)).toEqual(['booking-2'])
   })
+
+  it('fills several selected days as one undoable change', () => {
+    const store = useTripStore()
+    store.$patch(blank14DayTrip())
+    store.days[0]!.parkId = 'epcot'
+    store.days[0]!.note = 'Festival day'
+    store.days[1]!.parkId = 'rest'
+    store.days[2]!.parkId = 'pool'
+
+    store.copyDayPlanToMany(0, [1, 2, 2, 0])
+
+    expect(store.days[1]).toMatchObject({ parkId: 'epcot', note: 'Festival day' })
+    expect(store.days[2]).toMatchObject({ parkId: 'epcot', note: 'Festival day' })
+    expect(store.undo?.label).toBe('Filled 2 days')
+    expect(store.undo?.days).toHaveLength(2)
+
+    store.undoLastChange()
+    expect(store.days[1]!.parkId).toBe('rest')
+    expect(store.days[2]!.parkId).toBe('pool')
+  })
 })

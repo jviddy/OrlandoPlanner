@@ -489,36 +489,48 @@ export const useTripStore = defineStore('orlando-trip', {
     },
     /** Copy the movable plan while leaving date-fixed bookings on their original dates. */
     copyDayPlan(sourceIndex: number, targetIndex: number) {
+      this.copyDayPlanToMany(sourceIndex, [targetIndex])
+      if (this.undo) this.undo.label = `Copied plan to day ${targetIndex + 1}`
+    },
+    /** Apply one movable plan to several days as a single reversible action. */
+    copyDayPlanToMany(sourceIndex: number, targetIndexes: number[]) {
       const source = this.days[sourceIndex]
-      const target = this.days[targetIndex]
-      if (!source || !target) return
+      if (!source) return
       const sourceIdeas = source.items.filter((item) => item.anchor === 'plan')
-      const targetIdeas = target.items.filter((item) => item.anchor === 'plan')
       const comparableItems = (items: DayItem[]) => items.map(({ id: _id, ...item }) => item)
-      const samePlan = source.parkId === target.parkId
-        && source.secondParkId === target.secondParkId
-        && source.note === target.note
-        && JSON.stringify(comparableItems(sourceIdeas)) === JSON.stringify(comparableItems(targetIdeas))
-      if (samePlan) return
+      const targets = [...new Set(targetIndexes)]
+        .filter((index) => index !== sourceIndex)
+        .map((index) => ({ index, day: this.days[index] }))
+        .filter((entry): entry is { index: number; day: Day } => Boolean(entry.day))
+        .filter(({ day }) => {
+          const targetIdeas = day.items.filter((item) => item.anchor === 'plan')
+          return source.parkId !== day.parkId
+            || source.secondParkId !== day.secondParkId
+            || source.note !== day.note
+            || JSON.stringify(comparableItems(sourceIdeas)) !== JSON.stringify(comparableItems(targetIdeas))
+        })
+      if (!targets.length) return
       this.undo = {
-        label: `Copied plan to day ${targetIndex + 1}`,
-        days: [{
-          dayId: target.id,
-          parkId: target.parkId,
-          secondParkId: target.secondParkId,
-          note: target.note,
-          items: target.items.map((item) => ({ ...item })),
-        }],
+        label: `Filled ${targets.length} ${targets.length === 1 ? 'day' : 'days'}`,
+        days: targets.map(({ day }) => ({
+          dayId: day.id,
+          parkId: day.parkId,
+          secondParkId: day.secondParkId,
+          note: day.note,
+          items: day.items.map((item) => ({ ...item })),
+        })),
       }
-      target.parkId = source.parkId
-      target.secondParkId = source.parkId ? source.secondParkId : null
-      target.note = source.note
-      target.items = [
-        ...target.items.filter((item) => item.anchor === 'date'),
-        ...sourceIdeas.map((item) => ({ ...item, id: uid() })),
-      ]
-      this.sortDayItems(targetIndex)
-      this.justSet = targetIndex
+      for (const { index, day } of targets) {
+        day.parkId = source.parkId
+        day.secondParkId = source.parkId ? source.secondParkId : null
+        day.note = source.note
+        day.items = [
+          ...day.items.filter((item) => item.anchor === 'date'),
+          ...sourceIdeas.map((item) => ({ ...item, id: uid() })),
+        ]
+        this.sortDayItems(index)
+      }
+      this.justSet = targets.at(-1)!.index
     },
     /** `secondParkId` is only kept when a primary park is also set (a park-hopper day). */
     assignDay(index: number, parkId: string | null, secondParkId: string | null = null) {

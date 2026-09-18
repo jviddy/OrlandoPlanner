@@ -16,7 +16,8 @@ Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
 - **Slice 3 in progress:** the responsive assignment editor stays open across Previous, Next, and Next
   unset; puts used choices, rest/off-park choices, and searchable groups near the decision; makes park
   hopping explicit; shows nearby-day, ticket-count, and fixed-booking context; and supports copy
-  previous, rest, clear, optional auto-advance, and Undo. Multi-select batch fill remains.
+  previous, rest, clear, optional auto-advance, multi-select batch fill, and Undo. Recent-choice and
+  ticket-compatible ranking polish remains.
 
 This plan turns the product direction in
 [`next steps for orlandoPlanner.md`](./next%20steps%20for%20orlandoPlanner.md) into an ordered set of
