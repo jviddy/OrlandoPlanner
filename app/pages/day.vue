@@ -79,13 +79,19 @@ const groups: { key: ItemKind; title: string; hint: string; add: string }[] = [
     hint: "Won't move if you shuffle days",
     add: 'Add Lightning Lane, tour or show',
   },
+  {
+    key: 'idea',
+    title: 'Ideas',
+    hint: 'Moves with this day plan',
+    add: 'Add an idea',
+  },
 ]
 
 function itemsOf(kind: ItemKind): DayItem[] {
   return (day.value?.items ?? []).filter((i) => i.kind === kind)
 }
 
-const adding = reactive<Record<ItemKind, boolean>>({ dining: false, fixed: false })
+const adding = reactive<Record<ItemKind, boolean>>({ dining: false, fixed: false, idea: false })
 const editingId = ref<string | null>(null)
 
 function syncDayUrl() {

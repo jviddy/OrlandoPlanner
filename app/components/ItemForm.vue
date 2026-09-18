@@ -28,7 +28,9 @@ const otherPark = ref<string>(props.item?.parkId ?? '')
 const placeholder = computed(() =>
   props.kind === 'dining'
     ? "e.g. Chef Mickey's, Ohana, Toothsome"
-    : 'e.g. Rise of the Resistance LL, Wild Africa Trek',
+    : props.kind === 'idea'
+      ? 'e.g. Watch the parade, try a snack, take photos'
+      : 'e.g. Rise of the Resistance LL, Wild Africa Trek',
 )
 
 const canSave = computed(() => title.value.trim().length > 0)

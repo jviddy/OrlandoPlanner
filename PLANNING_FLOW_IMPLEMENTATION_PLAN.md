@@ -13,11 +13,15 @@ Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
 - **Slice 2 substantially complete:** Overview/Plan navigation, stable day URLs, mobile date rail,
   selected-day panel, desktop horizontal board, Previous/Next, Next unset, arrow-key navigation,
   focus movement, reduced-motion handling, and selected-card centring are implemented.
-- **Slice 3 in progress:** the responsive assignment editor stays open across Previous, Next, and Next
+- **Slice 3 substantially complete:** the responsive assignment editor stays open across Previous, Next, and Next
   unset; puts used choices, rest/off-park choices, and searchable groups near the decision; makes park
   hopping explicit; shows nearby-day, ticket-count, and fixed-booking context; and supports copy
-  previous, rest, clear, optional auto-advance, multi-select batch fill, and Undo. Recent-choice and
-  ticket-compatible ranking polish remains.
+  previous, rest, clear, optional auto-advance, multi-select batch fill, and Undo. Recent choices and
+  ticket-matched suggestions are included.
+- **Slice 4 in progress:** Plan now exposes Booking, Idea, and Edit details actions without leaving the
+  workspace. Its responsive detail panel separates date-fixed bookings from movable ideas, stages note
+  edits, protects unsaved forms, and offers fixes for wrong-park, park-hopper, travel-day, and ticket
+  overuse warnings. Legacy `/day` deprecation and additional date-range warnings remain.
 
 This plan turns the product direction in
 [`next steps for orlandoPlanner.md`](./next%20steps%20for%20orlandoPlanner.md) into an ordered set of

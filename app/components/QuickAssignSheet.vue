@@ -34,6 +34,7 @@ const batchOpen = ref(false)
 const batchTargets = ref<Set<number>>(new Set())
 
 const activityCatalog = computed(() => [...PARKS, ...store.customActivities])
+const recentChoices = computed(() => store.recentActivityIds.filter((id) => resolvePark(id, store.customActivities)))
 const searchResults = computed(() => {
   const query = searchQuery.value.trim().toLocaleLowerCase()
   if (!query) return []
@@ -52,7 +53,19 @@ const usedChoices = computed(() => {
     .sort((a, b) => b[1] - a[1])
     .map(([id]) => id)
     .filter((id) => !GENERIC_ACTIVITY_IDS.includes(id as typeof GENERIC_ACTIVITY_IDS[number]))
+    .filter((id) => !recentChoices.value.includes(id))
     .slice(0, 5)
+})
+const ticketChoices = computed(() => {
+  const eligible = PARKS.filter((activity) =>
+    (activity.resort === 'disney' && store.ticketDays.disney > 0)
+    || (activity.resort === 'universal' && store.ticketDays.universal > 0),
+  )
+  const alreadySuggested = new Set([...recentChoices.value, ...usedChoices.value])
+  return [
+    ...eligible.filter((activity) => !alreadySuggested.has(activity.id)),
+    ...eligible.filter((activity) => alreadySuggested.has(activity.id)),
+  ].slice(0, 5)
 })
 const nearbyDays = computed(() => {
   if (store.selectedDay === null) return []
@@ -390,6 +403,42 @@ onBeforeUnmount(() => {
               >
                 <DayCircle :park-id="pid" :size="42" />
                 <span class="tile__label">{{ resolvePark(pid, store.customActivities)?.short }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="!searchQuery.trim() && recentChoices.length" class="sgroup sgroup--used">
+            <p class="sgroup__label">Recently chosen</p>
+            <div class="sgroup__grid">
+              <button
+                v-for="pid in recentChoices"
+                :key="pid"
+                type="button"
+                class="tile"
+                :class="{ 'tile--on': selection.includes(pid) }"
+                :aria-pressed="selection.includes(pid)"
+                @click="choose(pid)"
+              >
+                <DayCircle :park-id="pid" :size="42" />
+                <span class="tile__label">{{ resolvePark(pid, store.customActivities)?.short }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="!searchQuery.trim() && ticketChoices.length" class="sgroup sgroup--used">
+            <p class="sgroup__label">Matches your tickets</p>
+            <div class="sgroup__grid">
+              <button
+                v-for="activity in ticketChoices"
+                :key="activity.id"
+                type="button"
+                class="tile"
+                :class="{ 'tile--on': selection.includes(activity.id) }"
+                :aria-pressed="selection.includes(activity.id)"
+                @click="choose(activity.id)"
+              >
+                <DayCircle :park-id="activity.id" :size="42" />
+                <span class="tile__label">{{ activity.short }}</span>
               </button>
             </div>
           </div>

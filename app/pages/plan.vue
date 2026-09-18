@@ -7,6 +7,7 @@ const router = useRouter()
 const selectedIndex = computed(() => store.selectedDay ?? 0)
 const selectedDay = computed(() => store.days[selectedIndex.value] ?? null)
 const board = ref<HTMLElement | null>(null)
+const detailEditor = ref<{ index: number; action: 'booking' | 'idea' | 'edit' } | null>(null)
 const nextUnsetIndex = computed(() => {
   for (let offset = 1; offset < store.days.length; offset++) {
     const index = (selectedIndex.value + offset) % store.days.length
@@ -26,11 +27,14 @@ function select(index: number) {
   store.selectDay(index)
   router.replace({ path: '/plan', query: { day: day.id } })
 }
-function openDetails(index: number) {
-  const day = store.days[index]
-  if (!day) return
+function openDetails(index: number, action: 'booking' | 'idea' | 'edit' = 'edit') {
+  if (!store.days[index]) return
   store.selectDay(index)
-  navigateTo({ path: '/day', query: { day: day.id } })
+  detailEditor.value = { index, action }
+}
+function changeFromDetails(index: number) {
+  detailEditor.value = null
+  nextTick(() => store.openSheet(index))
 }
 function nextUnset() {
   if (nextUnsetIndex.value >= 0) select(nextUnsetIndex.value)
@@ -77,15 +81,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
         </header>
         <PlanDateRail :selected-index="selectedIndex" @select="select" />
         <div class="plan-mobile scroll">
-          <PlanDayCard :index="selectedIndex" selected @change="store.openSheet(selectedIndex)" @details="openDetails(selectedIndex)" />
+          <PlanDayCard :index="selectedIndex" selected @change="store.openSheet(selectedIndex)" @add-booking="openDetails(selectedIndex, 'booking')" @add-idea="openDetails(selectedIndex, 'idea')" @edit-details="openDetails(selectedIndex)" />
           <div class="plan-mobile__steps">
             <button type="button" :disabled="selectedIndex === 0" @click="select(selectedIndex - 1)">← Previous</button>
             <button type="button" :disabled="selectedIndex === store.days.length - 1" @click="select(selectedIndex + 1)">Next →</button>
           </div>
         </div>
         <div ref="board" class="plan-board" aria-label="Trip plan board">
-          <PlanDayCard v-for="(day, index) in store.days" :key="day.id" :index="index" :selected="index === selectedIndex" @select="select(index)" @change="store.openSheet(index)" @details="openDetails(index)" />
+          <PlanDayCard v-for="(day, index) in store.days" :key="day.id" :index="index" :selected="index === selectedIndex" @select="select(index)" @change="store.openSheet(index)" @add-booking="openDetails(index, 'booking')" @add-idea="openDetails(index, 'idea')" @edit-details="openDetails(index)" />
         </div>
+        <PlanDetailsSheet v-if="detailEditor" :index="detailEditor.index" :initial-action="detailEditor.action" @close="detailEditor = null" @change-day="changeFromDetails(detailEditor.index)" />
       </template>
       <div v-else class="plan-loading" />
       <template #fallback><div class="plan-loading" /></template>

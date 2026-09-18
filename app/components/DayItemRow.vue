@@ -18,6 +18,7 @@ const wrongPark = computed(
 )
 const sub = computed(() => {
   if (wrongPark.value) return `⚠ ${parkName(props.item.parkId, store.customActivities)}`
+  if (props.item.anchor === 'date') return '🔒 Fixed to this date'
   return props.item.state === 'booked' ? 'Confirmed' : 'Not booked yet'
 })
 </script>
@@ -33,9 +34,9 @@ const sub = computed(() => {
     </span>
     <span
       class="irow__tag"
-      :class="item.state === 'booked' ? 'irow__tag--booked' : 'irow__tag--idea'"
+      :class="item.anchor === 'date' ? 'irow__tag--booked' : 'irow__tag--idea'"
     >
-      {{ item.state === 'booked' ? 'Booked' : 'Idea' }}
+      {{ item.anchor === 'date' ? 'Fixed' : 'Idea' }}
     </span>
   </button>
 </template>

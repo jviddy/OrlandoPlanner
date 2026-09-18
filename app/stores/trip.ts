@@ -54,6 +54,7 @@ function blankState(): TripState {
     sheetOpen: false,
     justSet: null,
     undo: null,
+    recentActivityIds: [],
   }
 }
 
@@ -485,6 +486,11 @@ export const useTripStore = defineStore('orlando-trip', {
       }
       day.parkId = parkId
       day.secondParkId = nextSecond
+      const chosen = [parkId, nextSecond].filter((id): id is string => Boolean(id))
+      this.recentActivityIds = [
+        ...chosen,
+        ...this.recentActivityIds.filter((id) => !chosen.includes(id)),
+      ].slice(0, 6)
       this.justSet = index
     },
     /** Copy the movable plan while leaving date-fixed bookings on their original dates. */

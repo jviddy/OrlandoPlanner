@@ -27,6 +27,16 @@ describe('trip assignment history', () => {
     expect(store.undo).toBeNull()
   })
 
+  it('keeps the most recently chosen activities available to the editor', () => {
+    const store = useTripStore()
+    store.$patch(blank14DayTrip())
+
+    store.setDayActivities(0, 'epcot')
+    store.setDayActivities(1, 'magic-kingdom', 'epcot')
+
+    expect(store.recentActivityIds).toEqual(['magic-kingdom', 'epcot'])
+  })
+
   it('copies a movable plan without moving date-fixed detail and supports undo', () => {
     const store = useTripStore()
     store.$patch(blank14DayTrip())

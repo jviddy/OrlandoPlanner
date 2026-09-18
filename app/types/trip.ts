@@ -2,7 +2,7 @@ import type { CustomActivity } from '~/data/parks'
 
 export type WeekStart = 'sunday' | 'monday' | 'tripDay1'
 
-export type ItemKind = 'dining' | 'fixed'
+export type ItemKind = 'dining' | 'fixed' | 'idea'
 export type ItemState = 'booked' | 'idea'
 export type ItemAnchor = 'date' | 'plan'
 
@@ -110,4 +110,6 @@ export interface TripState {
   justSet: number | null
   /** Transient single-step history for immediate planning actions. */
   undo: UndoEntry | null
+  /** Transient most-recently chosen activities for the continuous editor. */
+  recentActivityIds: string[]
 }
