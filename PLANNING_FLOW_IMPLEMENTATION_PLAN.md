@@ -1,6 +1,6 @@
 # Orlando Planner — pre-accounts implementation plan
 
-Status: **implementation in progress**
+Status: **complete at the accounts and collaboration boundary**
 
 Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
 
@@ -26,13 +26,16 @@ Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
   default to unset days, preserve fixed bookings, and remain available from Overview and Plan.
 - **Slice 6 complete for this phase:** a resumable setup draft supports self-directed, booked-first, and
   guided routes, route switching, review, and a single final commit into Plan.
-- **Slice 7 complete:** the privacy-first Share Studio presents three stories, portrait and square output,
+- **Slice 7 complete:** the privacy-first Share Studio presents five stories, portrait and square output,
   paginates long trips, shares/downloads multiple files, copies captions, and records local-only events.
-- **Slice 8 complete:** focused migration, repository, fixed/movable, undo, template, recovery, and share
-  privacy tests pass; the main mobile flows and 21-day sharing were browser-verified.
-- **Slice 9 foundation complete and disabled:** a D1 migration and anonymous create/fetch/update repository
-  path implement hashed edit/view capabilities, idempotency, optimistic revisions, validation, and an
-  activity log. The feature flag remains off pending environment provisioning and operational checks.
+- **Slice 8 complete:** focused migration, repository, fixed/movable, undo, template, recovery, setup,
+  and share privacy tests pass. All three setup routes, saved resume state, Plan navigation, fixed anchors,
+  recovery spacing, and every share story were browser-verified.
+- **Slice 9 foundation complete and disabled:** isolated preview and production D1 databases, migrations,
+  rollback SQL, an explicit opt-in upload panel, and anonymous create/fetch/update/revoke paths are in
+  place. Hashed edit/view capabilities, expiry, rate limits, idempotency, optimistic revisions, validation,
+  and an activity log passed a local Worker/D1 lifecycle check. The feature flag remains off until a
+  controlled preview receives an environment secret and an operational review.
 
 Implementation has reached the accounts and collaboration stop boundary. No account, authentication,
 invitation, role, or collaboration UI is included.

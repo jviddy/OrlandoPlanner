@@ -47,3 +47,23 @@ and a dense 21-day trip with notes, park hopping, fixed bookings, warnings, and 
 - Cancelling a form changes nothing; one-step changes offer Undo.
 - Date and starting-shape changes preview their impact and preserve recoverable content.
 - Share output paginates rather than shrinking below readable text or clipping content.
+
+## After implementation
+
+Code-audit and browser checks were repeated on 18 September 2026 against the completed pre-accounts
+flow. These remain product benchmarks rather than observed-user research.
+
+| Task | Implemented path | Result against baseline |
+| --- | --- | --- |
+| Assign five days | Plan -> Change day -> keep the editor open and use Next/Next unset, or batch-select days | One editor session replaces five separate opens; surrounding pace stays visible |
+| Jump from day 3 to day 15 | Select the dated card/rail item in Plan | One deliberate selection rather than up to 12 Next presses |
+| Add a booking | Selected Plan day -> + Booking -> Save | The selected day, neighbours, and warning context remain in the workspace |
+| Find and fix a warning | Warning -> Fix -> targeted Plan control | The fix opens at the affected day and control |
+| Change dates safely | Edit -> date preview -> Save, with recovery confirmation when needed | No immediate destructive mutation; removed content is recoverable |
+| Share a 21-day plan | Share -> story/privacy review -> paginated preview -> share/download | Requested-size images are checked for overflow and pixel dimensions; long trips use numbered files |
+
+The self-directed, booked-first, and guided setup routes were each run from start through review and
+Plan in a browser. The booked route retained a dated EPCOT dining anchor across reload. The guided
+route produced a 14-day recovery-first plan with travel at both boundaries and regular rest days. The
+overview, week, pacing, comparison, and countdown share stories generated previews; privacy defaults
+kept the real trip name and booking titles out of the output.

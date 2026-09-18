@@ -105,6 +105,8 @@ function save() {
           <button type="button" @click="store.clearRecovery()">Clear archive</button>
         </div>
 
+        <TripSyncPanel />
+
         <div class="edit__section">
           <p class="group-label">Week starts on</p>
           <div class="segmented">
