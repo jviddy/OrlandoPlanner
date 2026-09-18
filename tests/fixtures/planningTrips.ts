@@ -22,6 +22,8 @@ function base(name: string, start: string, length: number): TripState {
     version: 2,
     tripId: `fixture-trip-${length}`,
     created: true,
+    setupMode: 'self',
+    seedStrategy: 'blank',
     name,
     startDate: start,
     endDate: iso(start, length - 1),
@@ -38,6 +40,7 @@ function base(name: string, start: string, length: number): TripState {
     sheetOpen: false,
     justSet: null,
     undo: null,
+    recentActivityIds: [],
   }
 }
 

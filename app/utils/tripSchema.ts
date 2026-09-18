@@ -114,6 +114,8 @@ export function migratePersistedTrip(raw: any, makeId: IdFactory = createStableI
     version: TRIP_SCHEMA_VERSION,
     tripId: uniqueId(raw?.tripId, 'trip', used, makeId),
     created: Boolean(raw?.created),
+    setupMode: raw?.setupMode === 'booked' || raw?.setupMode === 'guided' ? raw.setupMode : 'self',
+    seedStrategy: raw?.seedStrategy === 'template' || raw?.seedStrategy === 'generated' ? raw.seedStrategy : 'blank',
     name: typeof raw?.name === 'string' ? raw.name : 'My Trip',
     startDate: typeof raw?.startDate === 'string' ? raw.startDate : '',
     endDate: typeof raw?.endDate === 'string' ? raw.endDate : '',
@@ -142,6 +144,8 @@ export function migratePersistedTrip(raw: any, makeId: IdFactory = createStableI
     | 'version'
     | 'tripId'
     | 'created'
+    | 'setupMode'
+    | 'seedStrategy'
     | 'name'
     | 'startDate'
     | 'endDate'

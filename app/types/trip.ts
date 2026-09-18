@@ -1,6 +1,8 @@
 import type { CustomActivity } from '~/data/parks'
 
 export type WeekStart = 'sunday' | 'monday' | 'tripDay1'
+export type SetupMode = 'self' | 'booked' | 'guided'
+export type SeedStrategy = 'blank' | 'template' | 'generated'
 
 export type ItemKind = 'dining' | 'fixed' | 'idea'
 export type ItemState = 'booked' | 'idea'
@@ -90,6 +92,8 @@ export interface TripState {
   tripId: string
   /** Flips true once a template has been chosen (trip left the gate). */
   created: boolean
+  setupMode: SetupMode
+  seedStrategy: SeedStrategy
 
   name: string
   startDate: string

@@ -38,6 +38,8 @@ function blankState(): TripState {
     version: VERSION,
     tripId: createStableId('trip'),
     created: false,
+    setupMode: 'self',
+    seedStrategy: 'blank',
     name: DEFAULT_TRIP_NAME,
     startDate: '',
     endDate: '',
@@ -102,6 +104,8 @@ export const useTripStore = defineStore('orlando-trip', {
       'version',
       'tripId',
       'created',
+      'setupMode',
+      'seedStrategy',
       'name',
       'startDate',
       'endDate',
@@ -356,6 +360,8 @@ export const useTripStore = defineStore('orlando-trip', {
         Pick<
           TripState,
           | 'name'
+          | 'setupMode'
+          | 'seedStrategy'
           | 'startDate'
           | 'endDate'
           | 'weekStart'
