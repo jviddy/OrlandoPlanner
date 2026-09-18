@@ -3,6 +3,12 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-09-01',
   devtools: { enabled: true },
 
+  runtimeConfig: {
+    anonymousSyncEnabled: false,
+    anonymousCapabilitySecret: '',
+    public: { anonymousSyncEnabled: false },
+  },
+
   modules: ['@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
 
   // The Nuxt persistedstate module defaults to cookies; the trip (up to 21 days
@@ -80,6 +86,7 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/**': { prerender: true },
+    '/api/**': { prerender: false },
   },
 
   typescript: {

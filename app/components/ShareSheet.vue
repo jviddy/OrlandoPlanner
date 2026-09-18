@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { toBlob } from 'html-to-image'
 import { presentShareTrip, type ShareFormat, type ShareStory } from '~/utils/sharePresenter'
+import { recordLocalEvent } from '~/utils/localEvents'
 
 const store = useTripStore()
 const isOpen = ref(false)
@@ -15,6 +16,7 @@ const previewUrls = ref<string[]>([])
 const blobs = shallowRef<Blob[]>([])
 const currentPage = ref(0)
 const customQuestion = ref('')
+let previousFocus: HTMLElement | null = null
 const presented = computed(() => presentShareTrip(store, story.value, { includeTripName: includeTripName.value, includeSafeDetails: includeSafeDetails.value }))
 const caption = computed(() => customQuestion.value.trim() ? `${customQuestion.value.trim()}\n\n${presented.value.caption.split('\n\n').slice(1).join('\n\n')}` : presented.value.caption)
 
@@ -32,21 +34,24 @@ async function generate() {
   }
   if (request !== token) return
   revokePreviews(); blobs.value = nextBlobs; previewUrls.value = nextBlobs.map((blob) => URL.createObjectURL(blob)); failed.value = nextBlobs.length !== presented.value.pages.length; generating.value = false
+  if (!failed.value) recordLocalEvent('share_preview_generated')
 }
-function open() { isOpen.value = true; story.value = 'overview'; includeTripName.value = false; includeSafeDetails.value = false; nextTick(generate) }
-function close() { isOpen.value = false; revokePreviews(); blobs.value = [] }
+function open() { previousFocus = document.activeElement as HTMLElement | null; isOpen.value = true; story.value = 'overview'; includeTripName.value = false; includeSafeDetails.value = false; nextTick(() => { document.querySelector<HTMLElement>('.share-studio>header button')?.focus(); generate() }) }
+function close() { isOpen.value = false; revokePreviews(); blobs.value = []; nextTick(() => previousFocus?.focus()) }
 watch([story, format, includeTripName, includeSafeDetails], () => { if (isOpen.value) generate() })
+watch(story, () => { if (isOpen.value) recordLocalEvent('share_story_selected') })
 
 function files() { return blobs.value.map((blob, index) => new File([blob], `${slugify(includeTripName.value ? store.displayName : 'orlando-trip')}-${story.value}-${index + 1}.png`, { type: 'image/png' })) }
 async function shareOrDownload() {
   const output = files(); if (!output.length) return
   const nav = navigator as Navigator & { canShare?: (data: { files: File[] }) => boolean }
   if (nav.canShare?.({ files: output })) {
-    try { await navigator.share({ files: output, title: 'Orlando trip plan', text: caption.value }); return } catch { /* fall back to download */ }
+    try { recordLocalEvent('share_native_opened'); await navigator.share({ files: output, title: 'Orlando trip plan', text: caption.value }); return } catch { /* fall back to download */ }
   }
   output.forEach((file) => { const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) })
+  recordLocalEvent('share_downloaded')
 }
-async function copyCaption() { await navigator.clipboard.writeText(caption.value); copied.value = true; setTimeout(() => { copied.value = false }, 1600) }
+async function copyCaption() { await navigator.clipboard.writeText(caption.value); recordLocalEvent('share_caption_copied'); copied.value = true; setTimeout(() => { copied.value = false }, 1600) }
 function onKey(event: KeyboardEvent) { if (event.key === 'Escape') close() }
 watch(isOpen, (openNow) => { if (typeof window !== 'undefined') openNow ? window.addEventListener('keydown', onKey) : window.removeEventListener('keydown', onKey) })
 onBeforeUnmount(() => { revokePreviews(); if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey) })

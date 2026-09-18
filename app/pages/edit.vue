@@ -25,6 +25,11 @@ const draft = reactive<TripDetailsDraft>(copyDetails())
 const original = ref('')
 const confirmDateChange = ref(false)
 const impact = computed(() => dateRangeImpact(store.days, draft.startDate, draft.endDate))
+const affected = computed(() => ({
+  flights: store.flights.filter((flight) => flight.date && (flight.date < draft.startDate || flight.date > draft.endDate)).length,
+  stays: store.hotels.filter((stay) => (stay.startDate && stay.startDate < draft.startDate) || (stay.endDate && stay.endDate > draft.endDate)).length,
+  bookings: store.days.filter((day) => day.date < draft.startDate || day.date > draft.endDate).reduce((sum, day) => sum + day.items.filter((item) => item.anchor === 'date').length, 0),
+}))
 const dirty = computed(() => original.value !== JSON.stringify(draft))
 
 onMounted(() => {
@@ -88,6 +93,16 @@ function save() {
           <span v-if="impact.removedWithContent">
             {{ impact.removedWithContent }} of those contain plans.
           </span>
+          <span v-if="affected.flights || affected.stays || affected.bookings">
+            Review needed: {{ affected.flights }} flight{{ affected.flights === 1 ? '' : 's' }},
+            {{ affected.stays }} stay{{ affected.stays === 1 ? '' : 's' }}, and
+            {{ affected.bookings }} fixed booking{{ affected.bookings === 1 ? '' : 's' }} outside the new range.
+          </span>
+        </div>
+
+        <div v-if="store.recovery.removedDays.length" class="edit__recovery">
+          <div><strong>{{ store.recovery.removedDays.length }} recovered day{{ store.recovery.removedDays.length === 1 ? '' : 's' }}</strong><span>These restore automatically if their dates return to the trip.</span></div>
+          <button type="button" @click="store.clearRecovery()">Clear archive</button>
         </div>
 
         <div class="edit__section">
@@ -187,6 +202,10 @@ function save() {
 }
 .edit__impact strong,
 .edit__impact span { display: block; }
+.edit__recovery { margin:0 20px 18px; padding:12px 14px; display:flex; justify-content:space-between; gap:12px; border:1px solid var(--warm-border); border-radius:var(--r-row); }
+.edit__recovery strong,.edit__recovery span { display:block; }
+.edit__recovery span { margin-top:2px; color:var(--text-faint); font-size:12px; }
+.edit__recovery button { flex:none; color:var(--warn-ink); font-size:12px; font-weight:700; }
 .segmented {
   display: flex;
   gap: 6px;

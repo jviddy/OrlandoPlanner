@@ -7,9 +7,8 @@ Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
 ## Implementation progress
 
 - **Slice 0 complete:** baseline journey audit and 14-, 17-, and 21-day fixtures added.
-- **Slice 1 in progress:** schema version 2, stable trip/day/stay/flight IDs, item anchors, tested legacy
-  migration, date-impact calculation, removed-day recovery, and single-step assignment Undo are
-  implemented. Repository wiring remains.
+- **Slice 1 complete:** schema version 2, stable identities, item anchors, tested migration,
+  date-impact calculation, recovery, Undo, and local/remote repository contracts are implemented.
 - **Slice 2 substantially complete:** Overview/Plan navigation, stable day URLs, mobile date rail,
   selected-day panel, desktop horizontal board, Previous/Next, Next unset, arrow-key navigation,
   focus movement, reduced-motion handling, and selected-card centring are implemented.
@@ -18,11 +17,25 @@ Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
   hopping explicit; shows nearby-day, ticket-count, and fixed-booking context; and supports copy
   previous, rest, clear, optional auto-advance, multi-select batch fill, and Undo. Recent choices and
   ticket-matched suggestions are included.
-- **Slice 4 in progress:** Plan now exposes Booking, Idea, and Edit details actions without leaving the
+- **Slice 4 complete:** Plan now exposes Booking, Idea, and Edit details actions without leaving the
   workspace. Its responsive detail panel separates date-fixed bookings from movable ideas, stages note
   edits, protects unsaved forms, and offers fixes for wrong-park, park-hopper, travel-day, and ticket
-  overuse warnings. Legacy `/day` links now redirect to the same stable day in Plan; additional
-  date-range warnings remain.
+  overuse warnings. Legacy `/day` links redirect to the same stable day in Plan, and date edits show
+  affected days, flights, stays, bookings, and recovery controls.
+- **Slice 5 complete:** trip settings use Save/Cancel drafts with impact review; starting shapes preview,
+  default to unset days, preserve fixed bookings, and remain available from Overview and Plan.
+- **Slice 6 complete for this phase:** a resumable setup draft supports self-directed, booked-first, and
+  guided routes, route switching, review, and a single final commit into Plan.
+- **Slice 7 complete:** the privacy-first Share Studio presents three stories, portrait and square output,
+  paginates long trips, shares/downloads multiple files, copies captions, and records local-only events.
+- **Slice 8 complete:** focused migration, repository, fixed/movable, undo, template, recovery, and share
+  privacy tests pass; the main mobile flows and 21-day sharing were browser-verified.
+- **Slice 9 foundation complete and disabled:** a D1 migration and anonymous create/fetch/update repository
+  path implement hashed edit/view capabilities, idempotency, optimistic revisions, validation, and an
+  activity log. The feature flag remains off pending environment provisioning and operational checks.
+
+Implementation has reached the accounts and collaboration stop boundary. No account, authentication,
+invitation, role, or collaboration UI is included.
 
 This plan turns the product direction in
 [`next steps for orlandoPlanner.md`](./next%20steps%20for%20orlandoPlanner.md) into an ordered set of
