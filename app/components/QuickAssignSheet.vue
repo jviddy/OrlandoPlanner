@@ -157,10 +157,13 @@ const customOpen = ref(false)
 const customLabel = ref('')
 const customGlyphId = ref(CUSTOM_ACTIVITY_GLYPHS[0]!.id)
 
-function openCustomForm() {
-  customLabel.value = ''
+function openCustomForm(initialLabel = '') {
+  customLabel.value = initialLabel.slice(0, 24)
   customGlyphId.value = CUSTOM_ACTIVITY_GLYPHS[0]!.id
   customOpen.value = true
+}
+function openCustomFromSearch() {
+  openCustomForm(searchQuery.value.trim())
 }
 function saveCustomActivity() {
   const label = customLabel.value.trim()
@@ -284,7 +287,23 @@ onBeforeUnmount(() => {
                 <span class="tile__label">{{ activity.short }}</span>
               </button>
             </div>
-            <p v-else class="search-empty">No matching activities.</p>
+            <div v-else class="search-empty">
+              <p>No matching activities.</p>
+              <button type="button" @click="openCustomFromSearch">Add “{{ searchQuery.trim() }}” as a custom activity</button>
+            </div>
+          </div>
+
+          <div v-if="searchQuery.trim() && customOpen" class="custom-form custom-form--search">
+            <input v-model="customLabel" class="input input--sm" type="text" placeholder="e.g. Spa day, Golf" maxlength="24" autofocus />
+            <div class="custom-form__glyphs">
+              <button v-for="g in CUSTOM_ACTIVITY_GLYPHS" :key="g.id" type="button" class="custom-form__glyph" :class="{ 'custom-form__glyph--on': customGlyphId === g.id }" @click="customGlyphId = g.id">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="g.glyph" /></svg>
+              </button>
+            </div>
+            <div class="custom-form__actions">
+              <button type="button" class="custom-form__btn" @click="customOpen = false">Cancel</button>
+              <button type="button" class="custom-form__btn custom-form__btn--go" :disabled="!customLabel.trim()" @click="saveCustomActivity">Add</button>
+            </div>
           </div>
 
           <template v-if="!searchQuery.trim()">
@@ -334,7 +353,7 @@ onBeforeUnmount(() => {
                       <DayCircle :park-id="activity.id" :size="42" />
                       <span class="tile__label">{{ activity.short }}</span>
                     </button>
-                    <button type="button" class="tile" @click="openCustomForm">
+                    <button type="button" class="tile" @click="openCustomForm()">
                       <span class="tile__add"><AppIcon name="plus" :size="18" /></span>
                       <span class="tile__label">Custom</span>
                     </button>
@@ -545,6 +564,7 @@ onBeforeUnmount(() => {
 .activity-search input { width:100%; height:36px; padding:0 11px; border:1.5px solid var(--field-border-soft); border-radius:10px; background:#fff; color:var(--text); font:inherit; font-size:13px; }
 .activity-search input:focus { border-color:var(--c-navy); outline:2px solid rgba(23,35,58,.12); }
 .search-empty { padding:12px 6px; color:var(--text-faint); font-size:12px; }
+.search-empty button { margin-top:8px; color:var(--c-navy); font-size:12px; font-weight:700; text-align:left; }
 .sgroup {
   margin-bottom: 9px;
 }
@@ -660,6 +680,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 10px;
 }
+.custom-form--search { margin: -2px 2px 9px; }
 .custom-form__glyphs {
   display: flex;
   gap: 8px;
