@@ -9,7 +9,7 @@ const { dowDayMon, time12 } = useDates()
 
 const day = computed(() => store.days[props.index]!)
 const activity = computed(() =>
-  [day.value.parkId, day.value.secondParkId]
+  [day.value.parkId, day.value.secondParkId, day.value.thirdParkId]
     .filter((id): id is string => Boolean(id))
     .map((id) => parkName(id, store.customActivities))
     .join(' + ') || 'Day not set',
@@ -17,7 +17,7 @@ const activity = computed(() =>
 const hotels = computed(() => store.hotelsForDate(day.value.date))
 const flights = computed(() => store.flights.filter((flight) => flight.date === day.value.date))
 const warningCount = computed(() => day.value.items.filter(
-  (item) => item.parkId && item.parkId !== day.value.parkId && item.parkId !== day.value.secondParkId,
+  (item) => item.parkId && ![day.value.parkId, day.value.secondParkId, day.value.thirdParkId].includes(item.parkId),
 ).length)
 </script>
 
@@ -32,7 +32,7 @@ const warningCount = computed(() => day.value.items.filter(
         title="Set activities"
         @click.stop="emit('change')"
       >
-        <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :date-number="parseISO(day.date).getUTCDate()" :size="56" />
+        <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :third-park-id="day.thirdParkId" :date-number="parseISO(day.date).getUTCDate()" :size="56" />
       </button>
     </header>
 

@@ -55,6 +55,7 @@ function migrateDay(raw: any, used: Set<string>, makeId: IdFactory): Day {
     date: typeof raw?.date === 'string' ? raw.date : '',
     parkId: typeof raw?.parkId === 'string' ? raw.parkId : null,
     secondParkId: typeof raw?.secondParkId === 'string' ? raw.secondParkId : null,
+    thirdParkId: typeof raw?.thirdParkId === 'string' ? raw.thirdParkId : null,
     note: typeof raw?.note === 'string' ? raw.note : '',
     items: Array.isArray(raw?.items)
       ? raw.items.map((item: unknown) => migrateItem(item, used, makeId))
@@ -162,7 +163,7 @@ export function migratePersistedTrip(raw: any, makeId: IdFactory = createStableI
 }
 
 function hasPlanningContent(day: Day): boolean {
-  return Boolean(day.parkId || day.secondParkId || day.note.trim() || day.items.length)
+  return Boolean(day.parkId || day.secondParkId || day.thirdParkId || day.note.trim() || day.items.length)
 }
 
 export interface DateRangeImpact {
@@ -218,6 +219,7 @@ export function refitDaysWithRecovery(
           date,
           parkId: null,
           secondParkId: null,
+          thirdParkId: null,
           note: '',
           items: [],
         },

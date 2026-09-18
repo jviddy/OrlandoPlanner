@@ -13,6 +13,7 @@ export interface ShareDay {
   date: string
   parkId: string | null
   secondParkId: string | null
+  thirdParkId: string | null
   summaries: string[]
 }
 
@@ -43,7 +44,7 @@ export function presentShareTrip(
   const title = privacy.includeTripName && trip.name.trim() ? trip.name.trim() : 'Our Orlando trip'
   const size = story === 'overview' || story === 'pacing' ? 21 : 7
   const safeDays = trip.days.map((day) => ({
-    id: day.id, date: day.date, parkId: day.parkId, secondParkId: day.secondParkId,
+    id: day.id, date: day.date, parkId: day.parkId, secondParkId: day.secondParkId, thirdParkId: day.thirdParkId,
     summaries: privacy.includeSafeDetails ? safeSummaries(day) : [],
   }))
   const storyDays = story === 'choice'

@@ -21,13 +21,11 @@ const title = computed(() => {
 })
 
 /**
- * Up to two park ids in the order tapped (first = primary/first half,
- * second = park-hopper half). Each change is saved immediately so every
+ * Up to three activities in the order tapped. Each change is saved immediately so every
  * way of closing the sheet keeps the latest selection.
  */
 const selection = ref<string[]>([])
 const openGroups = ref<Set<string>>(new Set())
-const hopperMode = ref(false)
 const searchQuery = ref('')
 const autoAdvance = ref(false)
 
@@ -43,7 +41,7 @@ const searchResults = computed(() => {
 const usedChoices = computed(() => {
   const counts = new Map<string, number>()
   for (const day of store.days) {
-    for (const id of [day.parkId, day.secondParkId]) {
+    for (const id of [day.parkId, day.secondParkId, day.thirdParkId]) {
       if (id) counts.set(id, (counts.get(id) ?? 0) + 1)
     }
   }
@@ -76,9 +74,8 @@ const fixedAnchorCount = computed(() => store.selected?.items.filter((item) => i
 function syncSelectionFromDay() {
   const day = store.selected
   selection.value = day
-    ? [day.parkId, day.secondParkId].filter((id): id is string => Boolean(id))
+    ? [day.parkId, day.secondParkId, day.thirdParkId].filter((id): id is string => Boolean(id))
     : []
-  hopperMode.value = Boolean(day?.secondParkId)
 }
 
 function resetOpenGroups() {
@@ -103,26 +100,16 @@ function toggleGroup(key: string) {
 
 function choose(parkId: string) {
   if (store.selectedDay === null) return
-  const [primary, second] = selection.value
-  const wasUnset = !primary
-
-  if (!primary) selection.value = [parkId]
-  else if (hopperMode.value && parkId !== primary) {
-    selection.value = second === parkId ? [primary] : [primary, parkId]
-  } else if (parkId === primary) selection.value = []
-  else selection.value = [parkId]
-
-  const [first, nextSecond] = selection.value
-  if (!nextSecond && hopperMode.value && first !== primary) hopperMode.value = false
-  store.setDayActivities(store.selectedDay, first ?? null, nextSecond ?? null)
-  if (autoAdvance.value && wasUnset && first && !hopperMode.value) nextTick(moveToNextUnset)
+  const wasUnset = selection.value.length === 0
+  selection.value = selection.value.includes(parkId)
+    ? selection.value.filter((id) => id !== parkId)
+    : selection.value.length < 3 ? [...selection.value, parkId] : selection.value
+  const [first, second, third] = selection.value
+  store.setDayActivities(store.selectedDay, first ?? null, second ?? null, third ?? null)
+  if (autoAdvance.value && wasUnset && first) nextTick(moveToNextUnset)
 }
-function removeSecondPark() {
-  const primary = selection.value[0]
-  if (store.selectedDay === null || !primary) return
-  selection.value = [primary]
-  hopperMode.value = false
-  store.setDayActivities(store.selectedDay, primary, null)
+function removeActivity(parkId: string) {
+  choose(parkId)
 }
 
 const previousAvailable = computed(() => (store.selectedDay ?? 0) > 0)
@@ -251,25 +238,14 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-if="selection[0]" class="selected-plan">
-            <div>
-              <span>Main plan</span>
-              <strong>{{ resolvePark(selection[0], store.customActivities)?.name }}</strong>
+            <div v-for="(parkId, index) in selection" :key="parkId">
+              <span>{{ index === 0 ? 'Main plan' : `Activity ${index + 1}` }}</span>
+              <strong>{{ resolvePark(parkId, store.customActivities)?.name }}</strong>
+              <button v-if="index > 0" type="button" @click="removeActivity(parkId)">Remove</button>
             </div>
-            <div v-if="selection[1]">
-              <span>Second park</span>
-              <strong>{{ resolvePark(selection[1], store.customActivities)?.name }}</strong>
-              <button type="button" @click="removeSecondPark">Remove</button>
-            </div>
-            <button
-              v-else
-              type="button"
-              class="hopper-button"
-              :class="{ 'hopper-button--on': hopperMode }"
-              @click="hopperMode = !hopperMode"
-            >
-              {{ hopperMode ? 'Choose the second park below' : '+ Add park hopper' }}
-            </button>
-            <p v-if="hopperMode && !store.parkHopper" class="hopper-hint">Your trip settings are not currently marked as park hopper.</p>
+            <p v-if="selection.length < 3" class="selection-hint">Choose up to {{ 3 - selection.length }} more {{ selection.length === 2 ? 'activity' : 'activities' }} below.</p>
+            <p v-else class="selection-hint">Three activities selected.</p>
+            <p v-if="selection.length > 1 && !store.parkHopper" class="hopper-hint">Your trip settings are not currently marked as park hopper.</p>
           </div>
 
           <div class="activity-search">
@@ -540,6 +516,7 @@ onBeforeUnmount(() => {
 .selected-plan span { color:var(--text-dim); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
 .selected-plan strong { grid-column:1; color:var(--text); font-size:12px; }
 .selected-plan div button { grid-column:2; grid-row:1 / span 2; color:#a04738; font-size:10px; font-weight:700; }
+.selection-hint { color:var(--text-muted); font-size:10.5px; }
 .hopper-button { justify-self:start; padding:7px 10px; border-radius:999px; background:#eef1f7; color:var(--c-navy); font-size:11px; font-weight:700; }
 .hopper-button--on { background:var(--c-navy); color:#fff; }
 .hopper-hint { color:#9a6c18; font-size:10.5px; }

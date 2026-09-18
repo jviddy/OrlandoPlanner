@@ -35,9 +35,9 @@ function pick(id: string) {
 const conflicts = computed(() => {
   if (!selectedTemplate.value) return { assigned: 0, fixed: 0, unset: 0 }
   return {
-    assigned: store.days.filter((day) => day.parkId || day.secondParkId).length,
+    assigned: store.days.filter((day) => day.parkId || day.secondParkId || day.thirdParkId).length,
     fixed: store.days.reduce((sum, day) => sum + day.items.filter((item) => item.anchor === 'date').length, 0),
-    unset: store.days.filter((day) => !day.parkId && !day.secondParkId).length,
+    unset: store.days.filter((day) => !day.parkId && !day.secondParkId && !day.thirdParkId).length,
   }
 })
 

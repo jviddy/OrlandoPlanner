@@ -6,6 +6,7 @@ const props = defineProps<{
   item: DayItem
   dayParkId: string | null
   daySecondParkId?: string | null
+  dayThirdParkId?: string | null
 }>()
 const emit = defineEmits<{ edit: [] }>()
 const store = useTripStore()
@@ -14,7 +15,8 @@ const wrongPark = computed(
   () =>
     props.item.parkId &&
     props.item.parkId !== props.dayParkId &&
-    props.item.parkId !== props.daySecondParkId,
+    props.item.parkId !== props.daySecondParkId &&
+    props.item.parkId !== props.dayThirdParkId,
 )
 const sub = computed(() => {
   if (wrongPark.value) return `⚠ ${parkName(props.item.parkId, store.customActivities)}`

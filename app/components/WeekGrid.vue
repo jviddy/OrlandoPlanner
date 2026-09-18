@@ -86,6 +86,7 @@ function cancel() {
               :class="{ 'anim-pop': popIndex === cell }"
               :park-id="dayCell(cell).parkId"
               :second-park-id="dayCell(cell).secondParkId"
+              :third-park-id="dayCell(cell).thirdParkId"
               :date-number="dayCell(cell).dateNumber"
               :size="40"
             />

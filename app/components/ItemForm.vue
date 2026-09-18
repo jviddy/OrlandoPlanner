@@ -9,6 +9,7 @@ const props = defineProps<{
   /** The park(s) this day is set to (so "another park" excludes them). */
   dayParkId: string | null
   daySecondParkId?: string | null
+  dayThirdParkId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -102,7 +103,7 @@ function submit() {
           v-for="p in otherParkOptions"
           :key="p.id"
           :value="p.id"
-          :disabled="p.id === dayParkId || p.id === daySecondParkId"
+          :disabled="p.id === dayParkId || p.id === daySecondParkId || p.id === dayThirdParkId"
         >
           {{ p.name }}
         </option>

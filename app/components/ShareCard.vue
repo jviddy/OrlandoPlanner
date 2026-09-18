@@ -6,10 +6,10 @@ import { parseISO, useDates } from '~/composables/useDates'
 const props = defineProps<{ page: SharePage; format: ShareFormat }>()
 const { dow } = useDates()
 function dateNumber(date: string) { return parseISO(date).getUTCDate() }
-function label(parkId: string | null, secondParkId: string | null) {
+function label(parkId: string | null, secondParkId: string | null, thirdParkId: string | null) {
   if (!parkId) return 'Not set'
   const first = parkName(parkId)
-  return secondParkId ? `${first} + ${parkName(secondParkId)}` : first
+  return [first, secondParkId ? parkName(secondParkId) : '', thirdParkId ? parkName(thirdParkId) : ''].filter(Boolean).join(' + ')
 }
 </script>
 
@@ -25,16 +25,16 @@ function label(parkId: string | null, secondParkId: string | null) {
 
     <div v-if="page.story !== 'weeks'" class="share-grid" :class="{ 'share-grid--choice': page.story === 'choice' }">
       <div v-for="day in page.days" :key="day.id" class="share-cell">
-        <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :date-number="dateNumber(day.date)" :size="68" flat />
-        <strong>{{ label(day.parkId, day.secondParkId) }}</strong>
+        <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :third-park-id="day.thirdParkId" :date-number="dateNumber(day.date)" :size="68" flat />
+        <strong>{{ label(day.parkId, day.secondParkId, day.thirdParkId) }}</strong>
       </div>
     </div>
 
     <div v-else class="share-rows">
       <div v-for="day in page.days" :key="day.id" class="share-row">
         <div class="share-row__date"><span>{{ dow(parseISO(day.date)) }}</span><strong>{{ dateNumber(day.date) }}</strong></div>
-        <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :size="54" flat />
-        <div class="share-row__body"><strong>{{ label(day.parkId, day.secondParkId) }}</strong><span v-for="summary in day.summaries" :key="summary">{{ summary }}</span></div>
+        <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :third-park-id="day.thirdParkId" :size="54" flat />
+        <div class="share-row__body"><strong>{{ label(day.parkId, day.secondParkId, day.thirdParkId) }}</strong><span v-for="summary in day.summaries" :key="summary">{{ summary }}</span></div>
       </div>
     </div>
 

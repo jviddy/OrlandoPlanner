@@ -15,6 +15,7 @@ export interface DayCellData {
   dateNumber: number
   parkId: string | null
   secondParkId: string | null
+  thirdParkId: string | null
   short: string
   items: DayCellItem[]
   more: string
@@ -44,6 +45,7 @@ export function useDayCell() {
     const d = parseISO(day.date)
     const park = resolvePark(day.parkId, store.customActivities)
     const park2 = resolvePark(day.secondParkId, store.customActivities)
+    const park3 = resolvePark(day.thirdParkId, store.customActivities)
     // Budget is 3 slots total: all items if 3 or fewer, otherwise the first
     // two plus a "+N" badge for the rest.
     const visibleItems = day.items.length <= 3 ? day.items : day.items.slice(0, 2)
@@ -53,7 +55,8 @@ export function useDayCell() {
       dateNumber: d.getUTCDate(),
       parkId: day.parkId,
       secondParkId: day.secondParkId,
-      short: [park?.short, park2?.short].filter(Boolean).join(' + '),
+      thirdParkId: day.thirdParkId,
+      short: [park?.short, park2?.short, park3?.short].filter(Boolean).join(' + '),
       items,
       more: extra > 0 ? `+${extra}` : '',
       hotel: store.hotelsForDate(day.date).join(' + '),

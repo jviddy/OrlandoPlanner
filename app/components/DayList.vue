@@ -22,6 +22,7 @@ function openDay(index: number) {
         <DayCircle
           :park-id="dayCell(i).parkId"
           :second-park-id="dayCell(i).secondParkId"
+          :third-park-id="dayCell(i).thirdParkId"
           :size="36"
         />
         <span class="drow__info">

@@ -33,6 +33,8 @@ export interface Day {
   parkId: string | null
   /** Optional second park, for a park-hopper day. Only meaningful with `parkId` set. */
   secondParkId: string | null
+  /** Optional third activity for a multi-activity day. */
+  thirdParkId: string | null
   note: string
   items: DayItem[]
 }
@@ -80,6 +82,7 @@ export interface UndoEntry {
     dayId: string
     parkId: string | null
     secondParkId: string | null
+    thirdParkId: string | null
     /** Present for commands that also change the rest of the movable plan. */
     note?: string
     items?: DayItem[]

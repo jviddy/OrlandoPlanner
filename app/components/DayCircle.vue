@@ -9,6 +9,8 @@ const props = withDefaults(
     parkId?: string | null
     /** Second park, for a park-hopper day — renders a diagonal split circle. */
     secondParkId?: string | null
+    /** A third activity is shown as a small +1 badge. */
+    thirdParkId?: string | null
     size?: number
     /** Show the date-of-month badge (grid only). */
     dateNumber?: number | string | null
@@ -19,11 +21,12 @@ const props = withDefaults(
     bob?: boolean
     strokeWidth?: number
   }>(),
-  { size: 40, parkId: null, secondParkId: null, inverted: false, flat: false, bob: false },
+  { size: 40, parkId: null, secondParkId: null, thirdParkId: null, inverted: false, flat: false, bob: false },
 )
 
 const park = computed(() => resolvePark(props.parkId, store.customActivities))
 const park2 = computed(() => resolvePark(props.secondParkId, store.customActivities))
+const hasThird = computed(() => Boolean(props.thirdParkId && props.thirdParkId !== props.parkId && props.thirdParkId !== props.secondParkId))
 const resort = computed(() => (park.value ? RESORTS[park.value.resort] : null))
 const resort2 = computed(() => (park2.value ? RESORTS[park2.value.resort] : null))
 /** Two different parks — the diagonal split. A single repeated park counts as one. */
@@ -124,15 +127,16 @@ function iconStyle(activity: Park | null, activityResort: Resort | null) {
         <path :d="park2!.glyph ?? GLYPHS.plus" />
       </svg>
     </template>
+    <span v-if="hasThird" class="circle__more" aria-label="Plus one more activity">+1</span>
     <span
-      v-else-if="park?.icon"
+      v-if="!isSplit && park?.icon"
       class="circle__mask"
       :class="{ 'anim-bob': bob }"
       :style="iconStyle(park, resort)"
       aria-hidden="true"
     />
     <svg
-      v-else
+      v-else-if="!isSplit"
       :class="{ 'anim-bob': bob }"
       :width="glyphSize"
       :height="glyphSize"
@@ -201,5 +205,19 @@ function iconStyle(activity: Park | null, activityResort: Resort | null) {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.circle__more {
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border: 1px solid var(--field-border-soft);
+  border-radius: 9px;
+  background: var(--c-navy);
+  color: #fff;
+  font: 700 8px/14px var(--font-ui);
+  text-align: center;
 }
 </style>

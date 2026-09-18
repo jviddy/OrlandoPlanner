@@ -28,7 +28,7 @@ const hasUnsaved = computed(() => Boolean(
 const warnings = computed(() => {
   const list: Array<{ id: string; text: string; action: 'change' | 'settings' }> = []
   for (const item of day.value.items) {
-    if (item.parkId && item.parkId !== day.value.parkId && item.parkId !== day.value.secondParkId) {
+    if (item.parkId && ![day.value.parkId, day.value.secondParkId, day.value.thirdParkId].includes(item.parkId)) {
       list.push({
         id: `park-${item.id}`,
         text: `${item.title} is at ${parkName(item.parkId, store.customActivities)}, outside this day's plan.`,
@@ -123,7 +123,7 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); nextTi
 
       <div class="detail-scroll">
         <section class="detail-plan">
-          <div><span class="group-label">Plan</span><strong>{{ [day.parkId, day.secondParkId].filter(Boolean).map((id) => parkName(id as string, store.customActivities)).join(' + ') || 'Day not set' }}</strong></div>
+          <div><span class="group-label">Plan</span><strong>{{ [day.parkId, day.secondParkId, day.thirdParkId].filter(Boolean).map((id) => parkName(id as string, store.customActivities)).join(' + ') || 'Day not set' }}</strong></div>
           <button type="button" @click="changeDay">Change day</button>
         </section>
 
@@ -145,12 +145,12 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); nextTi
           </div>
           <div class="detail-list">
             <template v-for="item in fixedItems" :key="item.id">
-              <ItemForm v-if="editingId === item.id" :kind="item.kind" :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @save="(value) => saveEdit(item.id, value)" @cancel="editingId = null" @remove="removeItem(item.id)" />
-              <DayItemRow v-else :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @edit="editingId = item.id" />
+              <ItemForm v-if="editingId === item.id" :kind="item.kind" :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" :day-third-park-id="day.thirdParkId" @save="(value) => saveEdit(item.id, value)" @cancel="editingId = null" @remove="removeItem(item.id)" />
+              <DayItemRow v-else :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" :day-third-park-id="day.thirdParkId" @edit="editingId = item.id" />
             </template>
             <p v-if="!fixedItems.length && adding !== 'fixed' && adding !== 'dining'" class="detail-empty">No date-fixed bookings.</p>
-            <ItemForm v-if="adding === 'dining'" kind="dining" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @save="saveNew" @cancel="adding = null" @remove="adding = null" />
-            <ItemForm v-if="adding === 'fixed'" kind="fixed" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @save="saveNew" @cancel="adding = null" @remove="adding = null" />
+            <ItemForm v-if="adding === 'dining'" kind="dining" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" :day-third-park-id="day.thirdParkId" @save="saveNew" @cancel="adding = null" @remove="adding = null" />
+            <ItemForm v-if="adding === 'fixed'" kind="fixed" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" :day-third-park-id="day.thirdParkId" @save="saveNew" @cancel="adding = null" @remove="adding = null" />
           </div>
         </section>
 
@@ -158,11 +158,11 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); nextTi
           <div class="detail-group__head"><div><span class="group-label">Movable ideas</span><p>These travel with this day plan.</p></div><button type="button" @click="adding = 'idea'">+ Add idea</button></div>
           <div class="detail-list">
             <template v-for="item in movableItems" :key="item.id">
-              <ItemForm v-if="editingId === item.id" :kind="item.kind" :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @save="(value) => saveEdit(item.id, value)" @cancel="editingId = null" @remove="removeItem(item.id)" />
-              <DayItemRow v-else :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @edit="editingId = item.id" />
+              <ItemForm v-if="editingId === item.id" :kind="item.kind" :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" :day-third-park-id="day.thirdParkId" @save="(value) => saveEdit(item.id, value)" @cancel="editingId = null" @remove="removeItem(item.id)" />
+              <DayItemRow v-else :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" :day-third-park-id="day.thirdParkId" @edit="editingId = item.id" />
             </template>
             <p v-if="!movableItems.length && adding !== 'idea'" class="detail-empty">No movable ideas yet.</p>
-            <ItemForm v-if="adding === 'idea'" kind="idea" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @save="saveNew" @cancel="adding = null" @remove="adding = null" />
+            <ItemForm v-if="adding === 'idea'" kind="idea" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" :day-third-park-id="day.thirdParkId" @save="saveNew" @cancel="adding = null" @remove="adding = null" />
           </div>
         </section>
 

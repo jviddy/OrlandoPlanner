@@ -68,7 +68,8 @@ function countResort(days: Day[], resort: ResortKey, custom: CustomActivity[]): 
   return days.filter(
     (d) =>
       resolvePark(d.parkId, custom)?.resort === resort ||
-      resolvePark(d.secondParkId, custom)?.resort === resort,
+      resolvePark(d.secondParkId, custom)?.resort === resort ||
+      resolvePark(d.thirdParkId, custom)?.resort === resort,
   ).length
 }
 
@@ -215,7 +216,7 @@ export const useTripStore = defineStore('orlando-trip', {
       const out: { dayIndex: number; item: DayItem }[] = []
       s.days.forEach((day, dayIndex) => {
         for (const item of day.items) {
-          if (item.parkId && item.parkId !== day.parkId && item.parkId !== day.secondParkId) {
+          if (item.parkId && ![day.parkId, day.secondParkId, day.thirdParkId].includes(item.parkId)) {
             out.push({ dayIndex, item })
           }
         }
@@ -242,7 +243,7 @@ export const useTripStore = defineStore('orlando-trip', {
           title: 'Reservation in the wrong park',
           body: `Day ${dayIndex + 1} · ${item.title} at ${parkName(item.parkId, this.customActivities)} — but this day is set to ${
             day.parkId
-              ? [day.parkId, day.secondParkId]
+              ? [day.parkId, day.secondParkId, day.thirdParkId]
                   .filter((id): id is string => Boolean(id))
                   .map((id) => parkName(id, this.customActivities))
                   .join(' + ')
@@ -414,6 +415,7 @@ export const useTripStore = defineStore('orlando-trip', {
           date: iso,
           parkId: carried ? carried.parkId : templateParkId(pattern, i, n),
           secondParkId: carried?.secondParkId ?? null,
+          thirdParkId: carried?.thirdParkId ?? null,
           note: carried?.note ?? '',
           items: carried?.items ?? [],
         })
@@ -431,12 +433,13 @@ export const useTripStore = defineStore('orlando-trip', {
         this.days = this.days.map((day, index) => {
           const suggested = templateParkId(tpl.pattern, index, this.days.length)
           if (strategy === 'fill-unset') {
-            return day.parkId || day.secondParkId ? day : { ...day, parkId: suggested }
+            return day.parkId || day.secondParkId || day.thirdParkId ? day : { ...day, parkId: suggested }
           }
           return {
             ...day,
             parkId: suggested,
             secondParkId: null,
+            thirdParkId: null,
             note: '',
             items: day.items.filter((item) => item.anchor === 'date'),
           }
@@ -464,18 +467,21 @@ export const useTripStore = defineStore('orlando-trip', {
     },
 
     /** Update a day's activities without changing the quick-assign sheet state. */
-    setDayActivities(index: number, parkId: string | null, secondParkId: string | null = null) {
+    setDayActivities(index: number, parkId: string | null, secondParkId: string | null = null, thirdParkId: string | null = null) {
       const day = this.days[index]
       if (!day) return
       const nextSecond = parkId ? secondParkId : null
-      if (day.parkId === parkId && day.secondParkId === nextSecond) return
+      const nextThird = parkId ? thirdParkId ?? null : null
+      const currentThird = day.thirdParkId ?? null
+      if (day.parkId === parkId && day.secondParkId === nextSecond && currentThird === nextThird) return
       this.undo = {
         label: `Changed day ${index + 1}`,
-        days: [{ dayId: day.id, parkId: day.parkId, secondParkId: day.secondParkId }],
+        days: [{ dayId: day.id, parkId: day.parkId, secondParkId: day.secondParkId, thirdParkId: currentThird }],
       }
       day.parkId = parkId
       day.secondParkId = nextSecond
-      const chosen = [parkId, nextSecond].filter((id): id is string => Boolean(id))
+      day.thirdParkId = nextThird
+      const chosen = [parkId, nextSecond, nextThird].filter((id): id is string => Boolean(id))
       this.recentActivityIds = [
         ...chosen,
         ...this.recentActivityIds.filter((id) => !chosen.includes(id)),
@@ -501,6 +507,7 @@ export const useTripStore = defineStore('orlando-trip', {
           const targetIdeas = day.items.filter((item) => item.anchor === 'plan')
           return source.parkId !== day.parkId
             || source.secondParkId !== day.secondParkId
+            || source.thirdParkId !== day.thirdParkId
             || source.note !== day.note
             || JSON.stringify(comparableItems(sourceIdeas)) !== JSON.stringify(comparableItems(targetIdeas))
         })
@@ -511,6 +518,7 @@ export const useTripStore = defineStore('orlando-trip', {
           dayId: day.id,
           parkId: day.parkId,
           secondParkId: day.secondParkId,
+          thirdParkId: day.thirdParkId,
           note: day.note,
           items: day.items.map((item) => ({ ...item })),
         })),
@@ -518,6 +526,7 @@ export const useTripStore = defineStore('orlando-trip', {
       for (const { index, day } of targets) {
         day.parkId = source.parkId
         day.secondParkId = source.parkId ? source.secondParkId : null
+        day.thirdParkId = source.parkId ? source.thirdParkId : null
         day.note = source.note
         day.items = [
           ...day.items.filter((item) => item.anchor === 'date'),
@@ -528,8 +537,8 @@ export const useTripStore = defineStore('orlando-trip', {
       this.justSet = targets.at(-1)!.index
     },
     /** `secondParkId` is only kept when a primary park is also set (a park-hopper day). */
-    assignDay(index: number, parkId: string | null, secondParkId: string | null = null) {
-      this.setDayActivities(index, parkId, secondParkId)
+    assignDay(index: number, parkId: string | null, secondParkId: string | null = null, thirdParkId: string | null = null) {
+      this.setDayActivities(index, parkId, secondParkId, thirdParkId)
       this.sheetOpen = false
     },
     clearDay(index: number) {
@@ -632,6 +641,7 @@ export const useTripStore = defineStore('orlando-trip', {
         if (!day) continue
         day.parkId = previous.parkId
         day.secondParkId = previous.secondParkId
+        day.thirdParkId = previous.thirdParkId ?? null
         if (previous.note !== undefined) day.note = previous.note
         if (previous.items !== undefined) day.items = previous.items.map((item) => ({ ...item }))
         this.justSet = index

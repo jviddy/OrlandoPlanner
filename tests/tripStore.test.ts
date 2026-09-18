@@ -11,12 +11,12 @@ describe('trip assignment history', () => {
     store.$patch(blank14DayTrip())
     const dayId = store.days[2]!.id
 
-    store.setDayActivities(2, 'magic-kingdom', 'epcot')
-    expect(store.days[2]).toMatchObject({ parkId: 'magic-kingdom', secondParkId: 'epcot' })
+    store.setDayActivities(2, 'magic-kingdom', 'epcot', 'hollywood-studios')
+    expect(store.days[2]).toMatchObject({ parkId: 'magic-kingdom', secondParkId: 'epcot', thirdParkId: 'hollywood-studios' })
     expect(store.undo?.days[0]?.dayId).toBe(dayId)
 
     store.undoLastChange()
-    expect(store.days[2]).toMatchObject({ parkId: null, secondParkId: null })
+    expect(store.days[2]).toMatchObject({ parkId: null, secondParkId: null, thirdParkId: null })
     expect(store.undo).toBeNull()
   })
 
