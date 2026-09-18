@@ -16,4 +16,16 @@ describe('local trip repository', () => {
     await repository.remove(trip.tripId)
     expect(await repository.load(trip.tripId)).toBeNull()
   })
+
+  it('migrates the legacy singleton key without deleting its rollback copy', async () => {
+    const storage = memoryStorage()
+    const trip = blank14DayTrip()
+    storage.setItem('orlando-trip', JSON.stringify(trip))
+    const repository = new LocalTripRepository(storage)
+    const loaded = await repository.loadCurrent()
+    expect(loaded?.tripId).toBe(trip.tripId)
+    expect(storage.getItem('orlando-trip')).not.toBeNull()
+    expect(storage.getItem('orlando-trip-v2:current')).toBe(trip.tripId)
+    expect(await repository.load(trip.tripId)).not.toBeNull()
+  })
 })

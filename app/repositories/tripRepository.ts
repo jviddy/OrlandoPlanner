@@ -10,7 +10,12 @@ export interface TripRepository {
 }
 
 export class LocalTripRepository implements TripRepository {
-  constructor(private readonly storage: Storage, private readonly prefix = 'orlando-trip:') {}
+  constructor(
+    private readonly storage: Storage,
+    private readonly prefix = 'orlando-trip-v2:',
+    private readonly currentKey = 'orlando-trip-v2:current',
+    private readonly legacyKey = 'orlando-trip',
+  ) {}
   async load(id: string) {
     const raw = this.storage.getItem(`${this.prefix}${id}`)
     if (!raw) return null
@@ -21,6 +26,25 @@ export class LocalTripRepository implements TripRepository {
     return { revision: 0 }
   }
   async remove(id: string) { this.storage.removeItem(`${this.prefix}${id}`) }
+  async loadCurrent(): Promise<PersistedTrip | null> {
+    const currentId = this.storage.getItem(this.currentKey)
+    if (currentId) {
+      const current = await this.load(currentId)
+      if (current) return current
+    }
+    const legacy = this.storage.getItem(this.legacyKey)
+    if (!legacy) return null
+    try {
+      const migrated = migratePersistedTrip(JSON.parse(legacy))
+      await this.saveCurrent(migrated)
+      return migrated
+    } catch { return null }
+  }
+  async saveCurrent(trip: PersistedTrip) {
+    await this.save(trip)
+    this.storage.setItem(this.currentKey, trip.tripId)
+    return { revision: 0 }
+  }
 }
 
 export interface AnonymousCapability {

@@ -17,7 +17,6 @@ import {
 import type { Day, DayItem, TripState } from '~/types/trip'
 import {
   createStableId,
-  migratePersistedTrip,
   refitDaysWithRecovery,
   TRIP_SCHEMA_VERSION,
 } from '~/utils/tripSchema'
@@ -98,37 +97,6 @@ interface WeekView {
 
 export const useTripStore = defineStore('orlando-trip', {
   state: (): TripState => blankState(),
-
-  persist: {
-    pick: [
-      'version',
-      'tripId',
-      'created',
-      'setupMode',
-      'seedStrategy',
-      'name',
-      'startDate',
-      'endDate',
-      'weekStart',
-      'hotels',
-      'ticketDays',
-      'parkHopper',
-      'flights',
-      'carHire',
-      'days',
-      'customActivities',
-      'recovery',
-    ],
-    /**
-     * `hotels` used to be `string[]`, and `flights` has gone through two
-     * shapes (`{ out, back }`, then `{ route, time }`) — reshape anything
-     * persisted in an old shape so existing trips don't lose data (or crash)
-     * after a schema change.
-     */
-    afterHydrate(ctx) {
-      Object.assign(ctx.store, migratePersistedTrip(ctx.store))
-    },
-  },
 
   getters: {
     startD: (s): Date | null => (s.startDate ? parseISO(s.startDate) : null),

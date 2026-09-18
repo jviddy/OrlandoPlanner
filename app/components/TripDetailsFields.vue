@@ -8,7 +8,11 @@ import { addDays, diffDays, parseISO, toISO } from '~/composables/useDates'
 import { createStableId } from '~/utils/tripSchema'
 import type { Flight, Stay, TripDetailsDraft } from '~/types/trip'
 
-const props = defineProps<{ draft?: TripDetailsDraft }>()
+type DetailSection = 'stay' | 'tickets' | 'flights'
+const props = withDefaults(defineProps<{ draft?: TripDetailsDraft; sections?: DetailSection[] }>(), {
+  sections: () => ['stay', 'tickets', 'flights'],
+})
+const show = (section: DetailSection) => props.sections.includes(section)
 
 const store = useTripStore()
 const model = computed(() => props.draft ?? store)
@@ -168,7 +172,7 @@ function setTicket(key: 'disney' | 'universal', value: string) {
     <div class="tdf__optional">
       <p class="eyebrow">Optional — add now or later</p>
 
-      <section class="disc">
+      <section v-if="show('stay')" class="disc">
         <button type="button" class="disc__head" @click="toggle('stay')">
           <span class="disc__tile" style="background: #e8effb; color: #0b3d91">
             <AppIcon name="bed" :size="17" />
@@ -217,7 +221,7 @@ function setTicket(key: 'disney' | 'universal', value: string) {
         </div>
       </section>
 
-      <section class="disc">
+      <section v-if="show('tickets')" class="disc">
         <button type="button" class="disc__head" @click="toggle('tix')">
           <span class="disc__tile" style="background: #fdece9; color: #c1442f">
             <AppIcon name="ticket" :size="17" />
@@ -264,7 +268,7 @@ function setTicket(key: 'disney' | 'universal', value: string) {
         </div>
       </section>
 
-      <section class="disc">
+      <section v-if="show('flights')" class="disc">
         <button type="button" class="disc__head" @click="toggle('fly')">
           <span class="disc__tile" style="background: #e6f5f3; color: #0f7d74">
             <AppIcon name="plane" :size="17" />

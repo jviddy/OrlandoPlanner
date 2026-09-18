@@ -1,6 +1,6 @@
 import type { Day, TripState } from '~/types/trip'
 
-export type ShareStory = 'overview' | 'weeks' | 'pacing'
+export type ShareStory = 'overview' | 'weeks' | 'pacing' | 'choice' | 'countdown'
 export type ShareFormat = 'portrait' | 'square'
 
 export interface SharePrivacy {
@@ -23,6 +23,7 @@ export interface SharePage {
   range: string
   story: ShareStory
   days: ShareDay[]
+  facts: string[]
 }
 
 function safeSummaries(day: Day): string[] {
@@ -37,6 +38,7 @@ export function presentShareTrip(
   trip: Pick<TripState, 'name' | 'startDate' | 'endDate' | 'days'>,
   story: ShareStory,
   privacy: SharePrivacy,
+  options: { selectedDayIds?: string[]; sleepsToGo?: number; unsetDays?: number } = {},
 ): { pages: SharePage[]; caption: string; included: string[]; excluded: string[] } {
   const title = privacy.includeTripName && trip.name.trim() ? trip.name.trim() : 'Our Orlando trip'
   const size = story === 'overview' || story === 'pacing' ? 21 : 7
@@ -44,7 +46,10 @@ export function presentShareTrip(
     id: day.id, date: day.date, parkId: day.parkId, secondParkId: day.secondParkId,
     summaries: privacy.includeSafeDetails ? safeSummaries(day) : [],
   }))
-  const groups = Array.from({ length: Math.max(1, Math.ceil(safeDays.length / size)) }, (_, index) => safeDays.slice(index * size, (index + 1) * size))
+  const storyDays = story === 'choice'
+    ? safeDays.filter((day) => options.selectedDayIds?.includes(day.id)).slice(0, 2)
+    : story === 'countdown' ? safeDays.slice(0, 7) : safeDays
+  const groups = Array.from({ length: Math.max(1, Math.ceil(storyDays.length / size)) }, (_, index) => storyDays.slice(index * size, (index + 1) * size))
   const pages = groups.map((days, index) => ({
     number: index + 1,
     total: groups.length,
@@ -52,8 +57,15 @@ export function presentShareTrip(
     range: `${trip.startDate} → ${trip.endDate}`,
     story,
     days,
+    facts: story === 'countdown'
+      ? [`${options.sleepsToGo ?? '—'} sleeps to go`, `${trip.days.length - (options.unsetDays ?? 0)} of ${trip.days.length} days set`]
+      : [],
   }))
-  const question = story === 'pacing' ? 'How does this pacing look?' : story === 'weeks' ? 'What would you change in our plan?' : 'Here is our Orlando trip plan.'
+  const question = story === 'pacing' ? 'How does this pacing look?'
+    : story === 'weeks' ? 'What would you change in our plan?'
+      : story === 'choice' ? 'Which of these two days would you choose?'
+        : story === 'countdown' ? `${options.sleepsToGo ?? ''} sleeps until our Orlando trip!`
+          : 'Here is our Orlando trip plan.'
   return {
     pages,
     caption: `${question}\n\n${trip.days.length} days planned with Orlando Planner.`,

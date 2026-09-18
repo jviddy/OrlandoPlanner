@@ -20,4 +20,11 @@ describe('share presenter privacy and pagination', () => {
     expect(result.pages.flatMap((page) => page.days).flatMap((day) => day.summaries)).toContain('Dining booked')
     expect(JSON.stringify(result)).not.toContain('Dinner booking')
   })
+
+  it('limits comparison stories to the two selected days', () => {
+    const trip = dense21DayTrip()
+    const ids = [trip.days[3]!.id, trip.days[12]!.id]
+    const result = presentShareTrip(trip, 'choice', { includeTripName: false, includeSafeDetails: false }, { selectedDayIds: ids })
+    expect(result.pages[0]!.days.map((day) => day.id)).toEqual(ids)
+  })
 })
