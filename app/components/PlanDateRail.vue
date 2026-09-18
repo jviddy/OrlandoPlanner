@@ -4,7 +4,7 @@ import { parseISO, useDates } from '~/composables/useDates'
 const props = defineProps<{ selectedIndex: number }>()
 const emit = defineEmits<{ select: [index: number] }>()
 const store = useTripStore()
-const { dow } = useDates()
+const { dowShort } = useDates()
 const rail = ref<HTMLElement | null>(null)
 
 function centreSelected() {
@@ -41,7 +41,7 @@ onMounted(centreSelected)
       @keydown.home.prevent="moveFocus(0)"
       @keydown.end.prevent="moveFocus(store.days.length - 1)"
     >
-      <span>{{ dow(parseISO(day.date)) }}</span>
+      <span>{{ dowShort(parseISO(day.date)) }}</span>
       <strong>{{ parseISO(day.date).getUTCDate() }}</strong>
       <i :class="{ 'date-rail__dot--set': day.parkId }" aria-hidden="true" />
     </button>

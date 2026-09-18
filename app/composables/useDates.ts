@@ -1,4 +1,5 @@
 const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MON = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -32,6 +33,7 @@ export function todayUTC(): Date {
 
 export function useDates() {
   const dow = (d: Date) => DOW[d.getUTCDay()]!
+  const dowShort = (d: Date) => DOW_SHORT[d.getUTCDay()]!
   const mon = (d: Date) => MON[d.getUTCMonth()]!
 
   /** "3 Apr" */
@@ -56,5 +58,5 @@ export function useDates() {
     return `${h12}:${String(m ?? 0).padStart(2, '0')}${suffix}`
   }
 
-  return { DOW, MON, dow, mon, dayMon, dowDayMon, range, time12, parseISO, toISO, addDays, diffDays }
+  return { DOW, DOW_SHORT, MON, dow, dowShort, mon, dayMon, dowDayMon, range, time12, parseISO, toISO, addDays, diffDays }
 }

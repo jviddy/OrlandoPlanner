@@ -5,7 +5,7 @@ import { parseISO, useDates } from '~/composables/useDates'
 const props = defineProps<{ index: number; selected?: boolean }>()
 const emit = defineEmits<{ select: []; change: []; addMeal: []; addBooking: []; addIdea: []; editDetails: [] }>()
 const store = useTripStore()
-const { dowDayMon, time12 } = useDates()
+const { dowShort, dayMon, time12 } = useDates()
 
 const day = computed(() => store.days[props.index]!)
 const activity = computed(() =>
@@ -24,7 +24,7 @@ const warningCount = computed(() => day.value.items.filter(
 <template>
   <article class="plan-card" :class="{ 'plan-card--selected': selected }" tabindex="0" :aria-current="selected ? 'true' : undefined" :aria-label="`Day ${index + 1}: ${activity}`" @click="emit('select')" @keydown.enter.self="emit('select')" @keydown.space.prevent.self="emit('select')">
     <header class="plan-card__head">
-      <div><p>Day {{ index + 1 }}</p><h2>{{ dowDayMon(parseISO(day.date)) }}</h2></div>
+      <div><p>Day {{ index + 1 }}</p><h2>{{ dowShort(parseISO(day.date)) }} {{ dayMon(parseISO(day.date)) }}</h2></div>
       <button
         type="button"
         class="plan-card__day-picker"
