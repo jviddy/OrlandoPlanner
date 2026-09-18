@@ -72,7 +72,11 @@ export class AnonymousTripRepository implements TripRepository {
     this.capability.revision = result.revision
     return result
   }
-  async remove() { throw new Error('Anonymous deletion is not enabled') }
+  async remove(id: string) {
+    if (!this.capability || this.capability.tripId !== id) throw new Error('Missing edit capability')
+    await $fetch(`/api/anonymous-trips/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${this.capability.editToken}` } })
+    this.capability = null
+  }
 }
 
 export function snapshotTrip(state: TripState): PersistedTrip { return migratePersistedTrip(state) }

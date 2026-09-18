@@ -32,7 +32,15 @@ async function generate() {
   const elements = [...document.querySelectorAll<HTMLElement>('.share-offscreen .share-card')]
   const nextBlobs: Blob[] = []
   for (const element of elements) {
-    try { const blob = await toBlob(element, { pixelRatio: 1, skipFonts: true }); if (blob) nextBlobs.push(blob) } catch { /* handled below */ }
+    try {
+      if (element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight) continue
+      const blob = await toBlob(element, { pixelRatio: 1, skipFonts: true })
+      if (!blob) continue
+      const bitmap = await createImageBitmap(blob)
+      const valid = bitmap.width === 1080 && bitmap.height === (format.value === 'square' ? 1080 : 1350)
+      bitmap.close()
+      if (valid) nextBlobs.push(blob)
+    } catch { /* handled below */ }
   }
   if (request !== token) return
   revokePreviews(); blobs.value = nextBlobs; previewUrls.value = nextBlobs.map((blob) => URL.createObjectURL(blob)); failed.value = nextBlobs.length !== presented.value.pages.length; generating.value = false
@@ -60,7 +68,17 @@ async function shareOrDownload() {
   recordLocalEvent('share_downloaded')
 }
 async function copyCaption() { await navigator.clipboard.writeText(caption.value); recordLocalEvent('share_caption_copied'); copied.value = true; setTimeout(() => { copied.value = false }, 1600) }
-function onKey(event: KeyboardEvent) { if (event.key === 'Escape') close() }
+function onKey(event: KeyboardEvent) {
+  if (event.key === 'Escape') return close()
+  if (event.key !== 'Tab') return
+  const dialog = document.querySelector<HTMLElement>('.share-studio')
+  const focusable = dialog ? [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]')] : []
+  if (!focusable.length) return
+  const first = focusable[0]!
+  const last = focusable.at(-1)!
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+}
 watch(isOpen, (openNow) => { if (typeof window !== 'undefined') openNow ? window.addEventListener('keydown', onKey) : window.removeEventListener('keydown', onKey) })
 onBeforeUnmount(() => { revokePreviews(); if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey) })
 defineExpose({ open })

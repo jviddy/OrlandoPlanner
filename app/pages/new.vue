@@ -3,6 +3,7 @@ import type { SetupMode } from '~/types/trip'
 import { useSetupStore } from '~/stores/setup'
 import { PARKS } from '~/data/parks'
 import { recommendSetup } from '~/utils/setupRecommendation'
+import { commitSetupToTrip } from '~/utils/setupCommit'
 
 useHead({ title: 'Set up your trip · Orlando Planner' })
 const store = useTripStore()
@@ -29,25 +30,10 @@ function next() { if (setup.step !== 1 || datesValid.value) setup.step = Math.mi
 function back() { setup.step = Math.max(0, setup.step - 1) }
 
 function commit() {
-  if (!setup.mode || !datesValid.value) return
-  store.resetTrip()
-  store.updateFields({
-    name: setup.name, startDate: setup.startDate, endDate: setup.endDate, weekStart: setup.weekStart,
-    hotels: setup.hotels.map((hotel) => ({ ...hotel })), ticketDays: { ...setup.ticketDays },
-    parkHopper: setup.parkHopper, flights: setup.flights.map((flight) => ({ ...flight })), carHire: setup.carHire,
-    setupMode: setup.mode,
-    seedStrategy: setup.mode === 'guided' ? 'generated' : setup.templateId === 'blank' ? 'blank' : 'template',
-  })
-  store.applyTemplate(setup.mode === 'guided' && setup.templateId === 'blank' ? 'both' : setup.templateId)
-  if (setup.mode === 'guided') store.applyTemplate(recommendation.value.templateId, 'replace-movable')
-  for (const booking of setup.bookings) {
-    const index = store.days.findIndex((day) => day.date === booking.date)
-    if (index < 0 || !booking.title.trim()) continue
-    store.addItem(index, { title: booking.title.trim(), time: booking.time, kind: booking.kind, state: 'booked', anchor: 'date', parkId: booking.parkId || null })
-  }
-  const firstUnset = store.days.find((day) => !day.parkId) ?? store.days[0]
+  const firstDayId = commitSetupToTrip(store, setup)
+  if (!firstDayId) return
   setup.clear()
-  navigateTo({ path: '/plan', query: firstUnset ? { day: firstUnset.id } : {} })
+  navigateTo({ path: '/plan', query: { day: firstDayId } })
 }
 </script>
 

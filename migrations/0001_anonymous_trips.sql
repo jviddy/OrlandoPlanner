@@ -6,6 +6,7 @@ CREATE TABLE anonymous_trips (
   payload TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
   deleted_at TEXT
 );
 CREATE TABLE anonymous_trip_creations (
@@ -22,3 +23,8 @@ CREATE TABLE anonymous_trip_activity (
   created_at TEXT NOT NULL
 );
 CREATE INDEX anonymous_trip_activity_trip ON anonymous_trip_activity(trip_id, revision);
+CREATE TABLE anonymous_rate_limits (
+  bucket TEXT PRIMARY KEY,
+  requests INTEGER NOT NULL,
+  updated_at TEXT NOT NULL
+);

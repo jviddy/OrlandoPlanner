@@ -22,7 +22,7 @@ const warningCount = computed(() => day.value.items.filter(
 </script>
 
 <template>
-  <article class="plan-card" :class="{ 'plan-card--selected': selected }" @click="emit('select')">
+  <article class="plan-card" :class="{ 'plan-card--selected': selected }" tabindex="0" :aria-current="selected ? 'true' : undefined" :aria-label="`Day ${index + 1}: ${activity}`" @click="emit('select')" @keydown.enter.self="emit('select')" @keydown.space.prevent.self="emit('select')">
     <header class="plan-card__head">
       <div><p>Day {{ index + 1 }}</p><h2>{{ dowDayMon(parseISO(day.date)) }}</h2></div>
       <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :date-number="parseISO(day.date).getUTCDate()" :size="56" />

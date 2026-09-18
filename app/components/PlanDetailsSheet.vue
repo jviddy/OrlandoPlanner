@@ -15,6 +15,7 @@ const adding = ref<ItemKind | null>(null)
 const editingId = ref<string | null>(null)
 const noteDraft = ref(day.value.note)
 const discardPrompt = ref(false)
+let previousFocus: HTMLElement | null = null
 
 const fixedItems = computed(() => day.value.items.filter((item) => item.anchor === 'date'))
 const movableItems = computed(() => day.value.items.filter((item) => item.anchor === 'plan'))
@@ -93,12 +94,22 @@ function openSettings() {
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') requestClose()
+  if (event.key !== 'Tab') return
+  const panel = document.querySelector<HTMLElement>('.detail-panel')
+  const focusable = panel ? [...panel.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]')] : []
+  if (!focusable.length) return
+  const first = focusable[0]!
+  const last = focusable.at(-1)!
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
 }
 onMounted(() => {
+  previousFocus = document.activeElement as HTMLElement | null
   begin(props.initialAction)
   window.addEventListener('keydown', onKeydown)
+  nextTick(() => document.querySelector<HTMLElement>('.detail-head > button')?.focus())
 })
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); nextTick(() => previousFocus?.focus()) })
 </script>
 
 <template>
