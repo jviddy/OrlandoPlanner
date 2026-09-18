@@ -15,6 +15,12 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
+    "db:migrate:local": "wrangler d1 migrations apply orlando-planner-preview --local",
+    "db:migrate:preview": "wrangler d1 migrations apply orlando-planner-preview --remote",
+    "db:migrate:production": "wrangler d1 migrations apply orlando-planner-production --remote --env production",
+    "db:list:preview": "wrangler d1 migrations list orlando-planner-preview --remote",
+    "db:list:production": "wrangler d1 migrations list orlando-planner-production --remote --env production",
+    "db:verify": "sh scripts/verify-d1-migrations.sh",
     "cf:preview": "npm run build && wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=orlando-planner"
   },

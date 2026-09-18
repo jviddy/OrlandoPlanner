@@ -31,7 +31,7 @@ function uniqueId(
 }
 
 function migrateItem(raw: any, used: Set<string>, makeId: IdFactory): DayItem {
-  const kind = raw?.kind === 'fixed' ? 'fixed' : 'dining'
+  const kind = raw?.kind === 'fixed' || raw?.kind === 'idea' ? raw.kind : 'dining'
   const state = raw?.state === 'booked' ? 'booked' : 'idea'
   return {
     id: uniqueId(raw?.id, 'item', used, makeId),

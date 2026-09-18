@@ -52,6 +52,8 @@ export interface AnonymousCapability {
   editToken: string
   viewToken: string
   revision: number
+  /** Legacy capabilities created before inactivity expiry do not include this. */
+  expiresAt?: string
 }
 
 /** Disabled-by-default server repository. Tokens stay client-side and are never put in trip data. */
@@ -68,8 +70,9 @@ export class AnonymousTripRepository implements TripRepository {
   }
   async save(trip: PersistedTrip, revision = this.capability?.revision ?? 0) {
     if (!this.capability || this.capability.tripId !== trip.tripId) throw new Error('Missing edit capability')
-    const result = await $fetch<{ revision: number }>(`/api/anonymous-trips/${trip.tripId}`, { method: 'PUT', headers: { Authorization: `Bearer ${this.capability.editToken}`, 'If-Match': String(revision) }, body: trip })
+    const result = await $fetch<{ revision: number; expiresAt: string }>(`/api/anonymous-trips/${trip.tripId}`, { method: 'PUT', headers: { Authorization: `Bearer ${this.capability.editToken}`, 'If-Match': String(revision) }, body: trip })
     this.capability.revision = result.revision
+    this.capability.expiresAt = result.expiresAt
     return result
   }
   async remove(id: string) {

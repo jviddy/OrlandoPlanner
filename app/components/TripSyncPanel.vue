@@ -10,6 +10,11 @@ const message = ref('')
 const capability = ref<AnonymousCapability | null>(null)
 const capabilityKey = computed(() => `orlando-anonymous-capability:${store.tripId}`)
 const requestKey = computed(() => `orlando-anonymous-request:${store.tripId}`)
+const expiryLabel = computed(() => {
+  if (!capability.value?.expiresAt) return ''
+  const days = Math.max(0, Math.ceil((Date.parse(capability.value.expiresAt) - Date.now()) / 86_400_000))
+  return `${days} day${days === 1 ? '' : 's'}`
+})
 
 onMounted(() => {
   try { capability.value = JSON.parse(localStorage.getItem(capabilityKey.value) ?? 'null') } catch { capability.value = null }
@@ -33,7 +38,7 @@ async function upload() {
   try {
     const repository = new AnonymousTripRepository()
     persistCapability(await repository.create(snapshotTrip(store.$state), requestId()))
-    message.value = 'Encrypted capabilities saved on this device. Your local trip remains available.'
+    message.value = 'Opaque access keys saved on this device. Your local trip remains available.'
   } catch { message.value = 'Upload failed. The local trip is unchanged and can be retried.' }
   working.value = false
 }
@@ -43,7 +48,7 @@ async function sync() {
   try {
     const repository = new AnonymousTripRepository(capability.value)
     const result = await repository.save(snapshotTrip(store.$state), capability.value.revision)
-    persistCapability({ ...capability.value, revision: result.revision })
+    persistCapability({ ...capability.value, revision: result.revision, expiresAt: result.expiresAt })
     message.value = `Saved revision ${result.revision}. The local copy is still retained.`
   } catch { message.value = 'Sync could not be completed. Review the server version before retrying; the local copy is unchanged.' }
   working.value = false
@@ -67,13 +72,13 @@ async function revoke() {
     <p class="group-label">Optional anonymous backup</p>
     <template v-if="!capability">
       <h2>Keep an anonymous server copy</h2>
-      <p>No account is created. This sends the current trip to Orlando Planner and stores private edit/view capabilities on this device.</p>
+      <p>No account is created. This sends the current trip to Orlando Planner and stores private edit/view access keys on this device. These keys are opaque, not encrypted, and anyone who obtains one can use its access.</p>
       <label><input v-model="accepted" type="checkbox" /> I understand this uploads a copy and that my local trip will also remain.</label>
       <button type="button" :disabled="!accepted || working" @click="upload">{{ working ? 'Uploading…' : 'Upload anonymous copy' }}</button>
     </template>
     <template v-else>
       <h2>Anonymous backup connected</h2>
-      <p>Server revision {{ capability.revision }}. Sync is manual while this feature is being proven.</p>
+      <p>Server revision {{ capability.revision }}. Sync is manual while this feature is being proven.<template v-if="expiryLabel"> The server copy expires after {{ expiryLabel }} without a successful sync.</template></p>
       <div><button type="button" :disabled="working" @click="sync">Sync now</button><button type="button" class="sync-panel__revoke" :disabled="working" @click="revoke">Revoke server copy</button></div>
     </template>
     <p v-if="message" role="status" class="sync-panel__message">{{ message }}</p>

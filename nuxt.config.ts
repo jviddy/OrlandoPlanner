@@ -6,6 +6,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     anonymousSyncEnabled: false,
     anonymousCapabilitySecret: '',
+    anonymousCapabilityKeyVersion: 1,
+    anonymousCapabilityPreviousSecrets: '',
     public: { anonymousSyncEnabled: false },
   },
 

@@ -19,6 +19,12 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - run: npm run db:verify
+
       # Produces ./dist with the Nitro cloudflare-pages preset.
       - run: npm run build
 
