@@ -272,10 +272,9 @@ onBeforeUnmount(() => {
             <p v-if="hopperMode && !store.parkHopper" class="hopper-hint">Your trip settings are not currently marked as park hopper.</p>
           </div>
 
-          <label class="activity-search">
-            <span class="sr-only">Search activities</span>
-            <input v-model="searchQuery" type="search" placeholder="Search parks and activities" />
-          </label>
+          <div class="activity-search">
+            <input v-model="searchQuery" type="search" aria-label="Search activities" placeholder="Search parks and activities" />
+          </div>
 
           <div v-if="searchQuery.trim()" class="sgroup">
             <p class="sgroup__label">Search results</p>
@@ -550,7 +549,7 @@ onBeforeUnmount(() => {
 .auto-advance { display:flex; align-items:center; gap:8px; margin:0 7px 12px; color:var(--text-muted); font-size:11px; }
 .auto-advance input { width:16px; height:16px; accent-color:var(--c-navy); }
 .activity-search { display:block; margin:0 2px 13px; }
-.activity-search input { width:100%; height:42px; padding:0 13px; border:1.5px solid var(--field-border-soft); border-radius:12px; background:#fff; color:var(--text); font:inherit; }
+.activity-search input { width:100%; height:36px; padding:0 11px; border:1.5px solid var(--field-border-soft); border-radius:10px; background:#fff; color:var(--text); font:inherit; font-size:13px; }
 .activity-search input:focus { border-color:var(--c-navy); outline:2px solid rgba(23,35,58,.12); }
 .search-empty { padding:12px 6px; color:var(--text-faint); font-size:12px; }
 .sgroup {
