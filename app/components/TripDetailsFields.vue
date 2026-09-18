@@ -2,11 +2,66 @@
 /**
  * The three required fields (name + arrive/depart) plus the three optional
  * collapsible sections. Shared by the new-trip gate and the edit screen.
- * Writes straight to the store as you type.
+ * Can edit a detached draft, or write to the store during first-time setup.
  */
 import { addDays, diffDays, parseISO, toISO } from '~/composables/useDates'
+import { createStableId } from '~/utils/tripSchema'
+import type { Flight, Stay, TripDetailsDraft } from '~/types/trip'
+
+const props = defineProps<{ draft?: TripDetailsDraft }>()
 
 const store = useTripStore()
+const model = computed(() => props.draft ?? store)
+
+function updateFields(patch: Partial<TripDetailsDraft>) {
+  if (props.draft) Object.assign(props.draft, patch)
+  else store.updateFields(patch)
+}
+
+function setHotel(index: number, name: string) {
+  if (!props.draft) return store.setHotel(index, name)
+  const next = props.draft.hotels.slice()
+  next[index] = { id: next[index]?.id ?? createStableId('stay'), ...next[index], name }
+  props.draft.hotels = next
+}
+
+function setHotelDates(index: number, dates: { start: string; end: string } | null) {
+  if (!props.draft) return store.setHotelDates(index, dates)
+  const current = props.draft.hotels[index]
+  if (!current) return
+  const next = props.draft.hotels.slice()
+  next[index] = dates
+    ? { id: current.id, name: current.name, startDate: dates.start, endDate: dates.end }
+    : { id: current.id, name: current.name }
+  props.draft.hotels = next
+}
+
+function addHotel() {
+  if (!props.draft) return store.addHotel()
+  if (props.draft.hotels.length < 4) {
+    props.draft.hotels = [...props.draft.hotels, { id: createStableId('stay'), name: '' }]
+  }
+}
+
+function setFlight(index: number, patch: Partial<Omit<Flight, 'id'>>) {
+  if (!props.draft) return store.setFlight(index, patch)
+  const next = props.draft.flights.slice()
+  next[index] = {
+    id: next[index]?.id ?? createStableId('flight'),
+    route: '', date: '', departTime: '', arriveTime: '',
+    ...next[index], ...patch,
+  }
+  props.draft.flights = next
+}
+
+function addFlight() {
+  if (!props.draft) return store.addFlight()
+  if (props.draft.flights.length < 6) {
+    props.draft.flights = [...props.draft.flights, {
+      id: createStableId('flight'), route: '', date: '', departTime: '', arriveTime: '',
+    }]
+  }
+}
 
 const open = reactive<Record<string, boolean>>({})
 function toggle(key: string) {
@@ -14,26 +69,33 @@ function toggle(key: string) {
 }
 
 const computedLine = computed(() =>
-  store.datesValid
-    ? `${store.dayCount} days · ${store.nights} nights`
+  datesValid.value
+    ? `${dayCount.value} days · ${Math.max(0, dayCount.value - 1)} nights`
     : 'Add both dates to continue',
 )
 
+const datesValid = computed(() => Boolean(
+  model.value.startDate && model.value.endDate && model.value.endDate >= model.value.startDate,
+))
+const dayCount = computed(() => datesValid.value
+  ? diffDays(parseISO(model.value.endDate), parseISO(model.value.startDate)) + 1
+  : 0)
+
 const staySummary = computed(() => {
-  if (store.hotels[1]?.name.trim()) return 'Split stay · 2 hotels'
-  if (store.hotels[0]?.name.trim()) return store.hotels[0].name
+  if (model.value.hotels[1]?.name.trim()) return 'Split stay · 2 hotels'
+  if (model.value.hotels[0]?.name.trim()) return model.value.hotels[0].name
   return 'Not set'
 })
 
 function onTripDatesUpdate({ start, end }: { start: string; end: string }) {
-  store.updateFields({ startDate: start, endDate: end })
+  updateFields({ startDate: start, endDate: end })
 }
 function onStayDatesUpdate(index: number, value: { start: string; end: string }) {
-  store.setHotelDates(index, value.start ? value : null)
+  setHotelDates(index, value.start ? value : null)
 }
 
 function stayNights(i: number): number {
-  const h = store.hotels[i]
+  const h = model.value.hotels[i]
   if (!h?.startDate || !h?.endDate) return 0
   return diffDays(parseISO(h.endDate), parseISO(h.startDate))
 }
@@ -41,7 +103,7 @@ function stayNights(i: number): number {
 /** ISO dates already covered by a *different* stay, for the "already booked" dot. */
 function otherStayDates(excludeIndex: number): string[] {
   const dates: string[] = []
-  store.hotels.forEach((h, idx) => {
+  model.value.hotels.forEach((h: Stay, idx: number) => {
     if (idx === excludeIndex || !h.startDate || !h.endDate) return
     for (let d = parseISO(h.startDate); toISO(d) <= h.endDate; d = addDays(d, 1)) {
       dates.push(toISO(d))
@@ -51,10 +113,10 @@ function otherStayDates(excludeIndex: number): string[] {
 }
 const ticketSummary = computed(
   () =>
-    `${store.ticketDays.disney || 0} Disney · ${store.ticketDays.universal || 0} Universal`,
+    `${model.value.ticketDays.disney || 0} Disney · ${model.value.ticketDays.universal || 0} Universal`,
 )
 const flightSummary = computed(() => {
-  const set = store.flights.filter((f) => f.route.trim()).length
+  const set = model.value.flights.filter((f: Flight) => f.route.trim()).length
   if (!set) return 'Not set'
   return `${set} flight${set === 1 ? '' : 's'} set`
 })
@@ -72,7 +134,7 @@ function flightPlaceholder(i: number): string {
 
 function setTicket(key: 'disney' | 'universal', value: string) {
   const n = Math.max(0, Math.min(60, Math.round(Number(value) || 0)))
-  store.updateFields({ ticketDays: { ...store.ticketDays, [key]: n } })
+  updateFields({ ticketDays: { ...model.value.ticketDays, [key]: n } })
 }
 </script>
 
@@ -85,15 +147,15 @@ function setTicket(key: 'disney' | 'universal', value: string) {
           class="input"
           type="text"
           placeholder="Florida 2027"
-          :value="store.name"
-          @input="store.updateFields({ name: ($event.target as HTMLInputElement).value })"
+          :value="model.name"
+          @input="updateFields({ name: ($event.target as HTMLInputElement).value })"
         />
       </label>
       <label class="field">
         <span>Dates</span>
         <DateRangeField
-          :start="store.startDate"
-          :end="store.endDate"
+          :start="model.startDate"
+          :end="model.endDate"
           placeholder="Add your dates"
           sheet-title="Trip dates"
           @update="onTripDatesUpdate"
@@ -118,26 +180,26 @@ function setTicket(key: 'disney' | 'universal', value: string) {
           <AppIcon :name="open.stay ? 'chevronUp' : 'chevronDown'" :size="14" class="disc__chev" />
         </button>
         <div v-if="open.stay" class="disc__body">
-          <div v-for="(_, i) in Math.max(1, store.hotels.length)" :key="i" class="stay">
+          <div v-for="(_, i) in Math.max(1, model.hotels.length)" :key="i" class="stay">
             <label class="drow">
               <span>Hotel {{ i + 1 }}</span>
               <input
                 class="input input--sm"
                 type="text"
                 placeholder="Hotel name"
-                :value="store.hotels[i]?.name ?? ''"
-                @input="store.setHotel(i, ($event.target as HTMLInputElement).value)"
+                :value="model.hotels[i]?.name ?? ''"
+                @input="setHotel(i, ($event.target as HTMLInputElement).value)"
               />
             </label>
-            <div v-if="store.datesValid" class="stay__dates-row">
+            <div v-if="datesValid" class="stay__dates-row">
               <DateRangeField
                 compact
                 variant="days"
                 class="stay__dates"
-                :start="store.hotels[i]?.startDate ?? ''"
-                :end="store.hotels[i]?.endDate ?? ''"
-                :min="store.startDate"
-                :max="store.endDate"
+                :start="model.hotels[i]?.startDate ?? ''"
+                :end="model.hotels[i]?.endDate ?? ''"
+                :min="model.startDate"
+                :max="model.endDate"
                 :assigned-dates="otherStayDates(i)"
                 placeholder="+ Add dates for this stay (optional)"
                 sheet-title="Stay dates"
@@ -149,7 +211,7 @@ function setTicket(key: 'disney' | 'universal', value: string) {
             </div>
             <span v-else class="stay__dates-hint">Set your trip dates to add stay dates</span>
           </div>
-          <button type="button" class="disc__action" @click="store.addHotel()">
+          <button type="button" class="disc__action" @click="addHotel()">
             + Add another stay
           </button>
         </div>
@@ -175,7 +237,7 @@ function setTicket(key: 'disney' | 'universal', value: string) {
               min="0"
               inputmode="numeric"
               placeholder="0"
-              :value="store.ticketDays.disney || ''"
+              :value="model.ticketDays.disney || ''"
               @input="setTicket('disney', ($event.target as HTMLInputElement).value)"
             />
           </label>
@@ -187,15 +249,15 @@ function setTicket(key: 'disney' | 'universal', value: string) {
               min="0"
               inputmode="numeric"
               placeholder="0"
-              :value="store.ticketDays.universal || ''"
+              :value="model.ticketDays.universal || ''"
               @input="setTicket('universal', ($event.target as HTMLInputElement).value)"
             />
           </label>
           <label class="disc__check">
             <input
               type="checkbox"
-              :checked="store.parkHopper"
-              @change="store.updateFields({ parkHopper: ($event.target as HTMLInputElement).checked })"
+              :checked="model.parkHopper"
+              @change="updateFields({ parkHopper: ($event.target as HTMLInputElement).checked })"
             />
             Park hopper included
           </label>
@@ -214,15 +276,15 @@ function setTicket(key: 'disney' | 'universal', value: string) {
           <AppIcon :name="open.fly ? 'chevronUp' : 'chevronDown'" :size="14" class="disc__chev" />
         </button>
         <div v-if="open.fly" class="disc__body">
-          <div v-for="(_, i) in Math.max(2, store.flights.length)" :key="i" class="flight">
+          <div v-for="(_, i) in Math.max(2, model.flights.length)" :key="i" class="flight">
             <div class="drow">
               <span>{{ flightLabel(i) }}</span>
               <input
                 class="input input--sm"
                 type="text"
                 :placeholder="flightPlaceholder(i)"
-                :value="store.flights[i]?.route ?? ''"
-                @input="store.setFlight(i, { route: ($event.target as HTMLInputElement).value })"
+                :value="model.flights[i]?.route ?? ''"
+                @input="setFlight(i, { route: ($event.target as HTMLInputElement).value })"
               />
             </div>
             <div class="flight__times">
@@ -231,10 +293,10 @@ function setTicket(key: 'disney' | 'universal', value: string) {
                 <input
                   class="input input--sm"
                   type="date"
-                  :min="store.startDate || undefined"
-                  :max="store.endDate || undefined"
-                  :value="store.flights[i]?.date ?? ''"
-                  @input="store.setFlight(i, { date: ($event.target as HTMLInputElement).value })"
+                  :min="model.startDate || undefined"
+                  :max="model.endDate || undefined"
+                  :value="model.flights[i]?.date ?? ''"
+                  @input="setFlight(i, { date: ($event.target as HTMLInputElement).value })"
                 />
               </label>
               <label class="field field--tiny">
@@ -242,8 +304,8 @@ function setTicket(key: 'disney' | 'universal', value: string) {
                 <input
                   class="input input--sm"
                   type="time"
-                  :value="store.flights[i]?.departTime ?? ''"
-                  @input="store.setFlight(i, { departTime: ($event.target as HTMLInputElement).value })"
+                  :value="model.flights[i]?.departTime ?? ''"
+                  @input="setFlight(i, { departTime: ($event.target as HTMLInputElement).value })"
                 />
               </label>
               <label class="field field--tiny">
@@ -251,28 +313,28 @@ function setTicket(key: 'disney' | 'universal', value: string) {
                 <input
                   class="input input--sm"
                   type="time"
-                  :value="store.flights[i]?.arriveTime ?? ''"
-                  @input="store.setFlight(i, { arriveTime: ($event.target as HTMLInputElement).value })"
+                  :value="model.flights[i]?.arriveTime ?? ''"
+                  @input="setFlight(i, { arriveTime: ($event.target as HTMLInputElement).value })"
                 />
               </label>
             </div>
           </div>
           <button
-            v-if="store.flights.length < 6"
+            v-if="model.flights.length < 6"
             type="button"
             class="disc__action"
-            @click="store.addFlight()"
+            @click="addFlight()"
           >
             + Add another flight
           </button>
-          <label v-if="open.car || store.carHire" class="drow">
+          <label v-if="open.car || model.carHire" class="drow">
             <span>Car hire</span>
             <input
               class="input input--sm"
               type="text"
               placeholder="Pick-up → drop-off"
-              :value="store.carHire"
-              @input="store.updateFields({ carHire: ($event.target as HTMLInputElement).value })"
+              :value="model.carHire"
+              @input="updateFields({ carHire: ($event.target as HTMLInputElement).value })"
             />
           </label>
           <button v-else type="button" class="disc__action" @click="open.car = true">

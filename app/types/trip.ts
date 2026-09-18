@@ -59,6 +59,19 @@ export interface Stay {
   endDate?: string
 }
 
+/** Editable trip metadata used by forms before changes are committed. */
+export interface TripDetailsDraft {
+  name: string
+  startDate: string
+  endDate: string
+  weekStart: WeekStart
+  hotels: Stay[]
+  ticketDays: TicketDays
+  parkHopper: boolean
+  flights: Flight[]
+  carHire: string
+}
+
 export interface UndoEntry {
   label: string
   days: Array<{

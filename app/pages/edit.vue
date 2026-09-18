@@ -1,12 +1,36 @@
 <script setup lang="ts">
 import type { WeekStart } from '~/types/trip'
+import type { TripDetailsDraft } from '~/types/trip'
+import { dateRangeImpact } from '~/utils/tripSchema'
 
 useHead({ title: 'Edit trip · Orlando Planner' })
 
 const store = useTripStore()
 
+function copyDetails(): TripDetailsDraft {
+  return {
+    name: store.name,
+    startDate: store.startDate,
+    endDate: store.endDate,
+    weekStart: store.weekStart,
+    hotels: structuredClone(store.hotels),
+    ticketDays: { ...store.ticketDays },
+    parkHopper: store.parkHopper,
+    flights: structuredClone(store.flights),
+    carHire: store.carHire,
+  }
+}
+
+const draft = reactive<TripDetailsDraft>(copyDetails())
+const original = ref('')
+const confirmDateChange = ref(false)
+const impact = computed(() => dateRangeImpact(store.days, draft.startDate, draft.endDate))
+const dirty = computed(() => original.value !== JSON.stringify(draft))
+
 onMounted(() => {
   if (!store.hasTrip) navigateTo('/new', { replace: true })
+  Object.assign(draft, copyDetails())
+  original.value = JSON.stringify(draft)
 })
 
 const weekStartOptions: { value: WeekStart; label: string }[] = [
@@ -19,6 +43,22 @@ const confirmReset = ref(false)
 function reset() {
   store.resetTrip()
   navigateTo('/new', { replace: true })
+}
+
+
+function save() {
+  if (!draft.startDate || !draft.endDate || draft.endDate < draft.startDate) return
+  if (impact.value.removedWithContent > 0 && !confirmDateChange.value) {
+    confirmDateChange.value = true
+    return
+  }
+  store.updateFields({
+    ...draft,
+    hotels: structuredClone(draft.hotels),
+    ticketDays: { ...draft.ticketDays },
+    flights: structuredClone(draft.flights),
+  })
+  navigateTo('/')
 }
 </script>
 
@@ -37,7 +77,18 @@ function reset() {
           </p>
         </header>
 
-        <TripDetailsFields />
+        <TripDetailsFields :draft="draft" />
+
+        <div v-if="dirty && (impact.added || impact.removed)" class="edit__impact" aria-live="polite">
+          <strong>Date change preview</strong>
+          <span v-if="impact.added">{{ impact.added }} day{{ impact.added === 1 ? '' : 's' }} added.</span>
+          <span v-if="impact.removed">
+            {{ impact.removed }} day{{ impact.removed === 1 ? '' : 's' }} moved to recovery.
+          </span>
+          <span v-if="impact.removedWithContent">
+            {{ impact.removedWithContent }} of those contain plans.
+          </span>
+        </div>
 
         <div class="edit__section">
           <p class="group-label">Week starts on</p>
@@ -47,8 +98,8 @@ function reset() {
               :key="opt.value"
               type="button"
               class="segmented__btn"
-              :class="{ 'segmented__btn--on': store.weekStart === opt.value }"
-              @click="store.updateFields({ weekStart: opt.value })"
+              :class="{ 'segmented__btn--on': draft.weekStart === opt.value }"
+              @click="draft.weekStart = opt.value"
             >
               {{ opt.label }}
             </button>
@@ -78,7 +129,24 @@ function reset() {
       </div>
 
       <div class="edit__foot">
-        <button class="cta" @click="navigateTo('/')">Done</button>
+        <NuxtLink to="/" class="edit__cancel">Cancel</NuxtLink>
+        <button class="cta" :disabled="!dirty || !draft.startDate || draft.endDate < draft.startDate" @click="save">
+          Save changes
+        </button>
+      </div>
+
+      <div v-if="confirmDateChange" class="edit__veil" @click.self="confirmDateChange = false">
+        <section class="edit__dialog" role="dialog" aria-modal="true" aria-labelledby="date-change-title">
+          <h2 id="date-change-title">Keep plans from removed dates?</h2>
+          <p>
+            {{ impact.removedWithContent }} planned day{{ impact.removedWithContent === 1 ? '' : 's' }} will leave the calendar.
+            They will stay available in recovery if you extend the dates again.
+          </p>
+          <div class="edit__dialog-actions">
+            <button type="button" class="edit__btn" @click="confirmDateChange = false">Review dates</button>
+            <button type="button" class="cta" @click="save">Save and recover later</button>
+          </div>
+        </section>
       </div>
 
       <template #fallback>
@@ -107,6 +175,18 @@ function reset() {
 .edit__section {
   padding: 4px 20px 20px;
 }
+.edit__impact {
+  margin: 0 20px 18px;
+  padding: 12px 14px;
+  border: 1px solid #dfc98f;
+  border-radius: var(--r-row);
+  background: #fff8df;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.edit__impact strong,
+.edit__impact span { display: block; }
 .segmented {
   display: flex;
   gap: 6px;
@@ -172,5 +252,35 @@ function reset() {
   padding: 12px 20px max(26px, env(safe-area-inset-bottom));
   background: var(--paper);
   border-top: 1px solid var(--warm-rule);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.edit__foot .cta { flex: 1; }
+.edit__cancel {
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 14px;
+}
+.edit__veil {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(9, 26, 51, 0.42);
+}
+.edit__dialog {
+  width: min(430px, 100%);
+  padding: 22px;
+  border-radius: var(--r-card);
+  background: var(--paper);
+  box-shadow: 0 18px 50px rgba(9, 26, 51, 0.24);
+}
+.edit__dialog h2 { margin: 0 0 8px; font-size: 21px; }
+.edit__dialog p { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+.edit__dialog-actions { display: flex; gap: 10px; margin-top: 18px; }
+.edit__dialog-actions .cta { flex: 1; }
 }
 </style>
