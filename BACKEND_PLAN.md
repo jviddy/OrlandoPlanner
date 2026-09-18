@@ -1,367 +1,501 @@
 # Backend & User Management Plan
 
-Status: **proposal, not yet built.** The app today is 100% client-side — a single
-trip lives in one browser's `localStorage`, there is no server, no accounts, no
-sharing. This document lays out what changes to support multiple users, trip
-ownership, sharing/collaboration, and sensitive data (reservation numbers etc.),
-and a phased path to get there without a rewrite.
+Updated 18 September 2026 after the pre-accounts planning release and the
+anonymous-persistence spike.
 
-Decisions below are recommendations, not commitments — anywhere I picked a
-specific answer to one of the open questions, it's called out under **Decision**
-so it's easy to spot and overrule.
+Status: **foundation built and disabled; accounts and collaboration not built.**
+The app still uses `localStorage` by default and does not upload a trip without
+an explicit choice. A repository boundary, stable IDs, two D1 environments, an
+anonymous-trip API, capability checks, optimistic revisions, validation, and
+write activity records now exist behind feature flags. The next backend work is
+to turn that spike into the canonical trip service, then add the smallest useful
+account-and-claim vertical slice.
+
+This document is now the implementation plan. “Working decision” means use that
+answer unless product review changes it. “Open decision” means do not build the
+affected feature until it is resolved.
 
 ---
 
-## 1. What a "trip" needs to support
+## 1. Current baseline
 
-Today: name, dates, hotels, tickets, flights, a day grid, and per-day dining /
-fixed-time items (`app/types/trip.ts`). That data model doesn't change much —
-what changes is that a trip stops being "the one thing in this browser" and
-becomes a row that belongs to *someone*, that other people can be let into, and
-that carries a few fields sensitive enough to hide from casual viewers.
+### Shipped locally
 
-New per-trip concepts:
-- **Ownership** — who's the primary account behind this trip, if anyone yet.
-- **Collaborators** — who else can see or edit it, and at what level.
-- **Visibility** — can a bare link view it; can it be publicly featured.
-- **Provenance** — was this seeded by admin from something like a Facebook
-  post, created by a travel agent, or started from scratch.
-- **Sensitive fields** — reservation/confirmation numbers, phone numbers on
-  bookings, etc. — visible to editors and above, not to viewers.
+- `TripState` has schema version 2 and stable IDs for trips, days, stays,
+  flights, and day items. It now includes setup/seed provenance, up to three
+  activities per day, custom activities, movable versus date-fixed items, split
+  stays, multiple flights, safe date-change recovery, and the Plan workflow.
+- `LocalTripRepository` stores trips under `orlando-trip-v2:<tripId>` and keeps
+  `orlando-trip-v2:current`. Migration from the legacy `orlando-trip` key keeps
+  the old value as a rollback copy.
+- Only persisted trip fields cross the repository boundary. Transient UI state
+  such as the selected day, open sheet, recent choices, and Undo is not synced.
+- `AnonymousTripRepository` and `/api/anonymous-trips/*` support create, fetch,
+  update, and revoke. Creation is idempotent; updates require `If-Match`; view
+  and edit capabilities are separate; only SHA-256 token hashes are stored.
+- Server-side flags and public UI flags both default to `false`. When enabled,
+  Trip settings offers an explicit upload, manual sync, failure recovery copy,
+  and revoke action. There is no silent migration or background upload.
+- Migration `0001_anonymous_trips.sql` and its rollback exist. Separate
+  `orlando-planner-preview` and `orlando-planner-production` D1 databases are
+  bound as `ORLANDO_DB`, and the migration has been applied to both.
+- A local Worker/D1 lifecycle check has covered create, idempotent retry,
+  unauthorized read, separate view/edit access, update, revision conflict,
+  revoke, and read-after-revoke. See
+  [`docs/anonymous-sync-foundation.md`](./docs/anonymous-sync-foundation.md).
 
-## 2. User & role model
+### Not built
 
-Two separate role concepts, and it's worth keeping them distinct:
+- Accounts, authentication, sessions, account recovery, or account linking.
+- A trip list or account-scoped multi-trip navigation.
+- Claiming, invitations, memberships, share-link management, or role UI.
+- Cross-device capability recovery or actual view/edit link routes.
+- Conflict resolution beyond returning an error and retaining the local copy.
+- Sensitive booking fields, API redaction, encryption of those fields, or a
+  retention cleanup job.
+- Agent/admin tooling, duplication, or a public gallery.
 
-- **Global role** on the *account* — `admin`, `agent`, `user`. Mostly about
-  what the platform lets the account *do* (admin tooling, agent features like
-  managing multiple clients' trips from one dashboard).
-- **Trip role** — per-trip, on the membership row, not the account. What that
-  *account* can do to *this trip*.
+### Known spike gaps to close before enabling it
 
-| Trip role | View | Edit days/items | Edit trip details (dates/name) | Manage sharing | See sensitive fields | Remove other members | Delete trip |
-|---|---|---|---|---|---|---|---|
-| **Owner** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (except `agent` members, see §3.2) | ✅ |
-| **Agent** (persistent collaborator) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (except other agents) | ❌ |
-| **Editor** | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| **Viewer** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Anonymous editor** (no account, name-only) | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
-| **Public / link viewer** (visibility = unlisted, no membership row) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+- The UI says capabilities are “encrypted”; they are opaque tokens stored in
+  `localStorage`, not encrypted. Correct the copy and document the XSS risk.
+- Anonymous rows expire 180 days after creation, even if actively updated.
+  Choose and implement an inactivity-based policy plus expiry warnings.
+- Secret rotation breaks deterministic capability re-derivation for an old
+  idempotency key. Add a capability key version/keyring or another rotation-safe
+  replay design before relying on this in production.
+- Validation checks size and the broad day/item shape, not the complete shared
+  `TripState` schema. Unknown and transient fields must not be persisted.
+- Rate-limit buckets and expired/soft-deleted trips have no purge process.
+- CI currently builds only; it does not run typecheck, tests, or migration
+  forward/rollback checks.
 
-The bottom two rows aren't accounts at all — they're what an unlisted link
-grants by default, matching how the app behaves today (anyone with the link
-can get in). "Anonymous editor" is today's actual behaviour (§4 covers how
-that gets phased in as a real trip type rather than the whole app's only mode).
+## 2. Non-negotiable guardrails
 
-## 3. Trip lifecycle, by your four cases
+1. **Local-first migration.** Existing local trips remain usable until a server
+   write succeeds, and the local recovery copy is never silently deleted.
+2. **Explicit upload.** No existing trip is sent to the server merely because a
+   user opened the upgraded app or created an account.
+3. **Server-enforced authorization.** The API checks every read and mutation.
+   Hiding a control in Vue is not authorization.
+4. **Separate capabilities.** A trip ID is an identifier, never a credential.
+   View, edit, invitation, and claim secrets are distinct, expiring, revocable,
+   and stored only as hashes.
+5. **Safe defaults.** Owned trips start private. Claiming locks anonymous edit
+   access unless the new owner deliberately creates a new edit link.
+6. **Optimistic concurrency.** Every write supplies the revision it read. A
+   stale write never silently overwrites newer server data.
+7. **No sensitive data in anonymous-edit trips.** Until account permissions,
+   server redaction, and encryption exist, confirmation numbers and similar
+   fields must not be accepted or stored.
+8. **Environment isolation.** Local, preview, and production data and secrets
+   stay separate. Preview must never point at production D1.
+9. **Auditable privilege.** Ownership transfer, agent access, invitations,
+   capability creation/revocation, claims, and admin support access create
+   activity records.
 
-### 3.1 Registered user (the baseline case)
+## 3. Ownership and permission model
 
-Create a trip → you're `owner`. You invite people by email or link, choosing
-`editor` or `viewer`. You can change visibility (private / unlisted-link) and
-revoke anyone except an `agent` member (see below). This is the whole loop for
-most users and needs no special-casing.
+There are two independent role layers:
 
-### 3.2 Travel agent
+- A global account role: `user`, `agent`, or `admin`.
+- A per-trip membership role: `owner`, `agent`, `editor`, or `viewer`.
 
-An agent creates the trip → the agent account gets a permanent `agent`
-membership row, separate from ownership. The agent then adds the client as
-`owner` (or invites them to claim it, if the client doesn't have an account
-yet — same flow as §3.4). Ownership can move to the client, get renamed,
-whatever — the `agent` membership is independent of the `owner_user_id` field
-and isn't touched by it.
+**Working decision — one source of ownership truth:** the single `owner`
+`TripMembership` row is authoritative. Do not also add an independently editable
+`Trip.owner_user_id`. Anonymous/admin-seeded trips have no owner membership.
+Claim and ownership transfer run as transactions, and a partial unique index
+enforces at most one active owner per trip.
 
-**Decision:** an `agent` membership can only be removed by that agent
-themselves or by a platform admin — not by the trip's owner. That's the whole
-point of the ask ("retain access, even if they are no longer the owner"), but
-it means a client can't unilaterally cut an agent out through the UI. If that
-ever needs to be revocable by the client, it should be a support/dispute path,
-not a button, so an agent's book of business isn't one accidental click away
-from disappearing.
+| Actor | View | Edit plan | Edit trip details | Manage sharing | Sensitive fields | Transfer ownership | Delete |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Owner | yes | yes | yes | yes | yes | yes | yes |
+| Agent member | yes | yes | yes | yes | yes | no | no |
+| Editor | yes | yes | no | no | yes | no | no |
+| Viewer | yes | no | no | no | no | no | no |
+| Anonymous edit capability | yes | yes | yes | no | no | no | revoke only |
+| Anonymous view capability | yes | no | no | no | no | no | no |
+| Unlisted viewer | yes | no | no | no | no | no | no |
+| Admin, ownerless trip | yes | yes | yes | claim/share setup | n/a | no | yes |
+| Admin, owned trip | no by default | no | no | no | no | no | no |
 
-Global `agent` role likely wants a lightweight approval step (you flip it on
-per-account) since it's the paid tier — not a self-serve checkbox on sign-up.
+An `admin` does not automatically become a visible trip member. Admin-seeded,
+ownerless trips can be managed through an audited admin permission. Access to an
+owned trip should be an explicit, logged support action rather than an invisible
+standing permission in the normal UI.
 
-### 3.3 Admin-seeded marketing trips
+**Open decision — agent removal:** the earlier plan made agent memberships
+permanent except for self-removal or an admin dispute path. That is unusually
+powerful. Decide and disclose the policy before agent support is built. It does
+not block ordinary owner/editor/viewer work.
 
-You build a trip from something you saw in a Facebook group, tweak it, post a
-screenshot with a soft link back to it. Two things this needs that a normal
-trip doesn't:
+**Working decision — agent approval:** the global `agent` role is manually
+approved initially; it is not selected during self-service sign-up.
 
-- **No real owner yet.** `owner_user_id` is null. You (admin) can edit it, but
-  you're not recorded as the trip's owner — more like a caretaker until
-  someone claims it. Modeling this as "admin edits anything with no owner"
-  (a permission, not a membership row) means you never show up as a
-  collaborator on someone else's claimed trip afterwards, which is the
-  "I no longer want to be an owner" requirement almost for free.
-- **A claim mechanism.** Each such trip gets a claim link (distinct from its
-  normal view link — e.g. `/t/<id>/claim/<token>`) that you put wherever the
-  screenshot points. Opening it while logged in (or after a quick sign-up)
-  shows "Claim this trip?" — confirming sets `owner_user_id` to that account
-  and burns the token. From that point it's a completely normal owned trip:
-  admin has no lingering access, and the new owner controls sharing exactly
-  like §3.1.
+## 4. Trip lifecycles
 
-**Decision:** claiming requires *some* account (sign-up or login), not just
-typing a name — someone needs to be accountable for it afterwards, and it's
-the one moment this system asks "are you sure this is yours?" I'd resist
-trying to verify identity against the Facebook name (e.g. auto-matching);
-worst case someone claims a trip that isn't theirs, which just means that one
-marketing template got used and you make another. Store the Facebook
-poster's display name as a cosmetic `source_attribution` note purely so the
-claim screen can say "Is this your trip, [name]?" — not as a check.
+### Registered user
 
-### 3.4 Unregistered / anonymous trips
+A signed-in user creates or explicitly uploads a trip and receives its owner
+membership. The trip is private by default. They can create viewer/editor
+invitations and unlisted view links, revoke them, or transfer ownership.
 
-This is today's app, basically unchanged, plus a path off of it:
+### Anonymous trip
 
-- Trip gets a random, unguessable ID the moment it's created — no sign-up.
-- First edit prompts for a display name ("Editing as: ___"), stored in a
-  cookie/localStorage, reused for every subsequent edit from that browser and
-  attached to an activity-log entry — this is the "change tracking without an
-  account" ask. It's an attribution label, not authentication; nothing stops
-  someone from typing a different name next time.
-- Anyone with the link can view *and edit* — no membership rows, this is the
-  trip's baseline visibility, same as today.
-- **Converting to owned.** A persistent "Claim this trip" affordance, same
-  flow as §3.3: sign up or log in, confirm, `owner_user_id` gets set on the
-  *same* record (no copy). Once claimed, the owner can tighten sharing (e.g.
-  turn off anonymous public editing) if they want — but the link doesn't
-  change, so anyone who already had it still resolves to the same trip.
+The current capability model remains the pre-account route:
 
-**Decision (your "not sure if copy or ownership" question):** convert in
-place, don't copy, and make that the only option here. Copying is a genuinely
-different feature — a *new*, independent trip pre-filled from an existing one
-— and it's more useful as something *anyone* can do to *any* visible trip
-(next section), not specifically tied to "claiming" an anonymous one.
+- The trip has a random stable ID, but the ID alone grants nothing.
+- The creating device receives distinct edit and view capabilities.
+- A view link carries only a view capability. Editing is available only when
+  somebody deliberately shares an edit capability.
+- Put capability secrets in the URL fragment, not the path/query, then have the
+  client exchange/use them in an `Authorization` header. This avoids routine
+  server logs and referrer headers capturing the secret.
+- An optional display name can attribute anonymous writes, but is not identity
+  or authentication.
 
-## 4. Sharing, visibility, and copies
+### Claiming an anonymous or admin-seeded trip
 
-Per trip:
+**Working decision:** claim in place; do not copy. The public trip ID and payload
+revision survive. Claiming requires a verified account and atomically:
 
-- **Private** — only the owner + explicit members.
-- **Unlisted** — anyone with the link can view (and, for still-anonymous
-  trips, edit). Default for anonymous and admin-seeded trips; a reasonable
-  default for new registered-user trips too, since it matches current
-  behaviour and most people planning a family trip aren't worried about
-  strangers finding a random UUID.
-- **Public** *(later, not MVP)* — listed/discoverable, e.g. an admin "featured
-  trips" gallery. Not needed to ship the rest of this; unlisted-with-a-link
-  covers the marketing use case fine.
+1. verifies and burns the one-use claim token;
+2. creates the owner membership;
+3. changes the trip from `anonymous`/`seeded` to `owned`;
+4. revokes all anonymous edit capabilities;
+5. makes the trip private unless the new owner explicitly chooses otherwise;
+6. records the claim and revocations in the activity log.
 
-**Your "copies" question — decision: yes, and make it separate from
-claiming.** Any trip whose visibility allows viewing gets a "Duplicate this
-trip" action, available to anyone (including anonymous visitors, who'd then
-need to claim *their new copy* to keep it beyond that browser session). It
-creates a brand-new trip, independent from the moment it's created — editing
-the copy never touches the original and vice versa. Add a per-trip
-`allow_duplication` flag, defaulting **on**, so an agent can switch it off for
-a private client itinerary they don't want getting cloned by whoever they
-sent the link to.
+Claim tokens are different from ordinary view/edit links. A cosmetic source
+attribution such as a Facebook display name may appear on the confirmation
+screen, but it is not identity verification.
 
-So: **claim** = same record, ownership changes, only meaningful while a trip
-has no owner. **Duplicate** = new record, always available (unless the owner
-turns it off), the mechanism behind "share publicly and let people start from
-what already exists."
+### Travel-agent trip
 
-## 5. Sensitive data (reservation numbers, etc.)
+An approved agent creates the trip and gets an `agent` membership. The client
+claims or accepts ownership separately, so ownership changes do not accidentally
+remove the agent membership. Agent-specific behaviour belongs after ordinary
+accounts, claiming, and invitations are proven.
 
-Once real bookings live in this thing (confirmation numbers, phone numbers on
-a reservation, party size), a `viewer` or a public link shouldn't see them —
-someone could use a confirmation number to modify or cancel a real booking
-that isn't theirs.
+### Duplication
 
-- Add clearly-separated fields on the dining/fixed-time item and on a stay —
-  e.g. `confirmationNumber`, `bookingPhone` — rather than stuffing them into
-  the free-text note, so they can actually be access-controlled.
-- **Field-level gating at the API, not just the UI.** When a trip is served to
-  a `viewer` or an unauthenticated link visitor, the response strips those
-  fields server-side before it ever reaches the browser — don't rely on the
-  frontend to just hide them, since that leaks in the network tab.
-- **Phase 2 hardening:** encrypt those specific columns at the application
-  layer (envelope encryption, key in Workers Secrets) before writing to the
-  database, so a raw data export or DB compromise doesn't hand out booking
-  references in plaintext either. Not needed for MVP — access control first,
-  encryption-at-rest for the sensitive columns as a follow-up.
-- General PII hygiene: minimise what you store (email + display name is
-  probably it), never log it in plaintext application logs, support account
-  deletion, rate-limit auth endpoints, consider Cloudflare Turnstile on
-  sign-up and on anonymous trip creation to keep bot spam down.
+Claiming and copying stay separate:
 
-## 6. Data model sketch
+- **Claim** changes ownership of the existing trip.
+- **Duplicate** creates an independent trip with a new ID and records
+  `duplicated_from_trip_id` for provenance.
 
-Relational, sketched as tables (maps cleanly onto Cloudflare D1 — see §7).
-Existing client types (`Day`, `DayItem`, `Stay`, `TicketDays`, `Flights` in
-`app/types/trip.ts`) stay close to what they are now; this is what wraps
-around them.
+Duplication is allowed only when the source is viewable and
+`allow_duplication = true`. It is not part of the first account slice.
 
-```
+## 5. Sharing and visibility
+
+- `private`: active members and valid invitation/claim flows only.
+- `unlisted`: anyone holding a valid, revocable view capability can read the
+  redacted representation. The bare trip URL is still not a credential.
+- `public` *(future)*: discoverable and eligible for a gallery. Do not add it to
+  the persisted enum or user-facing controls until the gallery is explicitly
+  approved.
+
+Owned trips default to `private`; anonymous and admin-seeded trips can create
+unlisted view links. Link access and membership access pass through the same
+central permission evaluator so individual endpoints cannot drift.
+
+Invitations are one-use, role-specific, email-bound where applicable, expiring,
+and revocable. Accepting an invitation requires login so the membership attaches
+to a real account. Never put reusable bearer tokens into email analytics URLs.
+
+## 6. Sensitive booking data
+
+Sensitive fields do not exist in `TripState` yet. When they are introduced:
+
+- Give them structured fields such as `confirmationNumber`, `bookingPhone`, and
+  `partySize`; never rely on a free-text note for access control.
+- Reject them on anonymous-edit trips.
+- Redact them in the API serializer for viewer, unlisted, and public reads. Test
+  every read route, including duplication, activity summaries, exports, and
+  error payloads.
+- Encrypt sensitive values at the application layer with a versioned Workers
+  secret before storing them. A key ID on each encrypted value must support key
+  rotation without a big-bang rewrite.
+- Never place sensitive values in logs, analytics, share images, notification
+  text, or activity summaries.
+
+Access control and redaction must land before the UI starts collecting these
+fields. Encryption, deletion, and recovery procedures must land before a
+production release containing real booking data.
+
+## 7. Canonical data model
+
+Use a **hybrid model** for the first backend release. Relational tables own
+identity, access, lifecycle, revision, and audit data. The existing persisted
+`TripState` remains one versioned JSON payload. This matches the repository spike
+and avoids maintaining a second relational representation of days, flights,
+stays, recovery data, and custom activities while those features are still
+changing.
+
+Normalize individual planning entities later only when query/reporting or
+collaborative merge requirements justify it. Sensitive booking values may be
+split into encrypted records sooner so redaction cannot accidentally serialize
+them with public trip data.
+
+```text
 User
-  id, email, display_name, global_role ('user'|'agent'|'admin'),
-  auth_provider, auth_subject_id,   -- see §7, no password column if we go passwordless
-  created_at, deleted_at
+  id, email, display_name, global_role, email_verified_at,
+  created_at, updated_at, deleted_at
+
+AuthIdentity
+  id, user_id, provider, provider_subject, created_at
+  unique(provider, provider_subject)
+
+Session
+  id, user_id, token_hash, expires_at, last_seen_at, revoked_at, created_at
+
+AuthToken
+  id, email, purpose, token_hash, expires_at, used_at, created_at
+
+IdempotencyRecord
+  key_hash, scope, resource_id, capability_key_version,
+  response_revision, expires_at, created_at
 
 Trip
-  id (public, random — not sequential),
-  name, start_date, end_date,
-  owner_user_id (nullable),
-  visibility ('private'|'unlisted'|'public'),
-  allow_duplication (bool, default true),
-  duplicated_from_trip_id (nullable, for provenance),
-  source_attribution (nullable text — "shared by X on Facebook"),
-  status ('anonymous'|'claimed'|'archived'),
-  created_at, updated_at, deleted_at
+  id, status ('anonymous'|'seeded'|'owned'|'archived'),
+  visibility ('private'|'unlisted'),
+  payload_schema_version, payload_json, revision,
+  allow_anonymous_edit, allow_duplication,
+  duplicated_from_trip_id, source_attribution,
+  expires_at, created_at, updated_at, deleted_at
 
 TripMembership
   trip_id, user_id, role ('owner'|'agent'|'editor'|'viewer'),
-  invited_by_user_id, created_at
-  -- owner_user_id on Trip is a convenience/derived pointer; the
-  -- membership row is the actual ACL entry, including for the owner.
+  invited_by_user_id, created_at, revoked_at
+  unique active membership per (trip_id, user_id)
+  unique active owner per trip
 
-AnonymousEditor
-  trip_id, display_name, device_token (cookie value), last_active_at
-  -- attribution only, not auth
+TripCapability
+  id, trip_id, kind ('view'|'edit'), token_hash, key_version,
+  created_by_user_id, expires_at, last_used_at, revoked_at, created_at
+
+Invitation
+  id, trip_id, email, role ('editor'|'viewer'), token_hash,
+  invited_by_user_id, expires_at, accepted_by_user_id,
+  accepted_at, revoked_at, created_at
 
 ClaimToken
-  trip_id, token, created_by_user_id (nullable, admin-seeded case),
-  expires_at, used_at, used_by_user_id
-
-TripDay
-  trip_id, date, park_id (nullable), note
-
-DayItem
-  day_id, kind ('dining'|'fixed'), title, time, state ('idea'|'booked'),
-  park_id (nullable),
-  confirmation_number (nullable, sensitive),
-  booking_phone (nullable, sensitive)
-
-Stay
-  trip_id, name, start_date (nullable), end_date (nullable),
-  confirmation_number (nullable, sensitive)
+  id, trip_id, token_hash, created_by_user_id,
+  expires_at, used_by_user_id, used_at, revoked_at, created_at
 
 ActivityLog
-  trip_id, actor_user_id (nullable), actor_anonymous_name (nullable),
+  id, trip_id, from_revision, to_revision,
+  actor_user_id, actor_capability_id, actor_display_name,
   action, summary, created_at
-  -- powers both "who changed what" for anonymous editors and a general
-  -- audit trail agents/owners can review
+
+RateLimitBucket
+  bucket_hash, scope, requests, window_started_at, updated_at
 ```
 
-## 7. Auth & infrastructure
+The JSON contract is the output of `migratePersistedTrip`, not raw Pinia state.
+It includes the current planning fields and excludes transient UI fields. The
+server must validate/migrate it using the same schema rules as the client before
+storage and again before returning it.
 
-The app already deploys to **Cloudflare Pages** with the `cloudflare-pages`
-Nitro preset, which means Nuxt server routes (`server/api/*`) run as
-Cloudflare Pages Functions today, at no extra infra cost. That points
-straight at:
+### Evolution from migration 0001
 
-- **Cloudflare D1** (serverless SQLite) for everything in §6. Relational,
-  cheap, same platform, no new vendor.
-- **Sessions:** an HttpOnly, Secure, `SameSite=Lax` cookie holding an opaque
-  token, looked up against a `Session` row in D1 (not a JWT) — opaque +
-  DB-backed means a session can actually be revoked (log out everywhere,
-  suspend an account) without waiting for a token to expire.
+Before accounts are exposed, add a migration that creates the canonical `trips`,
+`trip_capabilities`, and `activity_log` shape and copies any spike rows while
+preserving trip IDs, revisions, payloads, token hashes, and timestamps. Keep the
+old `/api/anonymous-trips/*` contract as a short compatibility adapter during the
+flagged preview, then remove it before public enablement. Because the spike is
+still disabled, this is the cheapest point to establish one trip table rather
+than maintain parallel anonymous and owned stores.
 
-**Decision on sign-up method:** passwordless — **email magic link** as the
-default, **Google OAuth** as a one-click alternative (worth adding Facebook
-login too, given the target audience is literally coming from Facebook travel
-groups). This sidesteps password storage almost entirely: no hashes to pick
-an algorithm for, no reset-flow to build, no "someone reused a leaked
-password" risk. It also keeps the ask — "sign up should be easy" — true by
-construction rather than by extra UX work bolted onto a password form.
+## 8. API and authentication contract
 
-If a password option ever gets added later (e.g. an agent wants a "log in
-without email round-trip" option), use Workers' native WebCrypto PBKDF2 (or a
-maintained Argon2/scrypt WASM build) — never a bespoke hash.
+### Trip endpoints
 
-## 8. Database implementation specifics
+The target resource family is:
 
-§6 says *what* the schema looks like and §7 says *D1* — this is the plumbing
-around that, none of which exists yet (today's `wrangler.toml` has no D1
-binding at all).
+```text
+POST   /api/trips
+GET    /api/trips
+GET    /api/trips/:tripId
+PUT    /api/trips/:tripId
+DELETE /api/trips/:tripId
+POST   /api/trips/:tripId/claim
+GET    /api/trips/:tripId/activity
 
-- **Schema management — Decision: Drizzle ORM + Drizzle Kit.** D1 support is
-  first-class, it's TypeScript-first (matches the `strict: true` setup this
-  project already has), and it generates versioned SQL migration files from
-  the schema instead of hand-written ALTER TABLE statements. The alternative
-  is raw SQL via D1's own prepared-statement API — simpler dependency-wise,
-  but no type safety on queries and migrations become hand-rolled. Given how
-  much of §6's schema will still be moving during Phase 1, the type safety is
-  worth the dependency.
-- **Migrations live in the repo**, e.g. `migrations/*.sql` generated by
-  Drizzle Kit, applied with `wrangler d1 migrations apply` as a deploy step —
-  schema changes get reviewed in a PR diff exactly like app code, not run by
-  hand against production.
-- **Local dev.** `wrangler d1 create orlando-planner-db` once, then bind it in
-  `wrangler.toml`. The dev server already logs `Using cloudflare-dev
-  emulation in development mode` (Nitro's Miniflare-backed dev mode), which
-  emulates D1 locally against a SQLite file on disk — so `npm run dev` keeps
-  working with no separate database process to run, no Docker, nothing extra
-  to install.
-- **Environments — Decision: one production D1 database, one shared preview
-  database** for all Cloudflare Pages preview deployments (branch/PR builds),
-  rather than a database-per-branch. Simpler to reason about at this scale;
-  revisit and isolate further once there's real paying-agent data that a
-  preview build shouldn't ever be able to touch.
-- **Backups.** D1's built-in Time Travel (point-in-time restore, ~30-day
-  window) covers "I broke something, restore to an hour ago" out of the box —
-  no custom backup job needed for MVP. Worth adding a periodic export to R2
-  once there's real user data, as a longer-retention belt-and-suspenders copy
-  Time Travel's window doesn't cover.
-- **Retention & deletion.** Every table with a `deleted_at` in §6 is a soft
-  delete — "delete my account" or "delete this trip" sets that column and
-  removes it from the app immediately, but a scheduled cleanup job
-  hard-deletes (actually purges the row, including the sensitive fields from
-  §5) after a grace period, e.g. 30 days. Gives you an undo window without
-  keeping PII around indefinitely, which is the actual "right to erasure"
-  ask, not just hiding a flagged row forever.
+POST   /api/trips/:tripId/capabilities
+DELETE /api/trips/:tripId/capabilities/:capabilityId
+POST   /api/trips/:tripId/invitations
+POST   /api/invitations/:token/accept
+```
 
-## 9. Migration path — don't do this as one big-bang rewrite
+Create operations use an idempotency key. Mutations use `If-Match` and return
+the new revision/ETag. For an authorized writer, a stale revision returns a
+structured `409 revision_conflict`; invalid or revoked credentials do not reveal
+whether a trip exists. The client must offer reload/compare/retry and retain its
+local draft. Do not turn on background autosave until that conflict path works.
 
-The current store (`app/stores/trip.ts`) is a single Pinia store, one trip,
-localStorage-persisted, no network calls. Rough phases:
+Central helpers perform authentication, trip lookup, capability verification,
+permission evaluation, payload validation/migration, redaction, and activity
+logging. Endpoint files should not reimplement those rules.
 
-**Phase 0 — foundation (no user-visible change).**
-Create the D1 database, wire up Drizzle + the migrations workflow from §8,
-and add `server/api/trips/*`. Every trip — including today's
-localStorage-only ones — gets synced to a server row the first time the app
-loads post-upgrade (auto-create an anonymous trip from whatever's in
-localStorage, keep editing it locally with the server as a write-through
-cache). No accounts yet; this just stops the data being single-browser-only
-and gives every trip the stable ID everything else in this doc hangs off of.
+### Authentication
 
-**Phase 1 — accounts + claiming.**
-Sign-up/login (magic link + OAuth), the "claim this trip" flow for both
-anonymous (§3.4) and admin-seeded (§3.3) trips, basic sharing (invite by
-email/link as editor/viewer). This is the point where §5's field-level
-gating has to exist, since viewers are now a real thing.
+**Working decision:** passwordless email magic link first. Add Google OAuth only
+after the email/session/claim path works end to end; Facebook OAuth is a later
+product decision. Do not add passwords in the first release.
 
-**Phase 2 — agents + duplication + hardening.**
-Agent global role + persistent `agent` membership (§3.2), "Duplicate this
-trip" (§4), activity log UI, encryption at rest for sensitive columns,
-Turnstile on the open endpoints.
+- Sessions use a high-entropy opaque token in an `HttpOnly`, `Secure`,
+  `SameSite=Lax` cookie; only its hash is stored in D1.
+- Magic-link and OAuth state tokens are one-use, short-lived, hashed, rate
+  limited, and protected against open redirects and account enumeration.
+- Mutating cookie-authenticated routes validate the request origin. OAuth uses
+  state and PKCE where the provider supports it.
+- Session revocation, “log out everywhere,” disabled accounts, and account
+  deletion are database operations, not JWT-expiry workarounds.
+- Account linking requires an authenticated user action. Do not silently merge
+  identities solely because two providers return the same unverified email.
 
-**Phase 3 — polish.**
-Public/featured trips gallery for marketing, admin dashboard for managing
-seeded trips and claim links in bulk.
+**Open decision blocking auth implementation:** choose the auth library/build
+versus a small in-repo implementation, the transactional email provider, token
+and session lifetimes, recovery behaviour, and the initial OAuth provider. Prove
+the chosen stack in the Cloudflare Pages runtime before committing the schema.
 
-Each phase ships independently and the app keeps working for existing users
-the whole way through — nothing here requires taking the site down or forcing
-a migration moment on anyone.
+### Routes and navigation
 
-## 10. Open questions worth a decision before Phase 1
+**Working decision:** introduce `/trips` and `/trips/:tripId/plan` (plus child
+settings/share routes) rather than continuing to infer one current trip from
+global state. Preserve redirects from today’s `/`, `/plan`, and `/edit` routes
+during migration. A local-only trip can appear alongside server trips with a
+clear “On this device” status.
 
-- **Agent verification:** self-serve toggle, or do you manually approve agent
-  accounts? (Recommended: manual, at least initially — it's the paid tier and
-  the one role with reduced-revocability privileges.)
-- **Anonymous trip edit access after claim:** once claimed, does the owner
-  have to explicitly re-enable "anyone with the link can still edit," or does
-  claiming automatically lock editing down to invited members only? (Leaning
-  toward: claiming locks it down by default — matches the mental model of
-  "now someone owns this" — but worth confirming since it's a behaviour
-  change for anyone else already mid-edit on that trip.)
-- **Public gallery (Phase 3):** is this actually wanted, or does the
-  marketing flow work fine off unlisted links alone? Affects whether "public"
-  visibility needs to exist as more than a placeholder enum value.
-- **Preview-environment isolation (§8):** is a single shared preview D1
-  database acceptable for now, or is even test/preview data sensitive enough
-  (e.g. once agents are testing with real client trips) to warrant isolating
-  it sooner than "later, once there's real paying-agent data"?
+## 9. D1, migrations, and operations
+
+- Continue the approach already proven: reviewed SQL migrations in
+  `migrations/` and typed wrappers around D1 prepared statements. Do **not** add
+  Drizzle merely to match the old proposal. Reconsider an ORM only if the query
+  surface becomes costly to maintain.
+- Add explicit package scripts for local, preview, and production migration
+  list/apply commands. Production application is a deliberate release step,
+  never an implicit side effect of a preview deploy.
+- Every migration needs a compatibility note and, where SQLite permits, a
+  rollback or forward-recovery script. Apply it to a disposable local database
+  in CI before either shared environment.
+- Keep preview and production bindings and secrets distinct. Preview contains
+  synthetic test trips only once sensitive fields exist.
+- Add cleanup for expired auth tokens, sessions, capabilities, rate-limit
+  buckets, anonymous trips, and soft-deleted records. Proposed policy: anonymous
+  expiry is 180 days after the last successful write; soft-deleted owned data is
+  purged after a 30-day recovery window. Confirm both before enablement.
+- Document D1 restore and export procedures, capability-secret rotation,
+  incident revocation, and account/trip deletion. Test restore before depending
+  on it.
+- Keep PII and bearer secrets out of application logs. Use request IDs and
+  actor/resource IDs for support diagnostics.
+
+## 10. Delivery plan
+
+### Phase 0 — pre-accounts foundation (complete, feature disabled)
+
+Stable IDs, local repository migration, explicit upload UI, D1 bindings,
+migration/rollback, capability-protected anonymous CRUD, idempotent creation,
+optimistic revisions, rate limiting, and lifecycle verification are complete.
+
+### Phase 0.5 — make the foundation production-shaped (next)
+
+This is the immediate next slice.
+
+1. Record the ownership, claim-lockdown, capability-link, hybrid-payload, and
+   auth-stack decisions as short ADRs or settled sections of this plan.
+2. Add a central operation-level permission evaluator and table-driven tests for
+   every actor in §3.
+3. Replace the spike tables with the canonical trip/capability/activity schema
+   through a tested migration and compatibility adapter.
+4. Share strict persisted-payload validation between client and server; reject
+   unknown/transient fields and sensitive fields on anonymous trips.
+5. Close the known gaps in §1: accurate capability copy, inactivity expiry,
+   key rotation, cleanup, and structured revision conflicts.
+6. Add `typecheck`, unit/authorization tests, build, and migration
+   forward/rollback checks to CI.
+7. Enable anonymous sync only in a controlled preview with an environment-
+   specific secret, repeat the full lifecycle check, and keep production off.
+
+Exit gate: the preview can create, fetch, update, conflict, revoke, expire, and
+purge an anonymous trip without data loss; unauthorized operations and every
+permission-matrix denial have automated coverage; rollback/recovery is written
+down and rehearsed.
+
+### Phase 1 — accounts and claim vertical slice
+
+- Implement magic-link login, opaque sessions, logout, and session revocation.
+- Add `/trips` plus trip-scoped routes and show local versus server status.
+- Let a verified user explicitly upload/claim one existing local or anonymous
+  trip in place.
+- Enforce the claim transaction and lockdown rules in §4.
+- Add account/trip deletion and minimum activity history for claim/security
+  events.
+
+Do not add invitations or agent behaviour yet.
+
+Exit gate: a new user can sign in, claim a trip without changing its ID or
+losing local recovery, open it on a second device, sign out/revoke sessions, and
+cannot use the old anonymous edit capability after claim.
+
+### Phase 2 — ordinary sharing and collaboration
+
+- Add editor/viewer invitations and revocable unlisted view/edit links.
+- Add server-side redaction and permission tests before collecting sensitive
+  booking fields.
+- Add activity attribution and a usable revision-conflict compare/retry flow.
+- Add Google OAuth and safe account linking if still wanted.
+
+Real-time presence, CRDTs, comments, and live cursor collaboration are not part
+of this phase; revision-safe whole-trip writes are sufficient initially.
+
+### Phase 3 — agents, duplication, and hardening
+
+- Add manually approved agent accounts after the removal/dispute policy is
+  settled.
+- Add agent dashboards and persistent trip membership with explicit disclosure.
+- Add trip duplication and provenance.
+- Add encrypted sensitive booking fields, key rotation, Turnstile where abuse
+  data justifies it, and longer-retention backup/export procedures.
+
+### Phase 4 — optional marketing/admin features
+
+- Admin-seeded trip tooling and claim-link management.
+- Public/featured trip gallery, only if unlisted links are insufficient.
+- Bulk support/operations tools with audited access.
+
+Each phase must ship independently, preserve local recovery, and keep later
+privileges out of earlier schemas and UI until their policies are settled.
+
+## 11. Decisions still needed
+
+Only the first item blocks the immediate account work; the others can wait for
+their phase.
+
+1. **Auth implementation and email delivery:** library or in-repo flow, email
+   provider, token/session lifetimes, recovery, and initial OAuth scope.
+2. **Anonymous retention:** confirm 180 days since last successful write and the
+   warning/recovery experience before expiry.
+3. **Agent removal/disputes:** whether the owner can revoke an agent and what
+   admin/support process exists.
+4. **Agent commercial approval:** who can approve the role and how entitlement
+   is removed when a plan ends.
+5. **Public gallery:** whether it is actually needed beyond unlisted sharing.
+
+## 12. Definition of done for backend changes
+
+A backend slice is not complete until:
+
+- authorization and redaction are tested at the API boundary;
+- legacy and current local fixtures survive migration and failure;
+- typecheck, tests, build, and disposable migration checks pass in CI;
+- preview and production bindings/secrets are proven distinct;
+- forward migration, rollback/forward-recovery, and app-version compatibility
+  are documented;
+- logs contain no raw bearer tokens or sensitive booking data;
+- the feature is exercised in preview before any production flag changes; and
+- production enablement is a separate, explicit decision.
