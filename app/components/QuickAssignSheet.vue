@@ -104,12 +104,24 @@ function choose(parkId: string) {
   selection.value = selection.value.includes(parkId)
     ? selection.value.filter((id) => id !== parkId)
     : selection.value.length < 3 ? [...selection.value, parkId] : selection.value
+  persistSelection()
+  if (autoAdvance.value && wasUnset && selection.value[0]) nextTick(moveToNextUnset)
+}
+function persistSelection() {
+  if (store.selectedDay === null) return
   const [first, second, third] = selection.value
   store.setDayActivities(store.selectedDay, first ?? null, second ?? null, third ?? null)
-  if (autoAdvance.value && wasUnset && first) nextTick(moveToNextUnset)
 }
 function removeActivity(parkId: string) {
   choose(parkId)
+}
+function moveActivity(index: number, direction: -1 | 1) {
+  const target = index + direction
+  if (target < 0 || target >= selection.value.length) return
+  const next = [...selection.value]
+  ;[next[index], next[target]] = [next[target]!, next[index]!]
+  selection.value = next
+  persistSelection()
 }
 
 const previousAvailable = computed(() => (store.selectedDay ?? 0) > 0)
@@ -241,7 +253,11 @@ onBeforeUnmount(() => {
             <div v-for="(parkId, index) in selection" :key="parkId">
               <span>{{ index === 0 ? 'Main plan' : `Activity ${index + 1}` }}</span>
               <strong>{{ resolvePark(parkId, store.customActivities)?.name }}</strong>
-              <button v-if="index > 0" type="button" @click="removeActivity(parkId)">Remove</button>
+              <div class="selected-plan__controls">
+                <button type="button" :disabled="index === 0" :aria-label="`Move ${resolvePark(parkId, store.customActivities)?.name} earlier`" @click="moveActivity(index, -1)">↑</button>
+                <button type="button" :disabled="index === selection.length - 1" :aria-label="`Move ${resolvePark(parkId, store.customActivities)?.name} later`" @click="moveActivity(index, 1)">↓</button>
+                <button type="button" class="selected-plan__remove" :aria-label="`Remove ${resolvePark(parkId, store.customActivities)?.name}`" @click="removeActivity(parkId)">×</button>
+              </div>
             </div>
             <p v-if="selection.length < 3" class="selection-hint">Choose up to {{ 3 - selection.length }} more {{ selection.length === 2 ? 'activity' : 'activities' }} below.</p>
             <p v-else class="selection-hint">Three activities selected.</p>
@@ -515,7 +531,10 @@ onBeforeUnmount(() => {
 .selected-plan > div { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:3px 10px; }
 .selected-plan span { color:var(--text-dim); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
 .selected-plan strong { grid-column:1; color:var(--text); font-size:12px; }
-.selected-plan div button { grid-column:2; grid-row:1 / span 2; color:#a04738; font-size:10px; font-weight:700; }
+.selected-plan__controls { grid-column:2; grid-row:1 / span 2; display:flex; align-items:center; gap:2px; }
+.selected-plan__controls button { width:20px; height:20px; border-radius:6px; background:#f1f3f7; color:var(--c-navy); font-size:12px; font-weight:800; line-height:1; }
+.selected-plan__controls button:disabled { opacity:.35; }
+.selected-plan__controls .selected-plan__remove { background:#fff0ee; color:#a04738; font-size:16px; }
 .selection-hint { color:var(--text-muted); font-size:10.5px; }
 .hopper-button { justify-self:start; padding:7px 10px; border-radius:999px; background:#eef1f7; color:var(--c-navy); font-size:11px; font-weight:700; }
 .hopper-button--on { background:var(--c-navy); color:#fff; }
