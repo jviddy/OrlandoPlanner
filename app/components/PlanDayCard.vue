@@ -3,7 +3,7 @@ import { parkName } from '~/data/parks'
 import { parseISO, useDates } from '~/composables/useDates'
 
 const props = defineProps<{ index: number; selected?: boolean }>()
-const emit = defineEmits<{ select: []; change: []; addBooking: []; addIdea: []; editDetails: [] }>()
+const emit = defineEmits<{ select: []; change: []; addMeal: []; addBooking: []; addIdea: []; editDetails: [] }>()
 const store = useTripStore()
 const { dowDayMon, time12 } = useDates()
 
@@ -58,6 +58,7 @@ const warningCount = computed(() => day.value.items.filter(
 
     <p v-if="day.note" class="plan-card__note">{{ day.note }}</p>
     <div class="plan-card__actions">
+      <button type="button" @click.stop="emit('addMeal')">+ Meal</button>
       <button type="button" @click.stop="emit('addBooking')">+ Booking</button>
       <button type="button" @click.stop="emit('addIdea')">+ Idea</button>
       <button type="button" class="plan-card__open" @click.stop="emit('editDetails')">Edit details <span aria-hidden="true">→</span></button>
@@ -87,7 +88,7 @@ const warningCount = computed(() => day.value.items.filter(
 .plan-card__item span { color:var(--text); font-weight:600; }
 .plan-card__item small { padding:3px 6px; border-radius:var(--r-pill); background:#eef0f3; color:var(--text-faint); font-size:9px; font-weight:700; text-transform:uppercase; }
 .plan-card__note { padding:10px 12px; border-left:3px solid var(--warm-border); color:var(--text-muted); font-size:12px; line-height:1.45; }
-.plan-card__actions { display:grid; grid-template-columns:auto auto minmax(0, 1fr); gap:6px; margin-top:auto; padding-top:13px; border-top:1px solid var(--warm-rule); }
+.plan-card__actions { display:grid; grid-template-columns:auto auto auto minmax(0, 1fr); gap:6px; margin-top:auto; padding-top:13px; border-top:1px solid var(--warm-rule); }
 .plan-card__actions button { padding:8px; border-radius:9px; background:#f2f4f9; color:var(--c-navy); font-size:11px; font-weight:800; }
 .plan-card__actions .plan-card__open { display:flex; align-items:center; justify-content:space-between; background:var(--c-navy); color:#fff; }
 @media (min-width:760px) { .plan-card { width:340px; min-width:340px; } }

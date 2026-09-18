@@ -9,7 +9,7 @@ const router = useRouter()
 const selectedIndex = computed(() => store.selectedDay ?? 0)
 const selectedDay = computed(() => store.days[selectedIndex.value] ?? null)
 const board = ref<HTMLElement | null>(null)
-const detailEditor = ref<{ index: number; action: 'booking' | 'idea' | 'edit' } | null>(null)
+const detailEditor = ref<{ index: number; action: 'meal' | 'booking' | 'idea' | 'edit' } | null>(null)
 const dayTransition = ref<'day-next' | 'day-previous'>('day-next')
 let swipeStart: SwipePoint | null = null
 const nextUnsetIndex = computed(() => {
@@ -50,7 +50,7 @@ function finishDaySwipe(event: TouchEvent) {
   if (!direction) return
   select(selectedIndex.value + direction)
 }
-function openDetails(index: number, action: 'booking' | 'idea' | 'edit' = 'edit') {
+function openDetails(index: number, action: 'meal' | 'booking' | 'idea' | 'edit' = 'edit') {
   if (!store.days[index]) return
   store.selectDay(index)
   detailEditor.value = { index, action }
@@ -108,7 +108,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
         <PlanDateRail :selected-index="selectedIndex" @select="select" />
         <div class="plan-mobile scroll" @touchstart.passive="startDaySwipe" @touchend="finishDaySwipe" @touchcancel="swipeStart = null">
           <Transition :name="dayTransition" mode="out-in">
-            <PlanDayCard :key="selectedDay.id" :index="selectedIndex" selected @change="store.openSheet(selectedIndex)" @add-booking="openDetails(selectedIndex, 'booking')" @add-idea="openDetails(selectedIndex, 'idea')" @edit-details="openDetails(selectedIndex)" />
+            <PlanDayCard :key="selectedDay.id" :index="selectedIndex" selected @change="store.openSheet(selectedIndex)" @add-meal="openDetails(selectedIndex, 'meal')" @add-booking="openDetails(selectedIndex, 'booking')" @add-idea="openDetails(selectedIndex, 'idea')" @edit-details="openDetails(selectedIndex)" />
           </Transition>
           <div class="plan-mobile__steps">
             <button type="button" :disabled="selectedIndex === 0" @click="select(selectedIndex - 1)">← Previous</button>
@@ -116,7 +116,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
           </div>
         </div>
         <div ref="board" class="plan-board" aria-label="Trip plan board">
-          <PlanDayCard v-for="(day, index) in store.days" :key="day.id" :index="index" :selected="index === selectedIndex" @select="select(index)" @change="store.openSheet(index)" @add-booking="openDetails(index, 'booking')" @add-idea="openDetails(index, 'idea')" @edit-details="openDetails(index)" />
+          <PlanDayCard v-for="(day, index) in store.days" :key="day.id" :index="index" :selected="index === selectedIndex" @select="select(index)" @change="store.openSheet(index)" @add-meal="openDetails(index, 'meal')" @add-booking="openDetails(index, 'booking')" @add-idea="openDetails(index, 'idea')" @edit-details="openDetails(index)" />
         </div>
         <PlanDetailsSheet v-if="detailEditor" :index="detailEditor.index" :initial-action="detailEditor.action" @close="detailEditor = null" @change-day="changeFromDetails(detailEditor.index)" />
       </template>

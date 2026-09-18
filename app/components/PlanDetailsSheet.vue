@@ -3,7 +3,7 @@ import { parkName } from '~/data/parks'
 import { parseISO, useDates } from '~/composables/useDates'
 import type { DayItem, ItemKind } from '~/types/trip'
 
-type InitialAction = 'booking' | 'idea' | 'edit'
+type InitialAction = 'meal' | 'booking' | 'idea' | 'edit'
 
 const props = defineProps<{ index: number; initialAction: InitialAction }>()
 const emit = defineEmits<{ close: []; changeDay: [] }>()
@@ -52,7 +52,7 @@ const warnings = computed(() => {
 })
 
 function begin(action: InitialAction) {
-  adding.value = action === 'booking' ? 'fixed' : action === 'idea' ? 'idea' : null
+  adding.value = action === 'meal' || action === 'booking' ? (action === 'meal' ? 'dining' : 'fixed') : action === 'idea' ? 'idea' : null
 }
 function saveNew(value: Omit<DayItem, 'id'>) {
   store.addItem(props.index, value)
