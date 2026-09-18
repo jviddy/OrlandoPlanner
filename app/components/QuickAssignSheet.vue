@@ -243,7 +243,7 @@ onBeforeUnmount(() => {
           <div class="decision-context" aria-label="Planning context">
             <div class="nearby-days">
               <div v-for="entry in nearbyDays" :key="entry.day!.id" :class="{ 'nearby-day--current': entry.offset === 0 }">
-                <span>{{ entry.offset === -1 ? 'Before' : entry.offset === 1 ? 'After' : 'This day' }}</span>
+                <span>{{ entry.offset === -1 ? 'Yesterday' : entry.offset === 1 ? 'Tomorrow' : 'This day' }}</span>
                 <strong>{{ entry.day!.parkId ? resolvePark(entry.day!.parkId, store.customActivities)?.short : 'Unset' }}</strong>
               </div>
             </div>
