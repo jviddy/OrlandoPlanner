@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { horizontalSwipeDirection, type SwipePoint } from '~/utils/swipe'
+
 useHead({ title: 'Plan · Orlando Planner' })
 
 const store = useTripStore()
@@ -8,6 +10,8 @@ const selectedIndex = computed(() => store.selectedDay ?? 0)
 const selectedDay = computed(() => store.days[selectedIndex.value] ?? null)
 const board = ref<HTMLElement | null>(null)
 const detailEditor = ref<{ index: number; action: 'booking' | 'idea' | 'edit' } | null>(null)
+const dayTransition = ref<'day-next' | 'day-previous'>('day-next')
+let swipeStart: SwipePoint | null = null
 const nextUnsetIndex = computed(() => {
   for (let offset = 1; offset < store.days.length; offset++) {
     const index = (selectedIndex.value + offset) % store.days.length
@@ -24,8 +28,27 @@ function routeIndex(): number {
 function select(index: number) {
   const day = store.days[index]
   if (!day) return
+  if (index !== selectedIndex.value) dayTransition.value = index > selectedIndex.value ? 'day-next' : 'day-previous'
   store.selectDay(index)
   router.replace({ path: '/plan', query: { day: day.id } })
+}
+function isInteractiveTarget(target: EventTarget | null) {
+  return target instanceof Element && Boolean(target.closest('button, input, textarea, select, a, [contenteditable="true"]'))
+}
+function startDaySwipe(event: TouchEvent) {
+  const touch = event.touches[0]
+  swipeStart = touch && !isInteractiveTarget(event.target)
+    ? { x: touch.clientX, y: touch.clientY, at: Date.now() }
+    : null
+}
+function finishDaySwipe(event: TouchEvent) {
+  const touch = event.changedTouches[0]
+  const start = swipeStart
+  swipeStart = null
+  if (!start || !touch) return
+  const direction = horizontalSwipeDirection(start, { x: touch.clientX, y: touch.clientY, at: Date.now() })
+  if (!direction) return
+  select(selectedIndex.value + direction)
 }
 function openDetails(index: number, action: 'booking' | 'idea' | 'edit' = 'edit') {
   if (!store.days[index]) return
@@ -83,8 +106,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
           <TripNav active="plan" />
         </header>
         <PlanDateRail :selected-index="selectedIndex" @select="select" />
-        <div class="plan-mobile scroll">
-          <PlanDayCard :index="selectedIndex" selected @change="store.openSheet(selectedIndex)" @add-booking="openDetails(selectedIndex, 'booking')" @add-idea="openDetails(selectedIndex, 'idea')" @edit-details="openDetails(selectedIndex)" />
+        <div class="plan-mobile scroll" @touchstart.passive="startDaySwipe" @touchend="finishDaySwipe" @touchcancel="swipeStart = null">
+          <Transition :name="dayTransition" mode="out-in">
+            <PlanDayCard :key="selectedDay.id" :index="selectedIndex" selected @change="store.openSheet(selectedIndex)" @add-booking="openDetails(selectedIndex, 'booking')" @add-idea="openDetails(selectedIndex, 'idea')" @edit-details="openDetails(selectedIndex)" />
+          </Transition>
           <div class="plan-mobile__steps">
             <button type="button" :disabled="selectedIndex === 0" @click="select(selectedIndex - 1)">← Previous</button>
             <button type="button" :disabled="selectedIndex === store.days.length - 1" @click="select(selectedIndex + 1)">Next →</button>
@@ -111,12 +136,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
 .plan-head__actions { display:flex; align-items:center; gap:8px; }
 .plan-head__actions a { color:var(--c-navy); font-size:11px; font-weight:700; }
 .plan-head__trip button { flex:none; padding:8px 10px; border-radius:var(--r-pill); background:var(--c-navy); color:#fff; font-size:11px; font-weight:700; }
-.plan-mobile { padding:4px 14px 90px; }
+.plan-mobile { padding:4px 14px 90px; touch-action:pan-y; }
 .plan-mobile :deep(.plan-card) { margin-inline:auto; }
 .plan-mobile__steps { display:flex; justify-content:space-between; gap:10px; width:min(100%, 420px); margin:12px auto 0; }
 .plan-mobile__steps button { padding:10px; color:var(--c-navy); font-size:12px; font-weight:700; }
 .plan-mobile__steps button:disabled { color:var(--text-dim); }
 .plan-board { display:none; }
+.day-next-enter-active,.day-next-leave-active,.day-previous-enter-active,.day-previous-leave-active { transition:opacity .18s ease, transform .18s ease; }
+.day-next-enter-from,.day-previous-leave-to { opacity:0; transform:translateX(16px); }
+.day-next-leave-to,.day-previous-enter-from { opacity:0; transform:translateX(-16px); }
+@media (prefers-reduced-motion: reduce) { .day-next-enter-active,.day-next-leave-active,.day-previous-enter-active,.day-previous-leave-active { transition:none; } }
 @media (min-width:760px) {
   .plan-page { max-width:none; }
   .plan-head { padding-inline:max(24px, calc((100vw - 1180px) / 2)); }

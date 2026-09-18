@@ -25,7 +25,15 @@ const warningCount = computed(() => day.value.items.filter(
   <article class="plan-card" :class="{ 'plan-card--selected': selected }" tabindex="0" :aria-current="selected ? 'true' : undefined" :aria-label="`Day ${index + 1}: ${activity}`" @click="emit('select')" @keydown.enter.self="emit('select')" @keydown.space.prevent.self="emit('select')">
     <header class="plan-card__head">
       <div><p>Day {{ index + 1 }}</p><h2>{{ dowDayMon(parseISO(day.date)) }}</h2></div>
-      <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :date-number="parseISO(day.date).getUTCDate()" :size="56" />
+      <button
+        type="button"
+        class="plan-card__day-picker"
+        :aria-label="`Set activities for day ${index + 1}`"
+        title="Set activities"
+        @click.stop="emit('change')"
+      >
+        <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :date-number="parseISO(day.date).getUTCDate()" :size="56" />
+      </button>
     </header>
 
     <section class="plan-card__activity">
@@ -63,6 +71,8 @@ const warningCount = computed(() => day.value.items.filter(
 .plan-card__head { display:flex; align-items:center; justify-content:space-between; gap:14px; }
 .plan-card__head p { color:var(--text-faint); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
 .plan-card__head h2 { margin-top:3px; font:700 22px/1.1 var(--font-display); color:var(--text); }
+.plan-card__day-picker { flex:none; display:grid; place-items:center; border-radius:50%; }
+.plan-card__day-picker:focus-visible { outline:3px solid var(--c-navy); outline-offset:3px; }
 .plan-card__activity { display:grid; grid-template-columns:1fr auto; gap:5px 10px; padding:14px; border-radius:var(--r-card); background:var(--sand); }
 .plan-card__activity .group-label { grid-column:1 / -1; }
 .plan-card__activity strong { min-width:0; font-size:15px; color:var(--text); }
