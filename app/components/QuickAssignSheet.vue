@@ -30,8 +30,6 @@ const openGroups = ref<Set<string>>(new Set())
 const hopperMode = ref(false)
 const searchQuery = ref('')
 const autoAdvance = ref(false)
-const batchOpen = ref(false)
-const batchTargets = ref<Set<number>>(new Set())
 
 const activityCatalog = computed(() => [...PARKS, ...store.customActivities])
 const recentChoices = computed(() => store.recentActivityIds.filter((id) => resolvePark(id, store.customActivities)))
@@ -74,18 +72,6 @@ const nearbyDays = computed(() => {
     .filter((entry) => entry.day)
 })
 const fixedAnchorCount = computed(() => store.selected?.items.filter((item) => item.anchor === 'date').length ?? 0)
-const previousPlan = computed(() => {
-  if (store.selectedDay === null || store.selectedDay < 1) return null
-  const day = store.days[store.selectedDay - 1]
-  return day && (day.parkId || day.note.trim() || day.items.some((item) => item.anchor === 'plan'))
-    ? day
-    : null
-})
-const currentHasPlan = computed(() => Boolean(
-  store.selected?.parkId
-  || store.selected?.note.trim()
-  || store.selected?.items.some((item) => item.anchor === 'plan'),
-))
 
 function syncSelectionFromDay() {
   const day = store.selected
@@ -130,38 +116,6 @@ function choose(parkId: string) {
   if (!nextSecond && hopperMode.value && first !== primary) hopperMode.value = false
   store.setDayActivities(store.selectedDay, first ?? null, nextSecond ?? null)
   if (autoAdvance.value && wasUnset && first && !hopperMode.value) nextTick(moveToNextUnset)
-}
-function clearDay() {
-  selection.value = []
-  hopperMode.value = false
-  if (store.selectedDay !== null) store.setDayActivities(store.selectedDay, null)
-}
-function markRestDay() {
-  if (store.selectedDay === null) return
-  hopperMode.value = false
-  selection.value = ['rest']
-  store.setDayActivities(store.selectedDay, 'rest')
-}
-function copyPreviousPlan() {
-  if (store.selectedDay === null || !previousPlan.value) return
-  store.copyDayPlan(store.selectedDay - 1, store.selectedDay)
-  syncSelectionFromDay()
-}
-function openBatchFill() {
-  batchTargets.value = new Set()
-  batchOpen.value = true
-}
-function toggleBatchTarget(index: number) {
-  const next = new Set(batchTargets.value)
-  if (next.has(index)) next.delete(index)
-  else next.add(index)
-  batchTargets.value = next
-}
-function applyBatchFill() {
-  if (store.selectedDay === null || !batchTargets.value.size) return
-  store.copyDayPlanToMany(store.selectedDay, [...batchTargets.value])
-  batchOpen.value = false
-  batchTargets.value = new Set()
 }
 function removeSecondPark() {
   const primary = selection.value[0]
@@ -253,8 +207,6 @@ watch(
     if (open) {
       instantClose.value = false
       customOpen.value = false
-      batchOpen.value = false
-      batchTargets.value = new Set()
       searchQuery.value = ''
       syncSelectionFromDay()
       resetOpenGroups()
@@ -276,14 +228,10 @@ onBeforeUnmount(() => {
       <div class="sheet" role="dialog" aria-modal="true" :aria-label="title">
         <div class="sheet__handle" />
         <div class="sheet__head">
-          <p class="sheet__title">{{ title }}</p>
-          <p class="sheet__sub">
-            Choose the main plan, then add a second park only when you need one.
-          </p>
           <div class="sheet__nav" aria-label="Move between trip days">
-            <button type="button" :disabled="!previousAvailable" @click="moveDay(-1)">← Previous</button>
-            <button type="button" :disabled="nextUnsetIndex < 0" @click="moveToNextUnset">Next unset</button>
-            <button type="button" :disabled="!nextAvailable" @click="moveDay(1)">Next →</button>
+            <button type="button" aria-label="Previous day" :disabled="!previousAvailable" @click="moveDay(-1)">←</button>
+            <p class="sheet__title">{{ title }}</p>
+            <button type="button" aria-label="Next day" :disabled="!nextAvailable" @click="moveDay(1)">→</button>
           </div>
           <div v-if="store.undo" class="sheet__undo" role="status" aria-live="polite">
             <span>{{ store.undo.label }}</span>
@@ -299,11 +247,6 @@ onBeforeUnmount(() => {
                 <strong>{{ entry.day!.parkId ? resolvePark(entry.day!.parkId, store.customActivities)?.short : 'Unset' }}</strong>
               </div>
             </div>
-            <p class="trip-counts">
-              {{ store.disneyDays }} Disney<span v-if="store.ticketDays.disney"> / {{ store.ticketDays.disney }} tickets</span>
-              · {{ store.universalDays }} Universal<span v-if="store.ticketDays.universal"> / {{ store.ticketDays.universal }} tickets</span>
-              · {{ store.unsetDays }} unset
-            </p>
             <p v-if="fixedAnchorCount" class="anchor-note">{{ fixedAnchorCount }} date-fixed {{ fixedAnchorCount === 1 ? 'booking stays' : 'bookings stay' }} on this day.</p>
           </div>
 
@@ -329,42 +272,6 @@ onBeforeUnmount(() => {
             <p v-if="hopperMode && !store.parkHopper" class="hopper-hint">Your trip settings are not currently marked as park hopper.</p>
           </div>
 
-          <div class="planning-actions">
-            <button type="button" :disabled="!previousPlan" @click="copyPreviousPlan">Copy previous</button>
-            <button type="button" @click="markRestDay">Mark rest day</button>
-            <button type="button" :disabled="!currentHasPlan" @click="openBatchFill">Fill days</button>
-            <button type="button" :disabled="!selection.length" @click="clearDay">Clear plan</button>
-          </div>
-
-          <div v-if="batchOpen" class="batch-fill">
-            <div class="batch-fill__head">
-              <div><strong>Fill selected days</strong><span>Date-fixed bookings on those days will stay in place.</span></div>
-              <button type="button" aria-label="Cancel fill selected days" @click="batchOpen = false">×</button>
-            </div>
-            <div class="batch-fill__days" aria-label="Days to fill">
-              <button
-                v-for="(day, index) in store.days"
-                :key="day.id"
-                type="button"
-                :disabled="index === store.selectedDay"
-                :class="{ 'batch-fill__day--on': batchTargets.has(index) }"
-                :aria-pressed="batchTargets.has(index)"
-                :aria-label="`Day ${index + 1}, ${day.date}`"
-                @click="toggleBatchTarget(index)"
-              >
-                <span>Day {{ index + 1 }}</span><strong>{{ parseISO(day.date).getUTCDate() }}</strong>
-              </button>
-            </div>
-            <button type="button" class="batch-fill__apply" :disabled="!batchTargets.size" @click="applyBatchFill">
-              {{ batchTargets.size ? `Fill ${batchTargets.size} ${batchTargets.size === 1 ? 'day' : 'days'}` : 'Choose days to fill' }}
-            </button>
-          </div>
-
-          <label class="auto-advance">
-            <input v-model="autoAdvance" type="checkbox" />
-            <span>Advance to the next unset day after choosing</span>
-          </label>
-
           <label class="activity-search">
             <span class="sr-only">Search activities</span>
             <input v-model="searchQuery" type="search" placeholder="Search parks and activities" />
@@ -388,6 +295,76 @@ onBeforeUnmount(() => {
             </div>
             <p v-else class="search-empty">No matching activities.</p>
           </div>
+
+          <template v-if="!searchQuery.trim()">
+          <div class="activity-groups">
+            <section v-for="group in SHEET_GROUPS" :key="group.key" class="accordion">
+              <button
+                type="button"
+                class="accordion__trigger"
+                :aria-expanded="openGroups.has(group.key)"
+                :aria-controls="`activity-group-${group.key}`"
+                @click="toggleGroup(group.key)"
+              >
+                <span class="accordion__dot" :style="{ background: RESORTS[group.key].bg }" />
+                <span>{{ group.title }}</span>
+                <span class="accordion__count">{{ group.ids.length }}</span>
+                <span class="accordion__chevron" :class="{ 'accordion__chevron--open': openGroups.has(group.key) }" aria-hidden="true">⌄</span>
+              </button>
+              <div
+                v-show="openGroups.has(group.key)"
+                :id="`activity-group-${group.key}`"
+                class="accordion__panel"
+              >
+                <div class="sgroup__grid">
+                  <button
+                    v-for="pid in group.ids"
+                    :key="pid"
+                    type="button"
+                    class="tile"
+                    :class="{ 'tile--on': selection.includes(pid) }"
+                    :aria-pressed="selection.includes(pid)"
+                    :title="PARK_BY_ID[pid]?.name"
+                    @click="choose(pid)"
+                  >
+                    <DayCircle :park-id="pid" :size="42" />
+                    <span class="tile__label">{{ PARK_BY_ID[pid]?.short }}</span>
+                  </button>
+                  <template v-if="group.key === 'off'">
+                    <button
+                      v-for="activity in store.customActivities"
+                      :key="activity.id"
+                      type="button"
+                      class="tile"
+                      :class="{ 'tile--on': selection.includes(activity.id) }"
+                      :aria-pressed="selection.includes(activity.id)"
+                      @click="choose(activity.id)"
+                    >
+                      <DayCircle :park-id="activity.id" :size="42" />
+                      <span class="tile__label">{{ activity.short }}</span>
+                    </button>
+                    <button type="button" class="tile" @click="openCustomForm">
+                      <span class="tile__add"><AppIcon name="plus" :size="18" /></span>
+                      <span class="tile__label">Custom</span>
+                    </button>
+                  </template>
+                </div>
+                <div v-if="group.key === 'off' && customOpen" class="custom-form">
+                  <input v-model="customLabel" class="input input--sm" type="text" placeholder="e.g. Spa day, Golf" maxlength="24" autofocus />
+                  <div class="custom-form__glyphs">
+                    <button v-for="g in CUSTOM_ACTIVITY_GLYPHS" :key="g.id" type="button" class="custom-form__glyph" :class="{ 'custom-form__glyph--on': customGlyphId === g.id }" @click="customGlyphId = g.id">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="g.glyph" /></svg>
+                    </button>
+                  </div>
+                  <div class="custom-form__actions">
+                    <button type="button" class="custom-form__btn" @click="customOpen = false">Cancel</button>
+                    <button type="button" class="custom-form__btn custom-form__btn--go" :disabled="!customLabel.trim()" @click="saveCustomActivity">Add</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+          </template>
 
           <div v-if="!searchQuery.trim() && usedChoices.length" class="sgroup sgroup--used">
             <p class="sgroup__label">Used in this trip</p>
@@ -443,118 +420,10 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <template v-if="!searchQuery.trim()">
-          <div class="sgroup sgroup--quick">
-            <p class="sgroup__label">Rest and off-park</p>
-            <div class="sgroup__grid">
-              <button
-                v-for="pid in GENERIC_ACTIVITY_IDS"
-                :key="pid"
-                type="button"
-                class="tile"
-                :class="{ 'tile--on': selection.includes(pid) }"
-                :aria-pressed="selection.includes(pid)"
-                :title="PARK_BY_ID[pid]?.name"
-                @click="choose(pid)"
-              >
-                <DayCircle :park-id="pid" :size="42" />
-                <span class="tile__label">{{ PARK_BY_ID[pid]?.short }}</span>
-              </button>
-              <button
-                v-for="c in store.customActivities"
-                :key="c.id"
-                type="button"
-                class="tile"
-                :class="{ 'tile--on': selection.includes(c.id) }"
-                :aria-pressed="selection.includes(c.id)"
-                @click="choose(c.id)"
-              >
-                <DayCircle :park-id="c.id" :size="42" />
-                <span class="tile__label">{{ c.short }}</span>
-              </button>
-              <button type="button" class="tile" @click="openCustomForm">
-                <span class="tile__add"><AppIcon name="plus" :size="18" /></span>
-                <span class="tile__label">Custom</span>
-              </button>
-            </div>
-
-            <div v-if="customOpen" class="custom-form">
-              <input
-                v-model="customLabel"
-                class="input input--sm"
-                type="text"
-                placeholder="e.g. Spa day, Golf"
-                maxlength="24"
-                autofocus
-              />
-              <div class="custom-form__glyphs">
-                <button
-                  v-for="g in CUSTOM_ACTIVITY_GLYPHS"
-                  :key="g.id"
-                  type="button"
-                  class="custom-form__glyph"
-                  :class="{ 'custom-form__glyph--on': customGlyphId === g.id }"
-                  @click="customGlyphId = g.id"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path :d="g.glyph" />
-                  </svg>
-                </button>
-              </div>
-              <div class="custom-form__actions">
-                <button type="button" class="custom-form__btn" @click="customOpen = false">
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  class="custom-form__btn custom-form__btn--go"
-                  :disabled="!customLabel.trim()"
-                  @click="saveCustomActivity"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="activity-groups">
-            <section v-for="group in SHEET_GROUPS" :key="group.key" class="accordion">
-              <button
-                type="button"
-                class="accordion__trigger"
-                :aria-expanded="openGroups.has(group.key)"
-                :aria-controls="`activity-group-${group.key}`"
-                @click="toggleGroup(group.key)"
-              >
-                <span class="accordion__dot" :style="{ background: RESORTS[group.key].bg }" />
-                <span>{{ group.title }}</span>
-                <span class="accordion__count">{{ group.ids.length }}</span>
-                <span class="accordion__chevron" :class="{ 'accordion__chevron--open': openGroups.has(group.key) }" aria-hidden="true">⌄</span>
-              </button>
-              <div
-                v-show="openGroups.has(group.key)"
-                :id="`activity-group-${group.key}`"
-                class="accordion__panel"
-              >
-                <div class="sgroup__grid">
-                  <button
-                    v-for="pid in group.ids"
-                    :key="pid"
-                    type="button"
-                    class="tile"
-                    :class="{ 'tile--on': selection.includes(pid) }"
-                    :aria-pressed="selection.includes(pid)"
-                    :title="PARK_BY_ID[pid]?.name"
-                    @click="choose(pid)"
-                  >
-                    <DayCircle :park-id="pid" :size="42" />
-                    <span class="tile__label">{{ PARK_BY_ID[pid]?.short }}</span>
-                  </button>
-                </div>
-              </div>
-            </section>
-          </div>
-          </template>
+          <label class="auto-advance">
+            <input v-model="autoAdvance" type="checkbox" />
+            <span>Advance to the next unset day after choosing</span>
+          </label>
         </div>
 
         <div class="sheet__foot">
@@ -607,22 +476,15 @@ onBeforeUnmount(() => {
   background: #dfe3ec;
   margin: 6px auto 10px;
 }
-.sheet__head {
-  padding: 0 20px 10px;
-}
+.sheet__head { padding:0 14px 8px; }
 .sheet__nav {
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:5px;
-  margin-top:10px;
+  display:grid; grid-template-columns:32px minmax(0,1fr) 32px; align-items:center; gap:8px;
 }
 .sheet__nav button {
-  min-height:34px;
-  padding:6px;
-  border-radius:var(--r-pill);
+  width:32px; height:32px; padding:0; border-radius:50%;
   background:#f2f4f9;
   color:var(--c-navy);
-  font-size:11px;
+  font-size:18px;
   font-weight:700;
 }
 .sheet__nav button:disabled { color:var(--text-dim); cursor:default; }
@@ -641,13 +503,9 @@ onBeforeUnmount(() => {
 }
 .sheet__undo button { color:#ffd36a; font-weight:800; }
 .sheet__title {
-  font: 700 18px var(--font-display);
+  overflow:hidden; font:700 17px var(--font-display);
   color: var(--text);
-}
-.sheet__sub {
-  font-size: 12.5px;
-  color: var(--text-faint);
-  margin-top: 2px;
+  text-align:center; text-overflow:ellipsis; white-space:nowrap;
 }
 .sheet__body {
   flex: 1;
@@ -662,7 +520,7 @@ onBeforeUnmount(() => {
   display: none;
 }
 .decision-context {
-  margin: 0 2px 12px;
+  margin: 0 2px 10px;
   padding: 10px;
   border-radius: 13px;
   background: #f7f4ed;
@@ -673,7 +531,6 @@ onBeforeUnmount(() => {
 .nearby-days strong { display:block; margin-top:2px; overflow:hidden; color:var(--text-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
 .nearby-day--current { box-shadow:inset 0 0 0 1.5px var(--c-navy); }
 .nearby-day--current strong { color:var(--c-navy); }
-.trip-counts { margin-top:8px; color:var(--text-muted); font-size:10.5px; line-height:1.4; text-align:center; }
 .anchor-note { margin-top:5px; color:#8a6518; font-size:10.5px; font-weight:600; text-align:center; }
 .selected-plan {
   display:grid;
@@ -690,22 +547,6 @@ onBeforeUnmount(() => {
 .hopper-button { justify-self:start; padding:7px 10px; border-radius:999px; background:#eef1f7; color:var(--c-navy); font-size:11px; font-weight:700; }
 .hopper-button--on { background:var(--c-navy); color:#fff; }
 .hopper-hint { color:#9a6c18; font-size:10.5px; }
-.planning-actions { display:grid; grid-template-columns:repeat(2, 1fr); gap:5px; margin:0 2px 10px; }
-.planning-actions button { min-height:38px; padding:6px; border-radius:10px; background:#f2f4f9; color:var(--c-navy); font-size:10.5px; font-weight:700; }
-.planning-actions button:disabled { color:var(--text-dim); }
-.batch-fill { margin:0 2px 12px; padding:11px; border:1.5px solid #d9deea; border-radius:13px; background:#f8f9fb; }
-.batch-fill__head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-.batch-fill__head strong { display:block; color:var(--text); font-size:12px; }
-.batch-fill__head span { display:block; margin-top:2px; color:var(--text-faint); font-size:10px; line-height:1.35; }
-.batch-fill__head > button { width:26px; height:26px; border-radius:50%; background:#e9ecf2; color:var(--text-muted); font-size:18px; line-height:1; }
-.batch-fill__days { display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; max-height:150px; margin-top:10px; overflow-y:auto; }
-.batch-fill__days button { min-height:46px; padding:5px 2px; border:1px solid var(--field-border-soft); border-radius:9px; background:#fff; color:var(--text-muted); }
-.batch-fill__days button:disabled { background:#e9ecf2; color:var(--text-dim); }
-.batch-fill__days span { display:block; font-size:8.5px; font-weight:700; text-transform:uppercase; }
-.batch-fill__days strong { display:block; margin-top:1px; font:700 14px var(--font-display); }
-.batch-fill__days .batch-fill__day--on { border-color:var(--c-navy); background:var(--c-navy); color:#fff; }
-.batch-fill__apply { width:100%; min-height:38px; margin-top:9px; border-radius:10px; background:var(--c-navy); color:#fff; font-size:11px; font-weight:700; }
-.batch-fill__apply:disabled { background:#c9ced9; }
 .auto-advance { display:flex; align-items:center; gap:8px; margin:0 7px 12px; color:var(--text-muted); font-size:11px; }
 .auto-advance input { width:16px; height:16px; accent-color:var(--c-navy); }
 .activity-search { display:block; margin:0 2px 13px; }
@@ -714,12 +555,6 @@ onBeforeUnmount(() => {
 .search-empty { padding:12px 6px; color:var(--text-faint); font-size:12px; }
 .sgroup {
   margin-bottom: 12px;
-}
-.sgroup--quick {
-  padding-bottom: 4px;
-}
-.sgroup--quick .sgroup__grid {
-  grid-template-columns: repeat(5, 1fr);
 }
 .sgroup--used .sgroup__grid { grid-template-columns:repeat(5, 1fr); }
 .sgroup__label {

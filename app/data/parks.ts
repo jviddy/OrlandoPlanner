@@ -235,15 +235,16 @@ export const PARK_BY_ID: Record<string, Park> = Object.fromEntries(
 )
 
 export interface SheetGroup {
-  key: AttractionGroupKey
+  key: AttractionGroupKey | 'off'
   title: string
   ids: string[]
   defaultOpen: boolean
 }
 
-const GROUP_ORDER: AttractionGroupKey[] = [
+const GROUP_ORDER: Array<AttractionGroupKey | 'off'> = [
   'disney',
   'universal',
+  'off',
   'seaworld',
   'legoland',
   'busch-gardens',
@@ -258,8 +259,10 @@ const GROUP_ORDER: AttractionGroupKey[] = [
 /** Groups for the quick-assign accordion, in folder order. */
 export const SHEET_GROUPS: SheetGroup[] = GROUP_ORDER.map((key) => ({
   key,
-  title: RESORTS[key].name,
-  ids: ATTRACTION_PARKS.filter((park) => park.resort === key).map((park) => park.id),
+  title: key === 'off' ? 'Rest and off-park' : RESORTS[key].name,
+  ids: key === 'off'
+    ? [...GENERIC_ACTIVITY_IDS]
+    : ATTRACTION_PARKS.filter((park) => park.resort === key).map((park) => park.id),
   defaultOpen: key === 'disney' || key === 'universal',
 }))
 
