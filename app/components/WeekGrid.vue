@@ -91,7 +91,7 @@ function cancel() {
               :size="40"
             />
             <span class="cell__short">{{ dayCell(cell).short }}</span>
-            <span v-if="dayCell(cell).items.length" class="cell__items">
+            <span class="cell__items">
               <span
                 v-for="(it, ii) in dayCell(cell).items"
                 :key="ii"
@@ -105,11 +105,7 @@ function cancel() {
                 dayCell(cell).more
               }}</span>
             </span>
-            <span
-              v-if="dayCell(cell).hotel"
-              class="cell__hotel"
-              :title="dayCell(cell).hotel"
-            >
+            <span class="cell__hotel" :title="dayCell(cell).hotel">
               {{ dayCell(cell).hotel }}
             </span>
           </button>
@@ -152,8 +148,9 @@ function cancel() {
 }
 .cell {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
+  min-height: 102px;
+  display: grid;
+  grid-template-rows: 12px 40px 11px minmax(0, 1fr) 10px;
   align-items: center;
   gap: 3px;
   padding: 2px 0;
