@@ -21,7 +21,8 @@ Baseline: commit `ec44122`, tagged `checkpoint-pre-planning-redesign-2026-09-17`
 - **Slice 4 in progress:** Plan now exposes Booking, Idea, and Edit details actions without leaving the
   workspace. Its responsive detail panel separates date-fixed bookings from movable ideas, stages note
   edits, protects unsaved forms, and offers fixes for wrong-park, park-hopper, travel-day, and ticket
-  overuse warnings. Legacy `/day` deprecation and additional date-range warnings remain.
+  overuse warnings. Legacy `/day` links now redirect to the same stable day in Plan; additional
+  date-range warnings remain.
 
 This plan turns the product direction in
 [`next steps for orlandoPlanner.md`](./next%20steps%20for%20orlandoPlanner.md) into an ordered set of

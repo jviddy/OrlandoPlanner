@@ -128,13 +128,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         </div>
 
         <section class="detail-group">
-          <div class="detail-group__head"><div><span class="group-label">Bookings</span><p>Date-fixed and kept on {{ day.date }} when plans move.</p></div><button type="button" @click="adding = 'fixed'">+ Add booking</button></div>
+          <div class="detail-group__head">
+            <div><span class="group-label">Bookings</span><p>Date-fixed and kept on {{ day.date }} when plans move.</p></div>
+            <div class="detail-group__actions"><button type="button" @click="adding = 'dining'">+ Meal</button><button type="button" @click="adding = 'fixed'">+ Booking</button></div>
+          </div>
           <div class="detail-list">
             <template v-for="item in fixedItems" :key="item.id">
               <ItemForm v-if="editingId === item.id" :kind="item.kind" :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @save="(value) => saveEdit(item.id, value)" @cancel="editingId = null" @remove="removeItem(item.id)" />
               <DayItemRow v-else :item="item" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @edit="editingId = item.id" />
             </template>
-            <p v-if="!fixedItems.length && adding !== 'fixed'" class="detail-empty">No date-fixed bookings.</p>
+            <p v-if="!fixedItems.length && adding !== 'fixed' && adding !== 'dining'" class="detail-empty">No date-fixed bookings.</p>
+            <ItemForm v-if="adding === 'dining'" kind="dining" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @save="saveNew" @cancel="adding = null" @remove="adding = null" />
             <ItemForm v-if="adding === 'fixed'" kind="fixed" :day-park-id="day.parkId" :day-second-park-id="day.secondParkId" @save="saveNew" @cancel="adding = null" @remove="adding = null" />
           </div>
         </section>
@@ -177,7 +181,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .detail-scroll { flex:1; min-height:0; overflow-y:auto; padding:14px 16px max(28px, env(safe-area-inset-bottom)); }
 .detail-plan { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px; border-radius:13px; background:var(--sand); }
 .detail-plan strong { display:block; margin-top:3px; color:var(--text); font-size:14px; }
-.detail-plan button,.detail-group__head > button { flex:none; color:var(--c-navy); font-size:11px; font-weight:800; }
+.detail-plan button,.detail-group__actions button,.detail-group__head > button { flex:none; color:var(--c-navy); font-size:11px; font-weight:800; }
 .detail-anchors { display:flex; flex-direction:column; gap:7px; margin-top:12px; padding:11px 12px; border:1px solid var(--warm-border); border-radius:12px; }
 .detail-anchors p { display:flex; align-items:center; gap:7px; color:var(--text-muted); font-size:12px; }
 .detail-warning { display:grid; grid-template-columns:auto 1fr auto; align-items:start; gap:8px; margin-top:10px; padding:10px; border:1px solid var(--warn-border); border-radius:12px; background:var(--warn-bg); color:var(--warn-ink); }
@@ -186,6 +190,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .detail-group { margin-top:18px; }
 .detail-group__head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px; }
 .detail-group__head p { margin-top:2px; color:var(--text-dim); font-size:10.5px; }
+.detail-group__actions { display:flex; gap:10px; }
 .detail-list { display:flex; flex-direction:column; gap:8px; }
 .detail-empty { padding:11px 12px; border:1px dashed var(--field-border); border-radius:var(--r-row); color:var(--text-faint); font-size:12px; }
 .detail-save-note { width:100%; margin-top:8px; padding:10px; border-radius:10px; background:var(--c-navy); color:#fff; font-size:12px; font-weight:700; }
