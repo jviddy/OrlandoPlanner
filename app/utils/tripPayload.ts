@@ -119,7 +119,7 @@ function parseStay(value: unknown, path: string, used: Set<string>): Stay {
 
 function parseFlight(value: unknown, path: string, used: Set<string>): Flight {
   const flight = record(value, path)
-  exactKeys(flight, ['id', 'route', 'date', 'departTime', 'arriveTime'], path)
+  exactKeys(flight, ['id', 'route', 'date', 'departTime', 'arriveTime', 'fromCode', 'fromName', 'toCode', 'toName'], path)
   const departTime = string(flight.departTime, `${path}.departTime`, 5)
   const arriveTime = string(flight.arriveTime, `${path}.arriveTime`, 5)
   if (departTime && !TIME.test(departTime)) fail(`${path}.departTime`, 'must be HH:MM or empty')
@@ -130,6 +130,10 @@ function parseFlight(value: unknown, path: string, used: Set<string>): Flight {
     date: isoDate(flight.date, `${path}.date`, true),
     departTime,
     arriveTime,
+    ...(flight.fromCode === undefined ? {} : { fromCode: string(flight.fromCode, `${path}.fromCode`, 10) }),
+    ...(flight.fromName === undefined ? {} : { fromName: string(flight.fromName, `${path}.fromName`, 200) }),
+    ...(flight.toCode === undefined ? {} : { toCode: string(flight.toCode, `${path}.toCode`, 10) }),
+    ...(flight.toName === undefined ? {} : { toName: string(flight.toName, `${path}.toName`, 200) }),
   }
 }
 

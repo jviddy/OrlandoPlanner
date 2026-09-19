@@ -48,25 +48,51 @@ function addHotel() {
 }
 
 function setFlight(index: number, patch: Partial<Omit<Flight, 'id'>>) {
-  if (!props.draft) return store.setFlight(index, patch)
-  const next = props.draft.flights.slice()
+  const source = props.draft ?? store
+  const next = source.flights.slice()
   next[index] = {
     id: next[index]?.id ?? createStableId('flight'),
     route: '', date: '', departTime: '', arriveTime: '',
     ...next[index], ...patch,
   }
-  props.draft.flights = next
+    // Auto-fill return flight as the reverse of outbound when it is still empty.
+  const outbound = next[0]
+  const returnFlight = next[1]
+  if (index === 0 && returnFlight && outbound && !returnFlight.route && !returnFlight.fromCode && outbound.fromCode && outbound.toCode) {
+    next[1] = {
+      ...returnFlight,
+      route: `${outbound.toCode} → ${outbound.fromCode}`,
+      fromCode: outbound.toCode,
+      fromName: outbound.toName,
+      toCode: outbound.fromCode,
+      toName: outbound.fromName,
+      date: source.endDate,
+    }
+  }
+  source.flights = next
 }
 
 function addFlight() {
-  if (!props.draft) return store.addFlight()
-  if (props.draft.flights.length < 6) {
-    const index = props.draft.flights.length
-    const defaultDate = index === 0 ? props.draft.startDate : index === 1 ? props.draft.endDate : ''
-    props.draft.flights = [...props.draft.flights, {
-      id: createStableId('flight'), route: '', date: defaultDate, departTime: '', arriveTime: '',
-    }]
-  }
+  const source = props.draft ?? store
+  if (source.flights.length >= 6) return
+  const index = source.flights.length
+  const outbound = source.flights[0]
+  const isReturn = index === 1 && outbound?.fromCode && outbound?.toCode
+  source.flights = [...source.flights, {
+    id: createStableId('flight'),
+    route: isReturn ? `${outbound.toCode} → ${outbound.fromCode}` : '',
+    date: index === 0 ? source.startDate : index === 1 ? source.endDate : '',
+    departTime: '',
+    arriveTime: '',
+    ...(isReturn
+      ? {
+          fromCode: outbound.toCode,
+          fromName: outbound.toName,
+          toCode: outbound.fromCode,
+          toName: outbound.fromName,
+        }
+      : {}),
+  }]
 }
 
 function flightDate(index: number): string {
@@ -96,9 +122,11 @@ const dayCount = computed(() => datesValid.value
   : 0)
 
 const staySummary = computed(() => {
-  if (model.value.hotels[1]?.name.trim()) return 'Split stay · 2 hotels'
-  if (model.value.hotels[0]?.name.trim()) return model.value.hotels[0].name
-  return 'Not set'
+  const named = model.value.hotels.filter((h) => h.name.trim())
+  if (named.length === 0) return 'Not set'
+  if (named.length === 1) return named[0]!.name
+  if (named.length === 2) return 'Split stay · 2 hotels'
+  return `Split stay · ${named.length} hotels`
 })
 
 function onTripDatesUpdate({ start, end }: { start: string; end: string }) {
@@ -156,6 +184,31 @@ function setTicket(key: 'disney' | 'universal', value: string) {
   const n = Math.max(0, Math.min(60, Math.round(Number(value) || 0)))
   updateFields({ ticketDays: { ...model.value.ticketDays, [key]: n } })
 }
+
+const namedHotelCount = computed(() => model.value.hotels.filter((h) => h.name.trim()).length)
+
+function changeoverDate(): string {
+  if (model.value.hotels.length < 2) return ''
+  const first = model.value.hotels[0]
+  const second = model.value.hotels[1]
+  if (first?.endDate) return first.endDate
+  if (second?.startDate) return second.startDate
+  return ''
+}
+
+function setChangeoverDate(iso: string) {
+  if (!iso || model.value.hotels.length < 2) return
+  setHotelDates(0, { start: model.value.startDate, end: iso })
+  setHotelDates(1, { start: iso, end: model.value.endDate })
+}
+
+function splitStayEvenly() {
+  if (!datesValid.value || model.value.hotels.length < 2) return
+  const totalNights = dayCount.value - 1
+  const midNight = Math.floor(totalNights / 2)
+  const changeover = toISO(addDays(parseISO(model.value.startDate), midNight))
+  setChangeoverDate(changeover)
+}
 </script>
 
 <template>
@@ -211,7 +264,30 @@ function setTicket(key: 'disney' | 'universal', value: string) {
                 @input="setHotel(i, ($event.target as HTMLInputElement).value)"
               />
             </label>
-            <div v-if="datesValid" class="stay__dates-row">
+            <div v-if="!datesValid" class="stay__dates-hint">Set your trip dates to add stay dates</div>
+            <div v-else-if="namedHotelCount === 1" class="stay__dates-hint">
+              Covers your whole trip
+            </div>
+            <div v-else-if="namedHotelCount === 2 && i === 0" class="stay__dates-row">
+              <label class="stay__changeover">
+                <span>Switch date</span>
+                <input
+                  class="input input--sm"
+                  type="date"
+                  :min="model.startDate"
+                  :max="model.endDate"
+                  :value="changeoverDate()"
+                  @input="setChangeoverDate(($event.target as HTMLInputElement).value)"
+                />
+              </label>
+              <span v-if="stayNights(0) > 0" class="stay__nights">
+                · {{ stayNights(0) }} night{{ stayNights(0) === 1 ? '' : 's' }}
+              </span>
+            </div>
+            <div v-else-if="namedHotelCount === 2 && i === 1" class="stay__dates-hint">
+              From switch date until departure
+            </div>
+            <div v-else class="stay__dates-row">
               <DateRangeField
                 compact
                 variant="days"
@@ -229,11 +305,20 @@ function setTicket(key: 'disney' | 'universal', value: string) {
                 · {{ stayNights(i) }} night{{ stayNights(i) === 1 ? '' : 's' }}
               </span>
             </div>
-            <span v-else class="stay__dates-hint">Set your trip dates to add stay dates</span>
           </div>
-          <button type="button" class="disc__action" @click="addHotel()">
-            + Add another stay
-          </button>
+          <div class="stay__actions">
+            <button type="button" class="disc__action" @click="addHotel()">
+              + Add another stay
+            </button>
+            <button
+              v-if="namedHotelCount === 2 && datesValid"
+              type="button"
+              class="disc__action"
+              @click="splitStayEvenly()"
+            >
+              Split evenly
+            </button>
+          </div>
         </div>
       </section>
 
@@ -251,28 +336,48 @@ function setTicket(key: 'disney' | 'universal', value: string) {
         <div v-if="open.tix" class="disc__body">
           <label class="drow">
             <span>Disney days</span>
-            <input
+            <select
               class="input input--sm"
-              type="number"
-              min="0"
-              inputmode="numeric"
-              placeholder="0"
-              :value="model.ticketDays.disney || ''"
-              @input="setTicket('disney', ($event.target as HTMLInputElement).value)"
-            />
+              :value="model.ticketDays.disney || 0"
+              @change="setTicket('disney', ($event.target as HTMLSelectElement).value)"
+            >
+              <option v-for="n in 15" :key="`d-${n - 1}`" :value="n - 1">{{ n - 1 }} days</option>
+            </select>
           </label>
+          <div class="ticket-chips">
+            <button
+              v-for="n in [7, 14]"
+              :key="`d-chip-${n}`"
+              type="button"
+              class="ticket-chip"
+              :class="{ 'ticket-chip--on': model.ticketDays.disney === n }"
+              @click="setTicket('disney', String(n))"
+            >
+              {{ n }}-day ticket
+            </button>
+          </div>
           <label class="drow">
             <span>Universal days</span>
-            <input
+            <select
               class="input input--sm"
-              type="number"
-              min="0"
-              inputmode="numeric"
-              placeholder="0"
-              :value="model.ticketDays.universal || ''"
-              @input="setTicket('universal', ($event.target as HTMLInputElement).value)"
-            />
+              :value="model.ticketDays.universal || 0"
+              @change="setTicket('universal', ($event.target as HTMLSelectElement).value)"
+            >
+              <option v-for="n in 15" :key="`u-${n - 1}`" :value="n - 1">{{ n - 1 }} days</option>
+            </select>
           </label>
+          <div class="ticket-chips">
+            <button
+              v-for="n in [7, 14]"
+              :key="`u-chip-${n}`"
+              type="button"
+              class="ticket-chip"
+              :class="{ 'ticket-chip--on': model.ticketDays.universal === n }"
+              @click="setTicket('universal', String(n))"
+            >
+              {{ n }}-day ticket
+            </button>
+          </div>
           <label class="disc__check">
             <input
               type="checkbox"
@@ -299,12 +404,13 @@ function setTicket(key: 'disney' | 'universal', value: string) {
           <div v-for="(_, i) in Math.max(2, model.flights.length)" :key="i" class="flight">
             <div class="drow">
               <span>{{ flightLabel(i) }}</span>
-              <input
-                class="input input--sm"
-                type="text"
+              <AirportField
+                :from-code="model.flights[i]?.fromCode"
+                :from-name="model.flights[i]?.fromName"
+                :to-code="model.flights[i]?.toCode"
+                :to-name="model.flights[i]?.toName"
                 :placeholder="flightPlaceholder(i)"
-                :value="model.flights[i]?.route ?? ''"
-                @input="setFlight(i, { route: ($event.target as HTMLInputElement).value })"
+                @update="setFlight(i, $event)"
               />
             </div>
             <div class="flight__times">
@@ -543,6 +649,20 @@ function setTicket(key: 'disney' | 'universal', value: string) {
   font-size: 12.5px;
   color: var(--text-faint);
 }
+.stay__actions {
+  display: flex;
+  gap: 16px;
+}
+.stay__changeover {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stay__changeover span {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
 .disc__action {
   align-self: flex-start;
   font-size: 13px;
@@ -557,5 +677,23 @@ function setTicket(key: 'disney' | 'universal', value: string) {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
+}
+.ticket-chips {
+  display: flex;
+  gap: 6px;
+  margin: -4px 0 4px 108px;
+}
+.ticket-chip {
+  padding: 5px 10px;
+  border-radius: var(--r-pill);
+  background: #f2f4f9;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ticket-chip--on {
+  background: var(--tile-selected);
+  color: var(--c-navy);
+  box-shadow: inset 0 0 0 1.5px var(--c-navy);
 }
 </style>

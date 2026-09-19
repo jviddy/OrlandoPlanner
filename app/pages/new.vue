@@ -48,7 +48,7 @@ function commit() {
   // Account-backed creation is automatic. Signed-out users simply keep the
   // local copy already written by the repository plugin.
   void ensureOwnedTripIfSignedIn()
-  navigateTo({ path: '/plan', query: { day: firstDayId } })
+  navigateTo('/')
 }
 </script>
 

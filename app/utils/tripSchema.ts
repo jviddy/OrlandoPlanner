@@ -1,4 +1,5 @@
 import { addDays, diffDays, parseISO, toISO } from '~/composables/useDates'
+import { findAirport, parseRoute } from '~/data/airports'
 import type { Day, DayItem, Flight, Stay, TripState } from '~/types/trip'
 
 export const TRIP_SCHEMA_VERSION = 3
@@ -76,9 +77,13 @@ function migrateFlights(rawFlights: unknown, used: Set<string>, makeId: IdFactor
 
   return source.map((raw: any) => {
     const legacyRoute = typeof raw === 'string' ? raw : raw?.route
+    const route = typeof legacyRoute === 'string' ? legacyRoute : ''
+    const { fromCode: parsedFrom, toCode: parsedTo } = route ? parseRoute(route) : { fromCode: '', toCode: '' }
+    const fromAirport = parsedFrom ? findAirport(parsedFrom) : null
+    const toAirport = parsedTo ? findAirport(parsedTo) : null
     return {
       id: uniqueId(raw?.id, 'flight', used, makeId),
-      route: typeof legacyRoute === 'string' ? legacyRoute : '',
+      route,
       date: typeof raw?.date === 'string' ? raw.date : '',
       departTime:
         typeof raw?.departTime === 'string'
@@ -87,6 +92,8 @@ function migrateFlights(rawFlights: unknown, used: Set<string>, makeId: IdFactor
             ? raw.time
             : '',
       arriveTime: typeof raw?.arriveTime === 'string' ? raw.arriveTime : '',
+      ...(parsedFrom ? { fromCode: parsedFrom, fromName: fromAirport?.name ?? parsedFrom } : {}),
+      ...(parsedTo ? { toCode: parsedTo, toName: toAirport?.name ?? parsedTo } : {}),
     }
   })
 }

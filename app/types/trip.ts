@@ -46,13 +46,18 @@ export interface TicketDays {
 
 export interface Flight {
   id: string
-  /** Free text, e.g. "MAN → MCO". */
+  /** Free text, e.g. "MAN → MCO". Kept for backward compatibility. */
   route: string
   /** ISO date, or '' if not set. */
   date: string
   /** 'HH:MM' 24h, or '' for "no time yet". */
   departTime: string
   arriveTime: string
+  /** Derived from the airport lookup; route is regenerated from these when both are set. */
+  fromCode?: string
+  fromName?: string
+  toCode?: string
+  toName?: string
 }
 
 export interface Stay {

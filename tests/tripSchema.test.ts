@@ -23,6 +23,8 @@ describe('trip schema migration', () => {
     expect(migrated.hotels[0]).toMatchObject({ name: 'Pop Century' })
     expect(migrated.hotels[0]?.id).toMatch(/^stay-generated-/)
     expect(migrated.flights.map((flight) => flight.route)).toEqual(['MAN → MCO', 'MCO → MAN'])
+    expect(migrated.flights[0]).toMatchObject({ fromCode: 'MAN', toCode: 'MCO' })
+    expect(migrated.flights[1]).toMatchObject({ fromCode: 'MCO', toCode: 'MAN' })
     expect(migrated.days[0]?.secondParkId).toBeNull()
     expect(migrated.days[0]?.items[0]).toMatchObject({ id: 'legacy-flight-item', anchor: 'date' })
     expect(migrated.days[1]?.items[0]).toMatchObject({ id: 'legacy-meal-item', anchor: 'date' })

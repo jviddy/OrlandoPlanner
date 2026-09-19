@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { parkName } from '~/data/parks'
+import { formatRoute } from '~/data/airports'
 import { parseISO, useDates } from '~/composables/useDates'
 
 const props = defineProps<{ index: number; selected?: boolean; readOnly?: boolean }>()
@@ -44,7 +45,7 @@ const warningCount = computed(() => day.value.items.filter(
 
     <div v-if="hotels.length || flights.length" class="plan-card__anchors">
       <p v-for="hotel in hotels" :key="hotel"><AppIcon name="bed" :size="14" /> {{ hotel }}</p>
-      <p v-for="flight in flights" :key="flight.id"><AppIcon name="plane" :size="14" /> {{ flight.route || 'Flight' }}<span v-if="flight.departTime"> · {{ time12(flight.departTime) }}</span></p>
+      <p v-for="flight in flights" :key="flight.id"><AppIcon name="plane" :size="14" /> {{ formatRoute(flight.fromCode, flight.toCode) || flight.route || 'Flight' }}<span v-if="flight.departTime"> · {{ time12(flight.departTime) }}</span></p>
     </div>
 
     <div v-if="warningCount" class="plan-card__warning"><AppIcon name="warn" :size="15" /> {{ warningCount }} booking {{ warningCount === 1 ? 'conflict' : 'conflicts' }}</div>

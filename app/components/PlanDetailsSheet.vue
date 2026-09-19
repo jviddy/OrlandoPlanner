@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { parkName } from '~/data/parks'
+import { formatRoute } from '~/data/airports'
 import { parseISO, useDates } from '~/composables/useDates'
 import type { DayItem, ItemKind } from '~/types/trip'
 
@@ -129,7 +130,7 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); nextTi
 
         <div v-if="hotels.length || flights.length" class="detail-anchors">
           <p v-for="hotel in hotels" :key="hotel"><AppIcon name="bed" :size="14" /> {{ hotel }}</p>
-          <p v-for="flight in flights" :key="flight.id"><AppIcon name="plane" :size="14" /> {{ flight.route || 'Flight' }}<span v-if="flight.departTime"> · {{ time12(flight.departTime) }}</span></p>
+          <p v-for="flight in flights" :key="flight.id"><AppIcon name="plane" :size="14" /> {{ formatRoute(flight.fromCode, flight.toCode) || flight.route || 'Flight' }}<span v-if="flight.departTime"> · {{ time12(flight.departTime) }}</span></p>
         </div>
 
         <div v-for="warning in warnings" :key="warning.id" class="detail-warning">

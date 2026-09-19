@@ -55,6 +55,7 @@ const draftStart = ref('')
 const draftEnd = ref('')
 const viewMonth = ref(monthStart(todayUTC()))
 const triggerRef = ref<HTMLButtonElement | null>(null)
+const hoverDate = ref('')
 
 const displayLabel = computed(() => {
   if (!props.start) return props.placeholder
@@ -179,13 +180,32 @@ function isDisabled(d: Date): boolean {
   return false
 }
 
-function cellState(d: Date | null): string {
+function rangeState(start: string, end: string, iso: string): 'start' | 'end' | 'mid' | '' {
+  if (!start) return ''
+  if (iso === start) return 'start'
+  if (!end) return ''
+  if (iso === end) return 'end'
+  if (iso > start && iso < end) return 'mid'
+  return ''
+}
+
+function cellState(d: Date | null): 'start' | 'end' | 'mid' | 'preview-start' | 'preview-end' | 'preview-mid' | '' {
   if (!d) return ''
   const iso = toISO(d)
-  if (draftStart.value && iso === draftStart.value) return 'start'
-  if (draftEnd.value && iso === draftEnd.value) return 'end'
-  if (draftStart.value && draftEnd.value && iso > draftStart.value && iso < draftEnd.value) {
-    return 'mid'
+  const existing = rangeState(draftStart.value, draftEnd.value, iso)
+  if (existing) return existing
+  if (!draftStart.value || draftEnd.value || !hoverDate.value) return ''
+  const anchor = draftStart.value
+  const probe = hoverDate.value
+  if (probe === anchor) return ''
+  if (probe < anchor) {
+    if (iso === probe) return 'preview-start'
+    if (iso > probe && iso < anchor) return 'preview-mid'
+    if (iso === anchor) return 'preview-end'
+  } else {
+    if (iso === anchor) return 'preview-start'
+    if (iso > anchor && iso < probe) return 'preview-mid'
+    if (iso === probe) return 'preview-end'
   }
   return ''
 }
@@ -265,9 +285,16 @@ function crowdStyle(d: Date | null) {
 function pick(d: Date | null) {
   if (!d || isDisabled(d)) return
   const iso = toISO(d)
-  if (!draftStart.value || draftEnd.value) {
+  // If the range is complete, clicking inside it keeps the selection so the
+  // user can confirm without accidentally blanking the end date.
+  if (draftStart.value && draftEnd.value) {
+    if (iso >= draftStart.value && iso <= draftEnd.value) return
     draftStart.value = iso
     draftEnd.value = ''
+    return
+  }
+  if (!draftStart.value) {
+    draftStart.value = iso
     return
   }
   if (iso < draftStart.value) {
@@ -366,10 +393,15 @@ onBeforeUnmount(() => {
                       :key="i"
                       type="button"
                       class="drf-cell"
-                      :class="[d ? `drf-cell--${cellState(d)}` : 'drf-cell--empty', d && !isDisabled(d) ? `drf-cell--crowd-${crowdLevel(d)}` : '']"
+                      :class="[
+                        d ? (cellState(d) ? `drf-cell--${cellState(d)}` : '') : 'drf-cell--empty',
+                        d && !isDisabled(d) ? `drf-cell--crowd-${crowdLevel(d)}` : '',
+                      ]"
                       :disabled="!d || isDisabled(d)"
                       :style="d ? crowdStyle(d) : undefined"
                       @click="pick(d)"
+                      @mouseenter="d ? hoverDate = toISO(d) : null"
+                      @mouseleave="hoverDate = ''"
                     >
                       {{ d ? d.getUTCDate() : '' }}
                     </button>
@@ -387,8 +419,10 @@ onBeforeUnmount(() => {
                     <button
                       type="button"
                       class="drf-circle"
-                      :class="`drf-circle--${cellState(d)}`"
+                      :class="cellState(d) ? `drf-circle--${cellState(d)}` : ''"
                       @click="pick(d)"
+                      @mouseenter="hoverDate = toISO(d)"
+                      @mouseleave="hoverDate = ''"
                     >
                       {{ d.getUTCDate() }}
                       <span v-if="isAssignedElsewhere(d)" class="drf-circle__dot" />
@@ -637,7 +671,7 @@ onBeforeUnmount(() => {
 .drf-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 0;
 }
 .drf-cell {
   aspect-ratio: 1;
@@ -647,6 +681,8 @@ onBeforeUnmount(() => {
   font-weight: 600;
   color: var(--text);
   border-radius: 10px;
+  position: relative;
+  margin: 1px;
 }
 .drf-cell--empty {
   visibility: hidden;
@@ -663,6 +699,42 @@ onBeforeUnmount(() => {
 .drf-cell--mid {
   background: var(--tile-selected);
   border-radius: 0;
+  margin: 1px 0;
+}
+.drf-cell--mid::before,
+.drf-cell--preview-mid::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 0;
+  background: var(--tile-selected);
+  z-index: -1;
+}
+.drf-cell--start::after,
+.drf-cell--end::after,
+.drf-cell--preview-start::after,
+.drf-cell--preview-end::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: var(--c-navy);
+  z-index: -1;
+}
+.drf-cell--preview-start,
+.drf-cell--preview-end,
+.drf-cell--preview-mid {
+  color: var(--text);
+}
+.drf-cell--preview-start::after,
+.drf-cell--preview-end::after {
+  background: var(--tile-selected);
+  opacity: 0.65;
+}
+.drf-cell--preview-mid {
+  background: transparent;
+}
+.drf-cell--preview-mid::before {
+  opacity: 0.65;
 }
 
 .drf-empty-hint {
@@ -711,7 +783,8 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: var(--c-teal);
 }
-.drf-circle--mid {
+.drf-circle--mid,
+.drf-circle--preview-mid {
   background: var(--tile-selected);
   border-color: var(--tile-selected);
   color: var(--text-muted);
@@ -721,5 +794,13 @@ onBeforeUnmount(() => {
   background: var(--c-navy);
   border-color: var(--c-navy);
   color: #fff;
+}
+.drf-circle--preview-start,
+.drf-circle--preview-end,
+.drf-circle--preview-mid {
+  color: var(--text);
+  background: var(--tile-selected);
+  border-color: var(--tile-selected);
+  opacity: 0.65;
 }
 </style>
