@@ -7,7 +7,8 @@ export type PersistedTripPayload = ReturnType<typeof migratePersistedTrip>
 const ROOT_KEYS = [
   'version', 'tripId', 'created', 'setupMode', 'seedStrategy', 'name',
   'startDate', 'endDate', 'weekStart', 'hotels', 'ticketDays', 'parkHopper',
-  'flights', 'carHire', 'days', 'customActivities', 'recovery',
+  'flights', 'carHire', 'confirmationNumber', 'bookingPhone', 'partySize',
+  'days', 'customActivities', 'recovery',
 ] as const
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -184,6 +185,9 @@ export function parsePersistedTripPayload(value: unknown): PersistedTripPayload 
     parkHopper: trip.parkHopper,
     flights: array(trip.flights, 'trip.flights', 6).map((flight, index) => parseFlight(flight, `trip.flights[${index}]`, used)),
     carHire: string(trip.carHire, 'trip.carHire', 1_000),
+    confirmationNumber: typeof trip.confirmationNumber === 'string' ? string(trip.confirmationNumber, 'trip.confirmationNumber', 200) : '',
+    bookingPhone: typeof trip.bookingPhone === 'string' ? string(trip.bookingPhone, 'trip.bookingPhone', 50) : '',
+    partySize: trip.partySize != null ? (Number.isInteger(Number(trip.partySize)) && Number(trip.partySize) >= 0 && Number(trip.partySize) <= 100 ? Number(trip.partySize) : fail('trip.partySize', 'must be an integer from 0 to 100')) : null,
     days: array(trip.days, 'trip.days', 60).map((day, index) => parseDay(day, `trip.days[${index}]`, used)),
     customActivities: array(trip.customActivities, 'trip.customActivities', 100).map((activity, index) => parseCustomActivity(activity, `trip.customActivities[${index}]`, used)),
     recovery: {

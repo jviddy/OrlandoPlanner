@@ -19,7 +19,7 @@ function days(start: string, length: number): Day[] {
 
 function base(name: string, start: string, length: number): TripState {
   return {
-    version: 2,
+    version: 3,
     tripId: `fixture-trip-${length}`,
     created: true,
     setupMode: 'self',
@@ -33,6 +33,9 @@ function base(name: string, start: string, length: number): TripState {
     parkHopper: false,
     flights: [],
     carHire: '',
+    confirmationNumber: '',
+    bookingPhone: '',
+    partySize: null,
     days: days(start, length),
     customActivities: [],
     recovery: { removedDays: [], updatedAt: '' },

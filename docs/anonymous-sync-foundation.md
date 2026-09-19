@@ -34,9 +34,12 @@ Before enabling it in any environment:
 
 1. Set `NUXT_ANONYMOUS_CAPABILITY_SECRET` to a long, environment-specific secret and enable both private
    and public flags only for a controlled preview.
-2. Apply migration 0002 and repeat the lifecycle check against that preview
-   binding. The current local Wrangler login cannot access the configured
-   account, so this remote check remains pending.
+2. ~~Apply migration 0002 and repeat the lifecycle check against that preview
+   binding.~~ **Done.** All 4 migrations applied to remote `orlando-planner-preview`
+   (WEUR). Full lifecycle check passed on 18 September 2026: create (201), read
+   with view token (200), unauthorized read (404), update with edit token (200),
+   revision conflict with stale If-Match (409), revoke (204), read-after-revoke
+   (404). Preview is live at `https://preview.orlando-planner.pages.dev`.
 3. Review retention, support and incident procedures before enabling production.
 
 The binding and prepared-statement approach follows the current [Cloudflare Pages binding guide](https://developers.cloudflare.com/pages/functions/bindings/), [D1 Worker API](https://developers.cloudflare.com/d1/worker-api/), and [D1 migrations guide](https://developers.cloudflare.com/d1/reference/migrations/), checked on 18 September 2026.

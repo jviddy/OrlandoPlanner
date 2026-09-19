@@ -1,4 +1,4 @@
-import { anonymousExpiry, bearer, enforceRateLimit, requireAnonymousDb, tokenHash, validateTripPayload } from '../../utils/anonymousTrips'
+import { anonymousExpiry, bearer, enforceRateLimit, rejectSensitiveFields, requireAnonymousDb, tokenHash, validateTripPayload } from '../../utils/anonymousTrips'
 
 interface EditableTrip { revision: number; capability_id: string }
 
@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
   const expected = Number(getHeader(event, 'if-match'))
   if (!Number.isInteger(expected) || expected < 1) throw createError({ statusCode: 428, statusMessage: 'If-Match revision required', data: { code: 'revision_required' } })
   const body = validateTripPayload(await readBody(event))
+  rejectSensitiveFields(body)
   if (body.tripId !== id) throw createError({ statusCode: 400, statusMessage: 'Trip ID does not match route', data: { code: 'trip_id_mismatch' } })
   const hash = await tokenHash(bearer(event))
   const now = new Date().toISOString()

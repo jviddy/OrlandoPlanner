@@ -1,7 +1,7 @@
 import { addDays, diffDays, parseISO, toISO } from '~/composables/useDates'
 import type { Day, DayItem, Flight, Stay, TripState } from '~/types/trip'
 
-export const TRIP_SCHEMA_VERSION = 2
+export const TRIP_SCHEMA_VERSION = 3
 
 export type IdFactory = (prefix: 'trip' | 'day' | 'stay' | 'flight' | 'item') => string
 
@@ -132,6 +132,9 @@ export function migratePersistedTrip(raw: any, makeId: IdFactory = createStableI
     parkHopper: Boolean(raw?.parkHopper),
     flights: migrateFlights(raw?.flights, used, makeId),
     carHire: typeof raw?.carHire === 'string' ? raw.carHire : '',
+    confirmationNumber: typeof raw?.confirmationNumber === 'string' ? raw.confirmationNumber : '',
+    bookingPhone: typeof raw?.bookingPhone === 'string' ? raw.bookingPhone : '',
+    partySize: raw?.partySize != null && !isNaN(Number(raw.partySize)) ? Number(raw.partySize) : null,
     days: Array.isArray(raw?.days)
       ? raw.days.map((day: unknown) => migrateDay(day, used, makeId))
       : [],
@@ -156,6 +159,9 @@ export function migratePersistedTrip(raw: any, makeId: IdFactory = createStableI
     | 'parkHopper'
     | 'flights'
     | 'carHire'
+    | 'confirmationNumber'
+    | 'bookingPhone'
+    | 'partySize'
     | 'days'
     | 'customActivities'
     | 'recovery'

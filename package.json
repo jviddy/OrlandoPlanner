@@ -22,7 +22,8 @@
     "db:list:production": "wrangler d1 migrations list orlando-planner-production --remote --env production",
     "db:verify": "sh scripts/verify-d1-migrations.sh",
     "cf:preview": "npm run build && wrangler pages dev dist",
-    "deploy": "npm run build && wrangler pages deploy dist --project-name=orlando-planner"
+    "deploy": "echo 'Cloudflare Pages deploys automatically on git push. Run: git push origin main'",
+    "deploy:legacy": "npm run build && wrangler pages deploy dist --project-name=orlando-planner"
   },
   "dependencies": {
     "@pinia/nuxt": "^1.0.2",

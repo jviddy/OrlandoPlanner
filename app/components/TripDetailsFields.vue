@@ -124,6 +124,12 @@ const flightSummary = computed(() => {
   if (!set) return 'Not set'
   return `${set} flight${set === 1 ? '' : 's'} set`
 })
+const bookingSummary = computed(() => {
+  const parts: string[] = []
+  if (model.value.confirmationNumber.trim()) parts.push(model.value.confirmationNumber)
+  if (model.value.partySize != null) parts.push(`${model.value.partySize} people`)
+  return parts.length ? parts.join(' · ') : 'Not set'
+})
 
 function flightLabel(i: number): string {
   if (i === 0) return 'Outbound'
@@ -344,6 +350,55 @@ function setTicket(key: 'disney' | 'universal', value: string) {
           <button v-else type="button" class="disc__action" @click="open.car = true">
             + Add car hire
           </button>
+        </div>
+      </section>
+
+      <section class="disc">
+        <button type="button" class="disc__head" @click="toggle('booking')">
+          <span class="disc__tile" style="background: #f3eef9; color: #6b3fa0">
+            <AppIcon name="ticket" :size="17" />
+          </span>
+          <span class="disc__meta">
+            <span class="disc__title">Booking details</span>
+            <span class="disc__summary">{{ bookingSummary }}</span>
+          </span>
+          <AppIcon :name="open.booking ? 'chevronUp' : 'chevronDown'" :size="14" class="disc__chev" />
+        </button>
+        <div v-if="open.booking" class="disc__body">
+          <label class="drow">
+            <span>Confirmation number</span>
+            <input
+              class="input input--sm"
+              type="text"
+              placeholder="e.g. ABC123"
+              :value="model.confirmationNumber"
+              @input="updateFields({ confirmationNumber: ($event.target as HTMLInputElement).value })"
+            />
+          </label>
+          <label class="drow">
+            <span>Booking phone</span>
+            <input
+              class="input input--sm"
+              type="tel"
+              placeholder="e.g. +1 407 555 1234"
+              :value="model.bookingPhone"
+              @input="updateFields({ bookingPhone: ($event.target as HTMLInputElement).value })"
+            />
+          </label>
+          <label class="drow">
+            <span>Party size</span>
+            <input
+              class="input input--sm"
+              type="number"
+              min="0"
+              max="100"
+              inputmode="numeric"
+              placeholder="Number of people"
+              :value="model.partySize ?? ''"
+              @input="updateFields({ partySize: ($event.target as HTMLInputElement).value ? Number(($event.target as HTMLInputElement).value) : null })"
+            />
+          </label>
+          <p class="disc__note">Booking details are private — they won't be visible to viewers or anyone with a view link.</p>
         </div>
       </section>
     </div>

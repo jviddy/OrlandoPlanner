@@ -19,7 +19,7 @@ describe('persisted trip payload', () => {
   it('rejects transient and unknown fields', () => {
     const snapshot = snapshotTrip(blank14DayTrip()) as Record<string, unknown>
     expect(() => parsePersistedTripPayload({ ...snapshot, selectedDay: 2 })).toThrow(TripPayloadError)
-    expect(() => parsePersistedTripPayload({ ...snapshot, confirmationNumber: 'secret' })).toThrow(TripPayloadError)
+    expect(() => parsePersistedTripPayload({ ...snapshot, internalDebug: true })).toThrow(TripPayloadError)
   })
 
   it('rejects duplicate IDs and malformed nested values', () => {

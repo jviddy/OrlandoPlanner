@@ -48,6 +48,9 @@ function blankState(): TripState {
     parkHopper: false,
     flights: [],
     carHire: '',
+    confirmationNumber: '',
+    bookingPhone: '',
+    partySize: null,
     days: [],
     customActivities: [],
     recovery: { removedDays: [], updatedAt: '' },
@@ -339,6 +342,9 @@ export const useTripStore = defineStore('orlando-trip', {
           | 'parkHopper'
           | 'flights'
           | 'carHire'
+          | 'confirmationNumber'
+          | 'bookingPhone'
+          | 'partySize'
         >
       >,
     ) {

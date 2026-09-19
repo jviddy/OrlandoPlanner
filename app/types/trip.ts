@@ -74,6 +74,9 @@ export interface TripDetailsDraft {
   parkHopper: boolean
   flights: Flight[]
   carHire: string
+  confirmationNumber: string
+  bookingPhone: string
+  partySize: number | null
 }
 
 export interface UndoEntry {
@@ -111,6 +114,11 @@ export interface TripState {
   /** [] | [outbound] | [outbound, return] | more, for connections/multi-city. */
   flights: Flight[]
   carHire: string
+
+  /** Sensitive booking details — redacted for viewers, unlisted, and public reads. */
+  confirmationNumber: string
+  bookingPhone: string
+  partySize: number | null
 
   days: Day[]
 

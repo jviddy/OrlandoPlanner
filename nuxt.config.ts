@@ -8,7 +8,20 @@ export default defineNuxtConfig({
     anonymousCapabilitySecret: '',
     anonymousCapabilityKeyVersion: 1,
     anonymousCapabilityPreviousSecrets: '',
-    public: { anonymousSyncEnabled: false },
+    authEnabled: true,
+    authDevExposeLinks: false,
+    authSessionDays: 30,
+    authMagicLinkMinutes: 15,
+    authRateLimitSecret: '',
+    resendApiKey: '',
+    authEmailFrom: '',
+    appBaseUrl: '',
+    googleClientId: '',
+    googleClientSecret: '',
+    public:{ 
+      anonymousSyncEnabled: false,
+      googleEnabled: true, 
+    },
   },
 
   modules: ['@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
@@ -80,6 +93,9 @@ export default defineNuxtConfig({
   // Deploy target: Cloudflare Pages (Nitro output -> ./dist with _worker.js).
   nitro: {
     preset: 'cloudflare-pages',
+    rollupConfig: {
+      output: { inlineDynamicImports: true },
+    },
     prerender: {
       crawlLinks: true,
       routes: ['/', '/new', '/templates', '/edit', '/day', '/plan', '/crowds', '/when-to-go'],

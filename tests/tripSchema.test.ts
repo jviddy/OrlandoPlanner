@@ -16,7 +16,7 @@ describe('trip schema migration', () => {
   it('adds stable identities and preserves legacy content', () => {
     const migrated = migratePersistedTrip(legacyTrip, deterministicIds())
 
-    expect(migrated.version).toBe(2)
+    expect(migrated.version).toBe(3)
     expect(migrated.tripId).toMatch(/^trip-generated-/)
     expect(migrated.days).toHaveLength(3)
     expect(new Set(migrated.days.map((day) => day.id)).size).toBe(3)

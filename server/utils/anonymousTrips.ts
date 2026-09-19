@@ -5,6 +5,7 @@ export interface D1RunResultLike { success: boolean; meta?: { changes?: number }
 export interface D1StatementLike {
   bind(...values: unknown[]): D1StatementLike
   first<T>(): Promise<T | null>
+  all<T>(): Promise<{ results?: T[]; success: boolean }>
   run(): Promise<D1RunResultLike>
 }
 export interface D1DatabaseLike {
@@ -93,5 +94,18 @@ export function validateTripPayload(value: unknown): PersistedTripPayload {
       throw createError({ statusCode: 400, statusMessage: 'Invalid trip payload', data: { code: 'invalid_trip_payload', detail: error.message } })
     }
     throw error
+  }
+}
+
+/** Reject trips that contain non-empty sensitive booking fields. */
+export function rejectSensitiveFields(payload: PersistedTripPayload): void {
+  const sensitive = ['confirmationNumber', 'bookingPhone'] as const
+  for (const key of sensitive) {
+    if (typeof payload[key] === 'string' && (payload[key] as string).trim()) {
+      throw createError({ statusCode: 400, statusMessage: 'Anonymous trips cannot contain sensitive booking fields', data: { code: 'sensitive_field_rejected', field: key } })
+    }
+  }
+  if (payload.partySize != null) {
+    throw createError({ statusCode: 400, statusMessage: 'Anonymous trips cannot contain sensitive booking fields', data: { code: 'sensitive_field_rejected', field: 'partySize' } })
   }
 }

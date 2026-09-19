@@ -18,6 +18,9 @@ function copyDetails(): TripDetailsDraft {
     parkHopper: store.parkHopper,
     flights: store.flights.map((flight) => ({ ...flight })),
     carHire: store.carHire,
+    confirmationNumber: store.confirmationNumber,
+    bookingPhone: store.bookingPhone,
+    partySize: store.partySize,
   }
 }
 

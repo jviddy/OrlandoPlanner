@@ -5,6 +5,7 @@ import {
   enforceRateLimit,
   purgeExpiredAnonymousData,
   randomToken,
+  rejectSensitiveFields,
   requireAnonymousDb,
   tokenHash,
   validateTripPayload,
@@ -22,6 +23,7 @@ export default defineEventHandler(async (event) => {
   await enforceRateLimit(event, db, 20, 'anonymous-create')
   await purgeExpiredAnonymousData(db)
   const body = validateTripPayload(await readBody(event))
+  rejectSensitiveFields(body)
   const idempotency = getHeader(event, 'idempotency-key')?.slice(0, 128) ?? ''
   if (idempotency.length < 16) throw createError({ statusCode: 400, statusMessage: 'Idempotency-Key required', data: { code: 'idempotency_key_required' } })
 
