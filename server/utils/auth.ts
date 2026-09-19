@@ -23,7 +23,12 @@ export function requireAuthDb(event: H3Event): D1DatabaseLike {
   const config = useRuntimeConfig(event)
   if (!config.authEnabled) throw createError({ statusCode: 404, statusMessage: 'Not found' })
   const db = (event.context as any).cloudflare?.env?.ORLANDO_DB as D1DatabaseLike | undefined
-  if (!db?.batch) throw createError({ statusCode: 503, statusMessage: 'Account service unavailable' })
+  if (!db?.batch) {
+    const host = getRequestURL(event).host
+    const branch = String((event.context as any).cloudflare?.env?.CF_PAGES_BRANCH || 'unknown')
+    console.error(`ORLANDO_DB D1 binding missing on ${host} (branch: ${branch})`)
+    throw createError({ statusCode: 503, statusMessage: 'Account service unavailable', data: { code: 'db_binding_missing', host, branch } })
+  }
   return db
 }
 

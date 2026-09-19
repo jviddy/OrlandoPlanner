@@ -1,19 +1,26 @@
-# Cloudflare Pages config for local preview + `wrangler pages deploy`.
-# Build output for the Nitro `cloudflare-pages` preset is ./dist
-name = "orlando-planner"
+# Cloudflare Pages config. Generated settings from the dashboard are merged with
+# the explicit bindings below. Build output for the Nitro `cloudflare-pages`
+# preset is ./dist.
+name = "orlando-planner-git"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
+migrations_dir = "migrations"
 
-# Local development and preview deployments use isolated preview data.
+# Environment variables mirrored from the Pages dashboard.
+[vars]
+NUXT_APP_BASE_URL = "https://orlando-planner-git.pages.dev"
+NUXT_AUTH_ENABLED = "true"
+NUXT_PUBLIC_GOOGLE_ENABLED = "true"
+
+# Preview environment uses the preview D1 database.
 [[d1_databases]]
 binding = "ORLANDO_DB"
 database_name = "orlando-planner-preview"
 database_id = "7e917655-43fe-48b7-a28e-3f76ca26ca68"
 migrations_dir = "migrations"
 
-# Production is separately provisioned. Anonymous sync remains disabled in
-# Nuxt runtime config until its explicit upload/recovery UI is released.
+# Production environment uses the production D1 database.
 [[env.production.d1_databases]]
 binding = "ORLANDO_DB"
 database_name = "orlando-planner-production"
