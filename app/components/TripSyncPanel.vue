@@ -7,7 +7,9 @@ const store = useTripStore()
 const enabled = computed(() => Boolean(config.public.anonymousSyncEnabled))
 const accepted = ref(false)
 const working = ref(false)
+const claiming = ref(false)
 const message = ref('')
+const user = ref<{ id: string; email: string; displayName: string } | null>(null)
 const capability = ref<AnonymousCapability | null>(null)
 const capabilityKey = computed(() => `orlando-anonymous-capability:${store.tripId}`)
 const requestKey = computed(() => `orlando-anonymous-request:${store.tripId}`)
@@ -50,8 +52,14 @@ const conflictDiff = computed(() => {
   return diffs
 })
 
-onMounted(() => {
+onMounted(async () => {
   try { capability.value = JSON.parse(localStorage.getItem(capabilityKey.value) ?? 'null') } catch { capability.value = null }
+  try {
+    const session = await $fetch<{ user: { id: string; email: string; displayName: string } | null }>('/api/auth/session')
+    user.value = session.user
+  } catch {
+    user.value = null
+  }
 })
 
 function persistCapability(value: AnonymousCapability | null) {
@@ -140,6 +148,28 @@ async function revoke() {
   } catch { message.value = 'Revocation failed. No local data was removed.' }
   working.value = false
 }
+
+async function claimToAccount() {
+  if (!capability.value || !user.value) return
+  claiming.value = true; message.value = ''
+  try {
+    const tokenResult = await $fetch<{ claimToken: string }>(`/api/trips/${store.tripId}/claim-token`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${capability.value.editToken}` },
+    })
+    await $fetch(`/api/trips/${store.tripId}/claim`, {
+      method: 'POST',
+      body: { claimToken: tokenResult.claimToken },
+    })
+    persistCapability(null)
+    localStorage.removeItem(requestKey.value)
+    message.value = 'Trip claimed to your account. Redirecting…'
+    navigateTo(`/trips/${store.tripId}`, { replace: true })
+  } catch (err: any) {
+    message.value = err?.data?.statusMessage || 'Claim failed. Make sure you are signed in and the trip is still anonymous.'
+  }
+  claiming.value = false
+}
 </script>
 
 <template>
@@ -177,6 +207,12 @@ async function revoke() {
       <h2>Anonymous backup connected</h2>
       <p>Server revision {{ capability.revision }}. Sync is manual while this feature is being proven.<template v-if="expiryLabel"> The server copy expires after {{ expiryLabel }} without a successful sync.</template></p>
       <div><button type="button" :disabled="working" @click="sync">Sync now</button><button type="button" class="sync-panel__revoke" :disabled="working" @click="revoke">Revoke server copy</button></div>
+      <div v-if="user" class="sync-panel__claim">
+        <p>You are signed in as {{ user.displayName || user.email }}. Claim this anonymous trip to your account.</p>
+        <button type="button" class="sync-panel__claim-btn" :disabled="claiming" @click="claimToAccount">
+          {{ claiming ? 'Claiming…' : 'Claim to my account' }}
+        </button>
+      </div>
     </template>
     <p v-if="message" role="status" class="sync-panel__message">{{ message }}</p>
   </section>
@@ -191,6 +227,9 @@ async function revoke() {
 .sync-panel div{display:flex;gap:8px}
 .sync-panel .sync-panel__revoke{background:#f5e7e3;color:var(--warn-ink)}
 .sync-panel .sync-panel__message{padding:8px;border-radius:8px;background:#eef4ef}
+.sync-panel .sync-panel__claim{margin-top:12px;padding-top:12px;border-top:1px solid var(--warm-border)}
+.sync-panel .sync-panel__claim p{font-size:12px;color:var(--text-muted);margin:0 0 8px}
+.sync-panel .sync-panel__claim-btn{background:var(--c-navy);color:#fff}
 .sync-panel .sync-panel__server-btn{background:#e8effb;color:#0b3d91}
 .sync-panel .sync-panel__cancel{background:#f0f0f0;color:#555}
 .conflict-diff{margin-top:12px}

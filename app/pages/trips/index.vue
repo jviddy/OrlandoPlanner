@@ -42,6 +42,8 @@ const localTrips = ref<LocalTrip[]>([])
 const loading = ref(true)
 const error = ref('')
 const uploadingIds = ref<Set<string>>(new Set())
+const deletingIds = ref<Set<string>>(new Set())
+const confirmDeleteId = ref<string | null>(null)
 
 onMounted(async () => {
   await loadSession()
@@ -146,6 +148,24 @@ function openLocalTrip(id: string) {
   window.localStorage.setItem('orlando-trip-v2:current', id)
   navigateTo('/')
 }
+
+function canDelete(role: string): boolean {
+  return role === 'owner' || role === 'agent' || role === 'admin'
+}
+
+async function deleteTrip(tripId: string) {
+  confirmDeleteId.value = null
+  deletingIds.value.add(tripId)
+  error.value = ''
+  try {
+    await $fetch(`/api/trips/${tripId}`, { method: 'DELETE' })
+    await loadServerTrips()
+  } catch (err: any) {
+    error.value = err?.data?.statusMessage || 'Delete failed. Try again.'
+  } finally {
+    deletingIds.value.delete(tripId)
+  }
+}
 </script>
 
 <template>
@@ -175,12 +195,38 @@ function openLocalTrip(id: string) {
           No trips saved to your account yet.
         </div>
         <ul v-else class="trips-list">
-          <li v-for="trip in serverTrips" :key="trip.id" class="trip-card trip-card--link">
-            <NuxtLink :to="`/trips/${trip.id}`" class="trip-card__info">
+          <li v-for="trip in serverTrips" :key="trip.id" class="trip-card" :class="{ 'trip-card--link': confirmDeleteId !== trip.id }">
+            <NuxtLink v-if="confirmDeleteId !== trip.id" :to="`/trips/${trip.id}`" class="trip-card__info">
               <span class="trip-card__name">{{ trip.name }}</span>
               <span class="trip-card__meta">{{ formatDateRange(trip.startDate, trip.endDate) }} · {{ trip.role }}</span>
             </NuxtLink>
-            <span class="trip-card__badge">cloud</span>
+            <div v-else class="trip-card__info">
+              <span class="trip-card__name">Delete {{ trip.name }}?</span>
+              <span class="trip-card__meta">This cannot be undone.</span>
+            </div>
+            <div v-if="confirmDeleteId !== trip.id" class="trip-card__actions">
+              <span class="trip-card__badge">cloud</span>
+              <button
+                v-if="canDelete(trip.role)"
+                type="button"
+                class="trips-btn trips-btn--small trips-btn--danger"
+                :disabled="deletingIds.has(trip.id)"
+                @click="confirmDeleteId = trip.id"
+              >
+                Delete
+              </button>
+            </div>
+            <div v-else class="trip-card__actions">
+              <button type="button" class="trips-btn trips-btn--small" @click="confirmDeleteId = null">Cancel</button>
+              <button
+                type="button"
+                class="trips-btn trips-btn--small trips-btn--danger"
+                :disabled="deletingIds.has(trip.id)"
+                @click="deleteTrip(trip.id)"
+              >
+                {{ deletingIds.has(trip.id) ? 'Deleting…' : 'Confirm delete' }}
+              </button>
+            </div>
           </li>
         </ul>
       </section>
@@ -368,6 +414,12 @@ function openLocalTrip(id: string) {
   background: transparent;
   border-color: var(--warm-border);
   color: var(--text-muted);
+}
+
+.trips-btn--danger {
+  background: #fff0ee;
+  border-color: #e8c4bc;
+  color: var(--warn-ink);
 }
 
 .trips-btn--small {
