@@ -146,6 +146,28 @@ export function useServerTrip() {
     message.value = 'Conflict unresolved. Your local copy is unchanged.'
   }
 
+  async function uploadCurrentTrip(): Promise<boolean> {
+    saving.value = true
+    message.value = ''
+    try {
+      const payload = migratePersistedTrip(store.$state)
+      const idempotencyKey = `${Date.now()}-${store.tripId}`
+      const result = await $fetch<{ tripId: string; revision: number }>('/api/trips', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: payload,
+      })
+      saveMeta({ tripId: result.tripId, revision: result.revision, role: 'owner', visibility: 'private' })
+      message.value = `Saved to your account as revision ${result.revision}.`
+      return true
+    } catch (err: any) {
+      message.value = err?.data?.statusMessage || 'Save to account failed. Make sure you are signed in.'
+      return false
+    } finally {
+      saving.value = false
+    }
+  }
+
   function clearServerLink() {
     saveMeta(null)
     conflict.value = null
@@ -160,6 +182,7 @@ export function useServerTrip() {
     isServerBacked,
     loadServerTrip,
     saveServerTrip,
+    uploadCurrentTrip,
     keepLocal,
     keepServer,
     cancelConflict,
