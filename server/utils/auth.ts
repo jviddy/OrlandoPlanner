@@ -198,7 +198,12 @@ export async function generateCodeVerifier(): Promise<string> {
 
 export async function generateCodeChallenge(verifier: string): Promise<string> {
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
-  return Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('')
+  // RFC 7636 requires the SHA-256 digest to be base64url-encoded for the
+  // S256 challenge. A hexadecimal digest has the wrong representation and
+  // causes Google's token exchange to reject the otherwise valid code.
+  let binary = ''
+  for (const byte of new Uint8Array(hash)) binary += String.fromCharCode(byte)
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
 export function googleRedirectUri(event: H3Event): string {

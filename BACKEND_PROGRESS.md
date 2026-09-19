@@ -2,7 +2,7 @@
 
 Auto-updated checklist. If you lose context, read this file first.
 
-Last updated: 19 September 2026 (Google OAuth route verified locally; moving from Direct Upload to Git-integrated Pages deployment)
+Last updated: 19 September 2026 (Git-integrated Pages production deployment live; OAuth start route verified)
 
 ---
 
@@ -82,7 +82,7 @@ Last updated: 19 September 2026 (Google OAuth route verified locally; moving fro
 - [x] Sensitive booking fields (`confirmationNumber`, `bookingPhone`, `partySize` — schema v3, rejected on anonymous trips, redacted for viewers)
 - [x] Activity attribution (`actor_display_name` populated on all owned-trip mutations)
 - [x] Revision-conflict compare/retry flow (`TripSyncPanel.vue` — fetches server version, shows diff table, keep-local/keep-server/cancel)
-- [~] Google OAuth route implementation (`/api/auth/google/start` and callback) — source and local Cloudflare preview verified; repo pushed to `main` and ready for the new Git-integrated Pages project; follow `docs/cloudflare-pages-git-worker-migration.md` to create the project and verify production OAuth
+- [~] Google OAuth route implementation (`/api/auth/google/start` and callback) — production worker is live at `https://orlando-planner-git.pages.dev` and `/api/auth/google/start` returns the expected Google 302; complete interactive callback/session test remains pending
 
 ## Phase 3 — agents, duplication, and hardening
 
@@ -113,8 +113,8 @@ Last updated: 19 September 2026 (Google OAuth route verified locally; moving fro
 | GET | `/api/auth/session` | ✅ |
 | POST | `/api/auth/logout` | ✅ |
 | POST | `/api/auth/logout-all` | ✅ |
-| GET | `/api/auth/google/start` | ✅ locally; production deployment blocked |
-| GET | `/api/auth/google/callback` | ✅ locally; production deployment blocked |
+| GET | `/api/auth/google/start` | ✅ production 302 verified |
+| GET | `/api/auth/google/callback` | ✅ route deployed; interactive Google callback test pending |
 
 ### Anonymous trips (`/api/anonymous-trips/`)
 | Method | Route | Status |

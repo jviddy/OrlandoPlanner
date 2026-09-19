@@ -53,15 +53,15 @@ Connect to Git**. Use a temporary project name so the existing production
 project remains available during verification, for example:
 `orlando-planner-git`.
 
-- [ ] Connect GitHub and authorize Cloudflare's GitHub application.
-- [ ] Select `jviddy/OrlandoPlanner`.
-- [ ] Set the production branch to `main`.
-- [ ] Set the framework preset to **Nuxt** (or **None** if Nuxt is not listed).
-- [ ] Set the root directory to the repository root.
-- [ ] Set the build command to `npm run build`.
-- [ ] Set the build output directory to `dist`.
-- [ ] Enable preview deployments for the branch/PR workflow you want to use.
-- [ ] Save the project and wait for its first build to complete.
+- [x] Connect GitHub and authorize Cloudflare's GitHub application.
+- [x] Select `jviddy/OrlandoPlanner`.
+- [x] Set the production branch to `main`.
+- [x] Set the framework preset to **None** (Nuxt was not listed).
+- [x] Set the root directory to the repository root.
+- [x] Set the build command to `npm run build`.
+- [x] Set the build output directory to `dist`.
+- [x] Enable preview deployments for the branch/PR workflow you want to use.
+- [x] Save the project and wait for its first build to complete.
 
 Expected result: the new project shows a Git repository under **Settings →
 Builds**, and the deployment is associated with a commit from `main` rather
@@ -69,32 +69,32 @@ than a manual Wrangler upload.
 
 ## 3. Recreate Cloudflare bindings and compatibility settings
 
-- [ ] Add the `nodejs_compat` compatibility flag for Production and Preview.
-- [ ] Add the D1 binding named `ORLANDO_DB`:
+- [x] Add the `nodejs_compat` compatibility flag for Production and Preview (managed by `wrangler.toml`; confirmed on Production).
+- [x] Add the D1 binding named `ORLANDO_DB`:
   - Production → `orlando-planner-production`
   - Preview → `orlando-planner-preview`
-- [ ] Confirm the migration set is applied to each database:
+- [x] Confirm the migration set is applied to each database:
 
   ```bash
   npx wrangler d1 migrations list orlando-planner-production --remote --env production
   npx wrangler d1 migrations list orlando-planner-preview --remote
   ```
 
-- [ ] Add non-secret build variables in both environments:
+- [x] Add non-secret build variables in both environments (managed by the repository build configuration):
   - `NODE_VERSION=22`
   - `NPM_CONFIG_LEGACY_PEER_DEPS=true`
-- [ ] Confirm the Pages build is using the repository's `wrangler.toml`.
+- [x] Confirm the Pages build is using the repository's `wrangler.toml`.
 
 ## 4. Add runtime variables and secrets
 
 Set these separately for **Production** and **Preview**. Never commit values to
 the repository.
 
-- [ ] `NUXT_AUTH_ENABLED=true`
-- [ ] `NUXT_PUBLIC_GOOGLE_ENABLED=true`
-- [ ] `NUXT_GOOGLE_CLIENT_ID=<Google OAuth client ID>`
-- [ ] `NUXT_GOOGLE_CLIENT_SECRET=<Google OAuth client secret>`
-- [ ] `NUXT_APP_BASE_URL=<exact URL for that environment>`
+- [x] `NUXT_AUTH_ENABLED=true` (application default; dashboard text variables are locked to `wrangler.toml`)
+- [x] `NUXT_PUBLIC_GOOGLE_ENABLED=true` (application default; dashboard text variables are locked to `wrangler.toml`)
+- [x] `NUXT_GOOGLE_CLIENT_ID=<Google OAuth client ID>` (Production and Preview secret)
+- [x] `NUXT_GOOGLE_CLIENT_SECRET=<Google OAuth client secret>` (Production and Preview secret)
+- [x] `NUXT_APP_BASE_URL=<exact URL for that environment>` (request-origin fallback is active for the Pages URL)
 - [ ] `NUXT_ANONYMOUS_CAPABILITY_SECRET=<environment-specific secret>`
 - [ ] Configure any magic-link variables required by the current environment:
   `NUXT_RESEND_API_KEY`, `NUXT_AUTH_EMAIL_FROM`, and
@@ -113,8 +113,11 @@ Preview:    https://<new-preview-domain>
 
 In **Google Cloud Console → APIs & Services → Credentials → OAuth client**:
 
-- [ ] Add the new Production callback:
-      `https://<new-production-domain>/api/auth/google/callback`
+- [x] Add the new Production callback:
+      `https://orlando-planner-git.pages.dev/api/auth/google/callback`
+      Google Cloud Console now shows the URI on the OAuth client. Google
+      still returned a cached `redirect_uri_mismatch` during immediate retry;
+      allow the documented propagation window and retry.
 - [ ] Add the new Preview callback:
       `https://<new-preview-domain>/api/auth/google/callback`
 - [ ] Keep the existing callback URLs until the cutover is complete.
@@ -123,8 +126,8 @@ In **Google Cloud Console → APIs & Services → Credentials → OAuth client**
 
 ## 6. Verify that the Nitro worker is active
 
-- [ ] Open the new Pages deployment URL.
-- [ ] Confirm the deployment is marked as Git-based, not Direct Upload.
+- [x] Open the new Pages deployment URL: `https://orlando-planner-git.pages.dev`.
+- [x] Confirm the deployment is marked as Git-based, not Direct Upload.
 - [ ] From the repository, identify the deployment ID and run:
 
   ```bash
@@ -136,7 +139,7 @@ In **Google Cloud Console → APIs & Services → Credentials → OAuth client**
 - [ ] Confirm `deployment tail` connects to a Functions deployment. If it says
       `does not have a Pages Function`, stop and fix the deployment mode before
       testing authentication.
-- [ ] Check the OAuth start route:
+- [x] Check the OAuth start route:
 
   ```bash
   curl -i https://<new-production-domain>/api/auth/google/start
@@ -145,14 +148,13 @@ In **Google Cloud Console → APIs & Services → Credentials → OAuth client**
   Expected result: HTTP `302` with a `Location` header beginning with
   `https://accounts.google.com/o/oauth2/v2/auth`.
 
-- [ ] Check the session route:
+- [x] Check the session route:
 
   ```bash
   curl -i https://<new-production-domain>/api/auth/session
   ```
 
-  Expected result: an application response (normally `401` when no session is
-  present), not a Nitro route `404`.
+  Actual result: HTTP `200` with `{"user":null}` when no session is present.
 
 ## 7. Test the complete sign-in flow
 
@@ -184,11 +186,15 @@ In **Google Cloud Console → APIs & Services → Credentials → OAuth client**
 
 ## 9. Final record
 
-- [ ] New Pages project name: `__________________________________________`
-- [ ] New production URL: `______________________________________________`
-- [ ] New preview URL: `________________________________________________`
-- [ ] GitHub commit verified in production: `____________________________`
-- [ ] Date/time of successful OAuth test: `_______________________________`
-- [ ] Old project retained for rollback until: `__________________________`
-- [ ] Update `BACKEND_PROGRESS.md` to mark production OAuth verification
-      complete.
+- [x] New Pages project name: `orlando-planner-git`
+- [x] New production URL: `https://orlando-planner-git.pages.dev`
+- [ ] New preview URL: *(no separate preview deployment URL recorded yet)*
+- [x] GitHub commit verified in production: `6784585`
+- [x] Production OAuth start route verified: 19 September 2026
+- [x] Old project retained for rollback: `orlando-planner.pages.dev`
+- [x] Update `BACKEND_PROGRESS.md` with the production deployment status.
+
+The complete interactive Google callback/session test remains open until the
+production callback is added to Google Cloud Console and a browser sign-in is
+completed successfully. The old Direct Upload project is intentionally
+retained as the rollback point.
