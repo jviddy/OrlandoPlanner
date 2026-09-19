@@ -55,7 +55,7 @@ export function assertSameOrigin(event: H3Event): void {
 export async function enforceAuthRateLimit(event: H3Event, db: D1DatabaseLike, email?: string): Promise<void> {
   const config = useRuntimeConfig(event)
   const secret = String(config.authRateLimitSecret)
-  if (!secret) throw createError({ statusCode: 503, statusMessage: 'Account service unavailable' })
+  if (!secret) throw createError({ statusCode: 503, statusMessage: 'Account service unavailable', data: { code: 'rate_limit_secret_missing' } })
   const now = new Date()
   const windowStartedAt = `${now.toISOString().slice(0, 13)}:00:00.000Z`
   const ip = getRequestIP(event, { xForwardedFor: true }) ?? 'unknown'
