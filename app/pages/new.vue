@@ -59,14 +59,16 @@ function commit() {
           <h1>Start with the trip</h1><p>Name and dates are the only required details.</p>
           <label class="field"><span>Trip name</span><input v-model="setup.name" class="input" placeholder="Florida 2027" /></label>
           <label class="field"><span>Dates</span><DateRangeField :start="setup.startDate" :end="setup.endDate" placeholder="Add your dates" sheet-title="Trip dates" @update="updateDates" /></label>
-          <p class="setup__hint">Your progress is saved on this device.</p>
+          <p class="setup__hint">Your trip is saved on this device. Sign in and use the menu to save a copy to your account.</p>
         </section>
 
-        <section v-else-if="setup.step === 2 && setup.mode === 'self'" class="setup__panel">
+        <section v-else-if="setup.step === 2 && setup.mode === 'self'" class="setup__panel setup__panel--wide">
           <h1>Choose a starting shape</h1><p>Blank is the default. You can apply a shape later from Overview or Plan.</p>
           <label v-for="option in [{id:'blank',name:'Blank trip'},{id:'disney',name:'First timer Disney'},{id:'both',name:'Disney + Universal'}]" :key="option.id" class="choice">
             <input v-model="setup.templateId" type="radio" :value="option.id" /><span>{{ option.name }}</span>
           </label>
+          <div class="setup__optional-divider"><span>Optional details</span></div>
+          <TripDetailsFields :draft="setup" :sections="['stay', 'tickets', 'flights']" />
         </section>
 
         <section v-else-if="setup.step === 2 && setup.mode === 'booked'" class="setup__panel setup__panel--wide">
@@ -124,4 +126,5 @@ function commit() {
 .anchors-form{padding:14px;border:1px solid var(--warm-border);border-radius:var(--r-card)}.anchors-form__head{display:flex;justify-content:space-between;gap:12px}.anchors-form__head p{margin-top:3px;color:var(--text-faint);font-size:12px}.anchors-form__head button{margin-left:8px;color:var(--c-navy);font-size:12px;font-weight:700}.anchor-row{display:grid;grid-template-columns:2fr 1.2fr 1fr 1.6fr auto;gap:7px;margin-top:10px}.anchor-row>button{color:var(--warn-ink);font-size:22px}.review-notes{padding:12px;border-radius:var(--r-row);background:#f3f5f8}.review-notes strong{display:block;margin-top:8px;font-size:13px}.review-notes strong:first-child{margin-top:0}.review-notes p{margin-top:4px;color:var(--text-muted);font-size:12px;line-height:1.4}.setup-error{padding:10px;border-radius:var(--r-row);background:var(--warn-bg);color:var(--warn-ink)!important;font-size:12px}@media(max-width:650px){.anchor-row{grid-template-columns:1fr 1fr}.anchor-row select{grid-column:1/-1}}
 .review{margin:0}.review div{padding:11px 0;border-bottom:1px solid var(--warm-rule)}.review dt{font-size:11px;text-transform:uppercase;color:var(--text-faint);font-weight:700}.review dd{margin:3px 0 0;color:var(--text)}.setup__switch{align-self:flex-start;color:var(--c-navy);font-weight:700;font-size:13px}
 .setup__foot{flex:none;display:flex;gap:12px;padding:12px 20px max(26px,env(safe-area-inset-bottom));border-top:1px solid var(--warm-rule);background:var(--paper)}.setup__foot .cta{flex:1}.setup__skip{color:var(--text-muted);font-weight:700}.setup__panel :deep(.tdf__required){display:none}.setup__panel :deep(.tdf__optional){padding-inline:0}
+.setup__optional-divider{display:flex;align-items:center;gap:10px;margin:8px 0 4px;color:var(--text-faint);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}.setup__optional-divider::before,.setup__optional-divider::after{content:'';flex:1;height:1px;background:var(--warm-border)}
 </style>

@@ -54,6 +54,7 @@ const isOpen = ref(false)
 const draftStart = ref('')
 const draftEnd = ref('')
 const viewMonth = ref(monthStart(todayUTC()))
+const triggerRef = ref<HTMLButtonElement | null>(null)
 
 const displayLabel = computed(() => {
   if (!props.start) return props.placeholder
@@ -74,6 +75,7 @@ function openSheet() {
 }
 function closeSheet() {
   isOpen.value = false
+  nextTick(() => triggerRef.value?.focus())
 }
 
 function monthGrid(month: Date): (Date | null)[] {
@@ -84,7 +86,35 @@ function monthGrid(month: Date): (Date | null)[] {
   const cells: (Date | null)[] = []
   for (let i = 0; i < pad; i++) cells.push(null)
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(Date.UTC(y, m, d)))
+  // Always render 6 weeks so the month block height stays constant.
+  while (cells.length < 42) cells.push(null)
   return cells
+}
+
+const yearOptions = computed(() => {
+  const current = viewMonth.value.getUTCFullYear()
+  const start = current - 3
+  const end = current + 5
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+})
+const monthsToJump = computed(() => {
+  const options: { year: number; month: number }[] = []
+  for (const year of yearOptions.value) {
+    for (let month = 0; month < 12; month++) {
+      options.push({ year, month })
+    }
+  }
+  return options
+})
+
+function setYearMonth(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  const [yearStr, monthStr] = value.split('-')
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  if (!Number.isNaN(year) && !Number.isNaN(month)) {
+    viewMonth.value = new Date(Date.UTC(year, month, 1))
+  }
 }
 
 /** Two consecutive months, so a range spanning a month-end is fully visible. */
@@ -160,6 +190,78 @@ function cellState(d: Date | null): string {
   return ''
 }
 
+/**
+ * Simple heuristic crowd index for Orlando theme parks.
+ * 0 = low, 1 = moderate, 2 = busy, 3 = very busy.
+ * Real crowd data would improve this, but the relative pattern is useful.
+ */
+function crowdLevel(d: Date): 0 | 1 | 2 | 3 {
+  const y = d.getUTCFullYear()
+  const m = d.getUTCMonth() // 0-11
+  const day = d.getUTCDate()
+  const dow = d.getUTCDay()
+  const isWeekend = dow === 0 || dow === 6
+
+  // Very busy holiday windows (approximate)
+  const veryBusyRanges: { start: [number, number]; end: [number, number] }[] = [
+    { start: [11, 23], end: [0, 2] }, // Christmas/New Year (Dec 23 - Jan 2)
+    { start: [6, 1], end: [6, 7] },   // July 4 week
+  ]
+  const easter = easterDate(y)
+  const easterStart = new Date(Date.UTC(easter.getUTCFullYear(), easter.getUTCMonth(), easter.getUTCDate() - 3))
+  const easterEnd = new Date(Date.UTC(easter.getUTCFullYear(), easter.getUTCMonth(), easter.getUTCDate() + 1))
+  if (d >= easterStart && d <= easterEnd) return 3
+
+  for (const range of veryBusyRanges) {
+    let start = new Date(Date.UTC(y, range.start[0], range.start[1]))
+    let end = new Date(Date.UTC(y, range.end[0], range.end[1]))
+    if (range.start[0] > range.end[0]) {
+      // crosses year boundary
+      if (m >= range.start[0] || m <= range.end[0]) return 3
+    } else {
+      if (d >= start && d <= end) return 3
+    }
+  }
+
+  // Busy windows
+  if ((m === 2 && day >= 10) || (m === 3 && day <= 15)) return 2 // Spring break
+  if (m === 5 || m === 6 || m === 7) return 2 // Summer
+  if (m === 11 && day >= 20) return 2 // Thanksgiving week
+
+  // Moderate
+  if (isWeekend) return 1
+  if (m === 2 || m === 3 || m === 4 || m === 11) return 1
+
+  // Low
+  return 0
+}
+
+function easterDate(year: number): Date {
+  // Anonymous Gregorian algorithm
+  const a = year % 19
+  const b = Math.floor(year / 100)
+  const c = year % 100
+  const d = Math.floor(b / 4)
+  const e = b % 4
+  const f = Math.floor((b + 8) / 25)
+  const g = Math.floor((b - f + 1) / 3)
+  const h = (19 * a + b - d - g + 15) % 30
+  const i = Math.floor(c / 4)
+  const k = c % 4
+  const l = (32 + 2 * e + 2 * i - h - k) % 7
+  const m = Math.floor((a + 11 * h + 22 * l) / 451)
+  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1
+  const day = ((h + l - 7 * m + 114) % 31) + 1
+  return new Date(Date.UTC(year, month, day))
+}
+
+function crowdStyle(d: Date | null) {
+  if (!d) return undefined
+  const level = crowdLevel(d)
+  const colors = ['transparent', 'rgba(106, 176, 76, 0.12)', 'rgba(255, 165, 0, 0.14)', 'rgba(220, 53, 69, 0.13)']
+  return { backgroundColor: colors[level] }
+}
+
 function pick(d: Date | null) {
   if (!d || isDisabled(d)) return
   const iso = toISO(d)
@@ -202,10 +304,14 @@ onBeforeUnmount(() => {
 
 <template>
   <button
+    ref="triggerRef"
     type="button"
     class="drf-trigger"
     :class="{ 'drf-trigger--compact': compact, 'drf-trigger--set': start }"
+    tabindex="0"
     @click="openSheet"
+    @keydown.enter.prevent="openSheet"
+    @keydown.space.prevent="openSheet"
   >
     <AppIcon v-if="!compact" name="calendar" :size="16" class="drf-trigger__icon" />
     <span>{{ displayLabel }}</span>
@@ -227,6 +333,18 @@ onBeforeUnmount(() => {
               <button type="button" class="drf-nav__btn drf-nav__btn--next" aria-label="Next month" @click="nextMonth">
                 <AppIcon name="arrowLeft" :size="16" />
               </button>
+              <label class="drf-year" aria-label="Jump to year and month">
+                <select @change="setYearMonth">
+                  <option
+                    v-for="m in monthsToJump"
+                    :key="`${m.year}-${m.month}`"
+                    :value="`${m.year}-${m.month}`"
+                    :selected="m.year === viewMonth.getUTCFullYear() && m.month === viewMonth.getUTCMonth()"
+                  >
+                    {{ MON[m.month] }} {{ m.year }}
+                  </option>
+                </select>
+              </label>
             </div>
             <p v-else-if="boundsLabel" class="drf-bounds">{{ boundsLabel }}</p>
             <p v-if="variant === 'days' && assignedDates.length" class="drf-legend">
@@ -248,8 +366,9 @@ onBeforeUnmount(() => {
                       :key="i"
                       type="button"
                       class="drf-cell"
-                      :class="[d ? `drf-cell--${cellState(d)}` : 'drf-cell--empty']"
+                      :class="[d ? `drf-cell--${cellState(d)}` : 'drf-cell--empty', d && !isDisabled(d) ? `drf-cell--crowd-${crowdLevel(d)}` : '']"
                       :disabled="!d || isDisabled(d)"
+                      :style="d ? crowdStyle(d) : undefined"
                       @click="pick(d)"
                     >
                       {{ d ? d.getUTCDate() : '' }}
@@ -315,6 +434,10 @@ onBeforeUnmount(() => {
 }
 .drf-trigger:not(.drf-trigger--set) {
   color: var(--text-faint);
+}
+.drf-trigger:focus-visible {
+  outline: 2px solid var(--c-navy);
+  outline-offset: 2px;
 }
 .drf-trigger--compact {
   width: auto;
@@ -409,15 +532,17 @@ onBeforeUnmount(() => {
 }
 
 .drf-nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   margin-top: 8px;
 }
 .drf-nav__label {
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
+  text-align: center;
 }
 .drf-nav__btn {
   padding: 6px;
@@ -429,6 +554,23 @@ onBeforeUnmount(() => {
 }
 .drf-nav__btn--next {
   transform: scaleX(-1);
+}
+.drf-year {
+  margin-left: auto;
+}
+.drf-year select {
+  height: 30px;
+  padding: 0 22px 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--field-border);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23687386' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
 }
 .drf-bounds {
   font-size: 12px;

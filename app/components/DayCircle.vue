@@ -181,13 +181,13 @@ function iconStyle(activity: Park | null, activityResort: Resort | null) {
   -webkit-mask-size: contain;
 }
 .circle__glyph--a {
-  top: 24%;
-  left: 24%;
+  top: 33%;
+  left: 33%;
   transform: translate(-50%, -50%);
 }
 .circle__glyph--b {
-  top: 76%;
-  left: 76%;
+  top: 67%;
+  left: 67%;
   transform: translate(-50%, -50%);
 }
 .circle__date {

@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { useServerTrip } from '~/composables/useServerTrip'
+import { AnonymousTripRepository, snapshotTrip, type AnonymousCapability } from '~/repositories/tripRepository'
 
 const store = useTripStore()
 const route = useRoute()
 const menuOpen = ref(false)
 const user = ref<{ id: string; email: string; displayName: string } | null>(null)
 const loadingUser = ref(false)
+const shareSheetRef = ref<{ open: () => void } | null>(null)
+const sharing = ref(false)
+const shareMessage = ref('')
 
 const { meta, saving, message, isServerBacked, uploadCurrentTrip, clearServerLink } = useServerTrip()
 
@@ -32,6 +36,40 @@ onMounted(() => {
 async function saveCurrentTrip() {
   await uploadCurrentTrip()
   menuOpen.value = false
+}
+
+function persistAnonymousCapability(value: AnonymousCapability | null) {
+  const key = `orlando-anonymous-capability:${store.tripId}`
+  if (value) localStorage.setItem(key, JSON.stringify(value))
+  else localStorage.removeItem(key)
+}
+
+async function shareTrip() {
+  if (!hasTrip.value) {
+    shareMessage.value = 'Create a trip first to share it.'
+    return
+  }
+  sharing.value = true
+  shareMessage.value = ''
+  try {
+    if (!backed.value) {
+      if (user.value) {
+        const ok = await uploadCurrentTrip()
+        if (!ok) throw new Error(message.value || 'Save failed')
+      } else {
+        const repository = new AnonymousTripRepository()
+        const idempotencyKey = `${Date.now()}-${store.tripId}`
+        const capability = await repository.create(snapshotTrip(store.$state), idempotencyKey)
+        persistAnonymousCapability(capability)
+      }
+    }
+    menuOpen.value = false
+    shareSheetRef.value?.open()
+  } catch (err: any) {
+    shareMessage.value = err?.message || 'Could not prepare the trip for sharing. Please try again.'
+  } finally {
+    sharing.value = false
+  }
 }
 
 async function logout() {
@@ -81,6 +119,17 @@ function closeMenu() {
         <AppIcon name="plus" :size="16" /> New trip
       </NuxtLink>
 
+      <button
+        v-if="hasTrip"
+        type="button"
+        class="app-header__item app-header__item--action"
+        :disabled="sharing"
+        @click="shareTrip"
+      >
+        <AppIcon name="share" :size="16" />
+        {{ sharing ? 'Preparing share…' : 'Share trip' }}
+      </button>
+
       <div class="app-header__divider" />
 
       <button
@@ -129,7 +178,10 @@ function closeMenu() {
     </div>
 
     <p v-if="message" role="status" class="app-header__message">{{ message }}</p>
+    <p v-if="shareMessage" role="status" class="app-header__message app-header__message--warn">{{ shareMessage }}</p>
   </nav>
+
+  <ShareSheet ref="shareSheetRef" />
 </template>
 
 <style scoped>
@@ -300,5 +352,10 @@ function closeMenu() {
   background: #eef4ef;
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.app-header__message--warn {
+  background: #fff4e6;
+  color: #8a5a00;
 }
 </style>

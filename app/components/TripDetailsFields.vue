@@ -61,10 +61,20 @@ function setFlight(index: number, patch: Partial<Omit<Flight, 'id'>>) {
 function addFlight() {
   if (!props.draft) return store.addFlight()
   if (props.draft.flights.length < 6) {
+    const index = props.draft.flights.length
+    const defaultDate = index === 0 ? props.draft.startDate : index === 1 ? props.draft.endDate : ''
     props.draft.flights = [...props.draft.flights, {
-      id: createStableId('flight'), route: '', date: '', departTime: '', arriveTime: '',
+      id: createStableId('flight'), route: '', date: defaultDate, departTime: '', arriveTime: '',
     }]
   }
+}
+
+function flightDate(index: number): string {
+  const existing = model.value.flights[index]?.date
+  if (existing) return existing
+  if (index === 0) return model.value.startDate
+  if (index === 1) return model.value.endDate
+  return ''
 }
 
 const open = reactive<Record<string, boolean>>({})
@@ -305,7 +315,7 @@ function setTicket(key: 'disney' | 'universal', value: string) {
                   type="date"
                   :min="model.startDate || undefined"
                   :max="model.endDate || undefined"
-                  :value="model.flights[i]?.date ?? ''"
+                  :value="flightDate(i)"
                   @input="setFlight(i, { date: ($event.target as HTMLInputElement).value })"
                 />
               </label>
