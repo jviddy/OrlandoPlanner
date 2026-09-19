@@ -17,8 +17,11 @@ export default defineEventHandler(async (event) => {
     const delivery = await deliverMagicLink(event, email, token, redirectPath)
     setHeader(event, 'Cache-Control', 'no-store')
     return { ok: true, message: 'If that address can receive mail, a sign-in link is on its way.', ...delivery }
-  } catch (error) {
+  } catch (error: any) {
     await db.prepare('DELETE FROM auth_tokens WHERE id = ?').bind(tokenId).run()
+    if (error?.data?.code === 'email_unavailable') {
+      throw createError({ statusCode: 503, statusMessage: 'Email delivery is not configured. Add NUXT_RESEND_API_KEY and NUXT_AUTH_EMAIL_FROM in Cloudflare Pages settings.', data: { code: 'email_unavailable' } })
+    }
     throw error
   }
 })
