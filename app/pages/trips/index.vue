@@ -175,11 +175,11 @@ function openLocalTrip(id: string) {
           No trips saved to your account yet.
         </div>
         <ul v-else class="trips-list">
-          <li v-for="trip in serverTrips" :key="trip.id" class="trip-card">
-            <div class="trip-card__info">
+          <li v-for="trip in serverTrips" :key="trip.id" class="trip-card trip-card--link">
+            <NuxtLink :to="`/trips/${trip.id}`" class="trip-card__info">
               <span class="trip-card__name">{{ trip.name }}</span>
               <span class="trip-card__meta">{{ formatDateRange(trip.startDate, trip.endDate) }} · {{ trip.role }}</span>
-            </div>
+            </NuxtLink>
             <span class="trip-card__badge">cloud</span>
           </li>
         </ul>
@@ -288,11 +288,18 @@ function openLocalTrip(id: string) {
   border-radius: var(--r-card);
 }
 
+.trip-card--link {
+  padding: 0;
+}
 .trip-card__info {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  color: inherit;
+  text-decoration: none;
+  padding: 14px 16px;
+  flex: 1;
 }
 
 .trip-card__name {

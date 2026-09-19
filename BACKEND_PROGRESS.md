@@ -27,8 +27,9 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
 
 - [x] Build the `/trips` account page; OAuth redirects there and the page now
       lists server/local trips and supports uploading local trips.
-- [ ] Build trip-scoped plan routes (`/trips/:tripId/plan`, etc.) so saved trips
-      can be opened and edited.
+- [~] Build trip-scoped plan routes (`/trips/:tripId/plan`, etc.) so saved trips
+      can be opened and edited. `/trips/:tripId` loader and server save panel
+      implemented; full scoped plan/edit routes pending.
 - [ ] Complete upload/claim UI for local/anonymous trips.
 - [ ] Exercise authenticated trip create/list/update/delete against the
       production API through the new UI.
@@ -104,7 +105,8 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
 - [x] Create view/edit capability link (`POST /api/trips/:id/capabilities`)
 - [x] Revoke capability link (`DELETE /api/trips/:id/capabilities/:capId`)
 - [x] `/trips` list page with local vs server status — lists server trips and local trips; supports uploading local trips to the account
-- [ ] Trip-scoped routes (`/trips/:tripId/plan` etc.) — **UI not built**
+- [~] Trip-scoped routes (`/trips/:tripId/plan` etc.) — `/trips/:tripId` loader
+      and server save panel implemented; plan/edit scoped routes pending
 - [~] Upload/claim UI for existing local trips — upload from `/trips` implemented; claim flow still pending UI
 - [ ] Account/trip deletion UI — **UI not built**
 

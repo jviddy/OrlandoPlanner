@@ -54,6 +54,7 @@ export const ICONS = {
   grid: 'M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z',
   list: 'M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01',
   share: 'M12 15V4m0 0 3.5 3.5M12 4 8.5 7.5M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6',
+  cloud: 'M17.5 19c2.5 0 4.5-2 4.5-4.5S20 10 17.5 10c-.2 0-.4 0-.5.1C16.3 6.2 13 3.5 9 4.5c-3.2.8-5.5 3.7-5.5 7 0 .3 0 .7.1 1C1.6 13.2 0 15.4 0 18c0 2.8 2.2 5 5 5h12.5Z',
 } as const
 
 export type IconName = keyof typeof ICONS

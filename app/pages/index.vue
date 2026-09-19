@@ -30,6 +30,9 @@ function fixAlert(dayIndex: number | undefined) {
               </span>
             </NuxtLink>
             <div class="ov-head__actions">
+              <ClientOnly>
+                <ServerSyncPanel />
+              </ClientOnly>
               <button
                 type="button"
                 class="ov-head__share"
