@@ -37,6 +37,9 @@ Last updated: 19 September 2026 (sharing panel, capability link consumption, inv
 - [x] Exercise authenticated trip create/list/update/delete against the
       production API through the new UI.
 - [x] Make a small `main` commit to confirm the Git deployment pipeline.
+- [ ] Configure remaining Cloudflare Pages secrets for production:
+      `NUXT_RESEND_API_KEY`, `NUXT_AUTH_EMAIL_FROM`, `NUXT_GOOGLE_CLIENT_SECRET`,
+      `NUXT_ANONYMOUS_CAPABILITY_SECRET`.
 - [ ] Test logout, session expiry, capability links, invitations, and multi-trip
       behavior in the production browser flow.
 - [ ] Decide on a final custom domain and add its Google OAuth callback URI.
