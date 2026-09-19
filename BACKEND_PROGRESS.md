@@ -24,9 +24,11 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
 
 ### Next deployment steps
 
-- [ ] Build the `/trips` account page; OAuth currently redirects there, but the
-      route is not yet implemented and returns a Nuxt 404.
-- [ ] Build trip-scoped plan routes and upload/claim UI for local trips.
+- [x] Build the `/trips` account page; OAuth redirects there and the page now
+      lists server/local trips and supports uploading local trips.
+- [ ] Build trip-scoped plan routes (`/trips/:tripId/plan`, etc.) so saved trips
+      can be opened and edited.
+- [ ] Complete upload/claim UI for local/anonymous trips.
 - [ ] Exercise authenticated trip create/list/update/delete against the
       production API through the new UI.
 - [ ] Test logout, session expiry, capability links, invitations, and multi-trip
@@ -100,9 +102,9 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
 - [x] Trip activity log endpoint (`GET /api/trips/:id/activity`)
 - [x] Create view/edit capability link (`POST /api/trips/:id/capabilities`)
 - [x] Revoke capability link (`DELETE /api/trips/:id/capabilities/:capId`)
-- [ ] `/trips` list page with local vs server status — **UI not built**
+- [x] `/trips` list page with local vs server status — lists server trips and local trips; supports uploading local trips to the account
 - [ ] Trip-scoped routes (`/trips/:tripId/plan` etc.) — **UI not built**
-- [ ] Upload/claim UI for existing local trips — **UI not built**
+- [~] Upload/claim UI for existing local trips — upload from `/trips` implemented; claim flow still pending UI
 - [ ] Account/trip deletion UI — **UI not built**
 
 ## Phase 2 — ordinary sharing and collaboration
