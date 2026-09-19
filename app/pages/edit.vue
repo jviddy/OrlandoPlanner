@@ -109,6 +109,7 @@ function save() {
         </div>
 
         <TripSyncPanel />
+        <TripSharingPanel />
 
         <div class="edit__section">
           <p class="group-label">Week starts on</p>

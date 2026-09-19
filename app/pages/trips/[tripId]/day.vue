@@ -4,6 +4,7 @@ import { useServerTrip } from '~/composables/useServerTrip'
 const route = useRoute()
 const tripId = computed(() => typeof route.params.tripId === 'string' ? route.params.tripId : '')
 const dayId = computed(() => typeof route.query.day === 'string' ? route.query.day : '')
+const capToken = computed(() => String(route.query.cap || ''))
 const { loadServerTrip } = useServerTrip()
 
 onMounted(async () => {
@@ -12,8 +13,9 @@ onMounted(async () => {
     return
   }
   try {
-    await loadServerTrip(tripId.value)
-    const query = dayId.value ? { day: dayId.value } : undefined
+    await loadServerTrip(tripId.value, capToken.value || undefined)
+    const query: Record<string, string> = {}
+    if (dayId.value) query.day = dayId.value
     navigateTo({ path: '/day', query }, { replace: true })
   } catch (err: any) {
     const status = err?.statusCode || err?.data?.statusCode

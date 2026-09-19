@@ -3,6 +3,7 @@ import { useServerTrip } from '~/composables/useServerTrip'
 
 const route = useRoute()
 const tripId = computed(() => typeof route.params.tripId === 'string' ? route.params.tripId : '')
+const capToken = computed(() => String(route.query.cap || ''))
 const loading = ref(true)
 const error = ref('')
 
@@ -15,7 +16,7 @@ onMounted(async () => {
     return
   }
   try {
-    await loadServerTrip(tripId.value)
+    await loadServerTrip(tripId.value, capToken.value || undefined)
     navigateTo('/', { replace: true })
   } catch (err: any) {
     const status = err?.statusCode || err?.data?.statusCode

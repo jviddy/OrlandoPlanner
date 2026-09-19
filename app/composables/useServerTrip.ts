@@ -29,6 +29,17 @@ export function useServerTrip() {
   const conflict = ref<ConflictInfo | null>(null)
   const saving = ref(false)
   const message = ref('')
+  const capabilityToken = ref<string | null>(null)
+
+  function setCapabilityToken(token: string | null) {
+    capabilityToken.value = token
+  }
+
+  function authHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {}
+    if (capabilityToken.value) headers.Authorization = `Bearer ${capabilityToken.value}`
+    return headers
+  }
 
   onMounted(() => {
     loadMeta()
@@ -54,8 +65,9 @@ export function useServerTrip() {
     return meta.value?.tripId === tripId
   }
 
-  async function loadServerTrip(tripId: string): Promise<ServerTrip> {
-    const result = await $fetch<{ trip: PersistedTrip; revision: number; role: string; visibility: string }>(`/api/trips/${tripId}`)
+  async function loadServerTrip(tripId: string, token?: string): Promise<ServerTrip> {
+    if (token) setCapabilityToken(token)
+    const result = await $fetch<{ trip: PersistedTrip; revision: number; role: string; visibility: string }>(`/api/trips/${tripId}`, { headers: authHeaders() })
     store.$reset()
     Object.assign(store, migratePersistedTrip(result.trip))
     window.localStorage.setItem('orlando-trip-v2:current', result.trip.tripId)
@@ -77,7 +89,7 @@ export function useServerTrip() {
       const payload = migratePersistedTrip(store.$state)
       const result = await $fetch<{ revision: number }>(`/api/trips/${meta.value.tripId}`, {
         method: 'PUT',
-        headers: { 'If-Match': String(meta.value.revision) },
+        headers: { 'If-Match': String(meta.value.revision), ...authHeaders() },
         body: payload,
       })
       saveMeta({ ...meta.value, revision: result.revision })
@@ -99,7 +111,7 @@ export function useServerTrip() {
   async function fetchServerVersion(revision: number) {
     if (!meta.value) return
     try {
-      const result = await $fetch<{ trip: PersistedTrip; revision: number }>(`/api/trips/${meta.value.tripId}`)
+      const result = await $fetch<{ trip: PersistedTrip; revision: number }>(`/api/trips/${meta.value.tripId}`, { headers: authHeaders() })
       conflict.value = { revision, trip: result.trip }
     } catch {
       message.value = 'Could not load the server version. Your local copy is unchanged.'
@@ -113,7 +125,7 @@ export function useServerTrip() {
       const payload = migratePersistedTrip(store.$state)
       const result = await $fetch<{ revision: number }>(`/api/trips/${meta.value.tripId}`, {
         method: 'PUT',
-        headers: { 'If-Match': String(conflict.value.revision) },
+        headers: { 'If-Match': String(conflict.value.revision), ...authHeaders() },
         body: payload,
       })
       saveMeta({ ...meta.value, revision: result.revision })
@@ -180,6 +192,7 @@ export function useServerTrip() {
     saving: readonly(saving),
     message,
     isServerBacked,
+    setCapabilityToken,
     loadServerTrip,
     saveServerTrip,
     uploadCurrentTrip,

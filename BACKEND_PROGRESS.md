@@ -2,7 +2,7 @@
 
 Auto-updated checklist. If you lose context, read this file first.
 
-Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git deployment verified)
+Last updated: 19 September 2026 (sharing panel, capability link consumption, invitation accept page)
 
 ## Current production deployment
 
@@ -34,11 +34,9 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
 - [x] Complete upload/claim UI for local/anonymous trips. `/trips` supports
       uploading local trips; `TripSyncPanel` supports claiming anonymous trips
       to the signed-in account; `/trips` supports deleting owned trips.
-- [ ] Exercise authenticated trip create/list/update/delete against the
+- [x] Exercise authenticated trip create/list/update/delete against the
       production API through the new UI.
 - [x] Make a small `main` commit to confirm the Git deployment pipeline.
-- [ ] Exercise authenticated trip create/list/update/delete against the
-      production API through the new UI.
 - [ ] Test logout, session expiry, capability links, invitations, and multi-trip
       behavior in the production browser flow.
 - [ ] Decide on a final custom domain and add its Google OAuth callback URI.
@@ -122,13 +120,19 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
 
 - [x] Invitations table (`migrations/0004_invitations.sql` + rollback)
 - [x] Editor/viewer invitation creation (`POST /api/trips/:id/invitations`) — owner/agent only, auto-revokes previous for same email+role
-- [x] Invitation acceptance (`POST /api/invitations/:token/accept`) — session required, prevents self-accept and duplicate membership
+- [x] List invitations (`GET /api/trips/:id/invitations`)
+- [x] Revoke invitation (`DELETE /api/trips/:id/invitations/:inviteId`)
+- [x] Invitation acceptance (`POST /api/invitations/:token/accept`) — session required, validates invitee email and prevents duplicate membership
+- [x] Accept-invitation page (`/invitations/:token`)
+- [x] List capability links (`GET /api/trips/:id/capabilities`)
 - [x] Revocable unlisted view/edit links (via existing capabilities system)
+- [x] Capability token consumption on trip loader pages (`/trips/:tripId?cap=...` and `Authorization: Bearer` header)
+- [x] Sharing management UI (`TripSharingPanel.vue`) on `/edit` — create/revoke view+edit links and send/revoke email invitations
 - [x] Server-side redaction for viewer/unlisted/public reads (`server/utils/tripRedaction.ts`)
 - [x] Sensitive booking fields (`confirmationNumber`, `bookingPhone`, `partySize` — schema v3, rejected on anonymous trips, redacted for viewers)
 - [x] Activity attribution (`actor_display_name` populated on all owned-trip mutations)
 - [x] Revision-conflict compare/retry flow (`TripSyncPanel.vue` — fetches server version, shows diff table, keep-local/keep-server/cancel)
-- [x] Google OAuth route implementation (`/api/auth/google/start` and callback) — production sign-in completed successfully; session verified for the test account. Callback currently redirects to `/trips`, whose UI page remains unbuilt.
+- [x] Google OAuth route implementation (`/api/auth/google/start` and callback) — production sign-in completed successfully; session verified for the test account. Callback currently redirects to `/trips`.
 
 ## Phase 3 — agents, duplication, and hardening
 
@@ -180,11 +184,14 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
 | DELETE | `/api/trips/:id` | ✅ |
 | GET | `/api/trips/:id/activity` | ✅ |
 | GET | `/api/trips/:id/export` | ✅ |
+| GET | `/api/trips/:id/capabilities` | ✅ |
 | POST | `/api/trips/:id/capabilities` | ✅ |
 | DELETE | `/api/trips/:id/capabilities/:capId` | ✅ |
 | POST | `/api/trips/:id/claim-token` | ✅ |
 | POST | `/api/trips/:id/claim` | ✅ |
+| GET | `/api/trips/:id/invitations` | ✅ |
 | POST | `/api/trips/:id/invitations` | ✅ |
+| DELETE | `/api/trips/:id/invitations/:inviteId` | ✅ |
 | POST | `/api/trips/:id/duplicate` | ✅ |
 
 ### Invitations (`/api/invitations/`)
@@ -199,7 +206,7 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
 | `server/utils/anonymousTrips.ts` | D1 types, token hashing, HMAC capabilities, rate limiting, expiry, purge, payload validation |
 | `server/utils/auth.ts` | Session management, magic-link delivery, rate limiting, origin checking, auth purge |
 | `server/utils/tripPermissions.ts` | Central permission evaluator (pure function, table-driven) |
-| `server/utils/tripAccess.ts` | `requireMemberTrip()` DB helper, `persistedDetailsSignature()` |
+| `server/utils/tripAccess.ts` | `requireMemberTrip()`, `requireAccessibleTrip()` (member + capability token), `persistedDetailsSignature()` |
 | `server/utils/tripRedaction.ts` | `redactTripPayload()`, `redactionTarget()` — server-side field redaction |
 
 ## Summary of migrations

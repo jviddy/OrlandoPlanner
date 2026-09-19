@@ -19,9 +19,9 @@ export default defineEventHandler(async (event) => {
   const invitation = await db.prepare("SELECT i.id, i.trip_id, i.role FROM invitations i JOIN trips t ON t.id = i.trip_id WHERE i.token_hash = ? AND i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > ? AND t.deleted_at IS NULL AND t.status = 'owned'").bind(hash, now).first<InvitationRow>()
   if (!invitation) throw createError({ statusCode: 400, statusMessage: 'Invitation is invalid or expired', data: { code: 'invalid_invitation' } })
 
-  // Prevent accepting your own invitation.
+  // Ensure the signed-in user is the invited person.
   const invitedEmail = await db.prepare('SELECT email FROM invitations WHERE id = ?').bind(invitation.id).first<{ email: string }>()
-  if (invitedEmail?.email === user.email) throw createError({ statusCode: 400, statusMessage: 'You cannot accept your own invitation', data: { code: 'self_accept' } })
+  if (invitedEmail?.email !== user.email) throw createError({ statusCode: 403, statusMessage: 'Sign in as the invited email to accept', data: { code: 'wrong_recipient' } })
 
   // Check if the user already has an active membership for this trip.
   const existing = await db.prepare('SELECT id FROM trip_memberships WHERE trip_id = ? AND user_id = ? AND revoked_at IS NULL').bind(invitation.trip_id, user.id).first<{ id: string }>()
