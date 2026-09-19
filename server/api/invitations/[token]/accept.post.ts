@@ -1,5 +1,5 @@
-import { assertSameOrigin, requireAuthDb, requireSession } from '../../utils/auth'
-import { randomToken, tokenHash } from '../../utils/anonymousTrips'
+import { assertSameOrigin, requireAuthDb, requireSession } from '../../../utils/auth'
+import { randomToken, tokenHash } from '../../../utils/anonymousTrips'
 
 interface InvitationRow {
   id: string
