@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { useServerTrip } from '~/composables/useServerTrip'
+
 const store = useTripStore()
 const { dayCell } = useDayCell()
+const { meta, isServerBacked } = useServerTrip()
+const readOnly = computed(() => isServerBacked(store.tripId) && !meta.value?.canEdit)
 
 const DOW_FROM_SUNDAY = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 /**
@@ -48,7 +52,10 @@ function start(index: number) {
 }
 function end(index: number) {
   clearTimeout(pressTimer)
-  if (!longFired) store.openSheet(index)
+  if (!longFired) {
+    if (readOnly.value) openDay(index)
+    else store.openSheet(index)
+  }
 }
 function cancel() {
   clearTimeout(pressTimer)
@@ -78,8 +85,8 @@ function cancel() {
             @pointercancel="cancel"
             @click.prevent
             @contextmenu.prevent
-            @keydown.enter.prevent="store.openSheet(cell)"
-            @keydown.space.prevent="store.openSheet(cell)"
+            @keydown.enter.prevent="readOnly ? openDay(cell) : store.openSheet(cell)"
+            @keydown.space.prevent="readOnly ? openDay(cell) : store.openSheet(cell)"
           >
             <span class="cell__dow">{{ colDow[ci] }}</span>
             <DayCircle

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { horizontalSwipeDirection, type SwipePoint } from '~/utils/swipe'
+import { useServerTrip } from '~/composables/useServerTrip'
 
 useHead({ title: 'Plan · Orlando Planner' })
 
 const store = useTripStore()
 const route = useRoute()
 const router = useRouter()
+const { meta, isServerBacked } = useServerTrip()
+const readOnly = computed(() => isServerBacked(store.tripId) && !meta.value?.canEdit)
 const selectedIndex = computed(() => store.selectedDay ?? 0)
 const selectedDay = computed(() => store.days[selectedIndex.value] ?? null)
 const board = ref<HTMLElement | null>(null)
@@ -51,11 +54,13 @@ function finishDaySwipe(event: TouchEvent) {
   select(selectedIndex.value + direction)
 }
 function openDetails(index: number, action: 'meal' | 'booking' | 'idea' | 'edit' = 'edit') {
+  if (readOnly.value) return
   if (!store.days[index]) return
   store.selectDay(index)
   detailEditor.value = { index, action }
 }
 function changeFromDetails(index: number) {
+  if (readOnly.value) return
   detailEditor.value = null
   nextTick(() => store.openSheet(index))
 }
@@ -99,16 +104,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
           <div class="plan-head__trip">
             <div><p>{{ store.displayName }}</p><span>{{ store.rangeLabel }}</span></div>
             <div class="plan-head__actions">
-              <NuxtLink to="/templates?reapply=1&return=plan">Starting shape</NuxtLink>
+              <NuxtLink v-if="!readOnly" to="/templates?reapply=1&return=plan">Starting shape</NuxtLink>
               <button v-if="nextUnsetIndex >= 0" type="button" @click="nextUnset">Next unset · {{ store.unsetDays }} left</button>
             </div>
           </div>
+          <p v-if="readOnly" class="plan-head__readonly">View only · Ask the owner for editor access to make changes.</p>
           <TripNav active="plan" />
         </header>
         <PlanDateRail :selected-index="selectedIndex" @select="select" />
         <div class="plan-mobile scroll" @touchstart.passive="startDaySwipe" @touchend="finishDaySwipe" @touchcancel="swipeStart = null">
           <Transition :name="dayTransition" mode="out-in">
-            <PlanDayCard :key="selectedDay.id" :index="selectedIndex" selected @change="store.openSheet(selectedIndex)" @add-meal="openDetails(selectedIndex, 'meal')" @add-booking="openDetails(selectedIndex, 'booking')" @add-idea="openDetails(selectedIndex, 'idea')" @edit-details="openDetails(selectedIndex)" />
+            <PlanDayCard :key="selectedDay.id" :index="selectedIndex" selected :read-only="readOnly" @change="store.openSheet(selectedIndex)" @add-meal="openDetails(selectedIndex, 'meal')" @add-booking="openDetails(selectedIndex, 'booking')" @add-idea="openDetails(selectedIndex, 'idea')" @edit-details="openDetails(selectedIndex)" />
           </Transition>
           <div class="plan-mobile__steps">
             <button type="button" :disabled="selectedIndex === 0" @click="select(selectedIndex - 1)">← Previous</button>
@@ -116,7 +122,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
           </div>
         </div>
         <div ref="board" class="plan-board" aria-label="Trip plan board">
-          <PlanDayCard v-for="(day, index) in store.days" :key="day.id" :index="index" :selected="index === selectedIndex" @select="select(index)" @change="store.openSheet(index)" @add-meal="openDetails(index, 'meal')" @add-booking="openDetails(index, 'booking')" @add-idea="openDetails(index, 'idea')" @edit-details="openDetails(index)" />
+          <PlanDayCard v-for="(day, index) in store.days" :key="day.id" :index="index" :selected="index === selectedIndex" :read-only="readOnly" @select="select(index)" @change="store.openSheet(index)" @add-meal="openDetails(index, 'meal')" @add-booking="openDetails(index, 'booking')" @add-idea="openDetails(index, 'idea')" @edit-details="openDetails(index)" />
         </div>
         <PlanDetailsSheet v-if="detailEditor" :index="detailEditor.index" :initial-action="detailEditor.action" @close="detailEditor = null" @change-day="changeFromDetails(detailEditor.index)" />
       </template>
@@ -136,6 +142,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPlanKeydown))
 .plan-head__actions { display:flex; align-items:center; gap:8px; }
 .plan-head__actions a { color:var(--c-navy); font-size:11px; font-weight:700; }
 .plan-head__trip button { flex:none; padding:8px 10px; border-radius:var(--r-pill); background:var(--c-navy); color:#fff; font-size:11px; font-weight:700; }
+.plan-head__readonly { margin-top:7px; padding:7px 10px; border-radius:8px; background:#eef3fc; color:var(--text-muted); font-size:11px; }
 .plan-mobile { padding:4px 14px 90px; touch-action:pan-y; }
 .plan-mobile :deep(.plan-card) { margin-inline:auto; }
 .plan-mobile__steps { display:flex; justify-content:space-between; gap:10px; width:min(100%, 420px); margin:12px auto 0; }

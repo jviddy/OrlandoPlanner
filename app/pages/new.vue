@@ -4,10 +4,13 @@ import { useSetupStore } from '~/stores/setup'
 import { PARKS } from '~/data/parks'
 import { recommendSetup } from '~/utils/setupRecommendation'
 import { commitSetupToTrip } from '~/utils/setupCommit'
+import { useServerTrip } from '~/composables/useServerTrip'
 
 useHead({ title: 'Set up your trip · Orlando Planner' })
 const store = useTripStore()
 const setup = useSetupStore()
+const route = useRoute()
+const { clearServerLink, ensureOwnedTripIfSignedIn } = useServerTrip()
 const routeLabels: Record<SetupMode, string> = { self: "I know what I'm doing", booked: 'I have things booked', guided: 'Help me plan' }
 const priorities = ['Disney parks', 'Universal parks', 'Rest days', 'Food', 'Shopping']
 const facts = ['Flights', 'Hotels', 'Tickets', 'Dining', 'Tours or events']
@@ -23,7 +26,16 @@ const bookedSections = computed(() => [
 const recommendation = computed(() => recommendSetup(setup))
 const bookingConflicts = computed(() => setup.bookings.filter((booking) => !booking.date || booking.date < setup.startDate || booking.date > setup.endDate))
 
-onMounted(() => { if (store.hasTrip) navigateTo('/', { replace: true }) })
+onMounted(async () => {
+  if (route.query.fresh === '1') {
+    clearServerLink()
+    store.resetTrip()
+    setup.clear()
+    await navigateTo('/new', { replace: true })
+    return
+  }
+  if (store.hasTrip) navigateTo('/', { replace: true })
+})
 function choose(mode: SetupMode) { setup.start(mode) }
 function updateDates({ start, end }: { start: string; end: string }) { setup.startDate = start; setup.endDate = end }
 function next() { if (setup.step !== 1 || datesValid.value) setup.step = Math.min(3, setup.step + 1) }
@@ -33,6 +45,9 @@ function commit() {
   const firstDayId = commitSetupToTrip(store, setup)
   if (!firstDayId) return
   setup.clear()
+  // Account-backed creation is automatic. Signed-out users simply keep the
+  // local copy already written by the repository plugin.
+  void ensureOwnedTripIfSignedIn()
   navigateTo({ path: '/plan', query: { day: firstDayId } })
 }
 </script>
@@ -59,7 +74,7 @@ function commit() {
           <h1>Start with the trip</h1><p>Name and dates are the only required details.</p>
           <label class="field"><span>Trip name</span><input v-model="setup.name" class="input" placeholder="Florida 2027" /></label>
           <label class="field"><span>Dates</span><DateRangeField :start="setup.startDate" :end="setup.endDate" placeholder="Add your dates" sheet-title="Trip dates" @update="updateDates" /></label>
-          <p class="setup__hint">Your trip is saved on this device. Sign in and use the menu to save a copy to your account.</p>
+          <p class="setup__hint">You can plan without an account. Signed-out trips stay on this device; signed-in trips save to your account automatically.</p>
         </section>
 
         <section v-else-if="setup.step === 2 && setup.mode === 'self'" class="setup__panel setup__panel--wide">

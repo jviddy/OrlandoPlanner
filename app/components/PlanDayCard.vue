@@ -2,7 +2,7 @@
 import { parkName } from '~/data/parks'
 import { parseISO, useDates } from '~/composables/useDates'
 
-const props = defineProps<{ index: number; selected?: boolean }>()
+const props = defineProps<{ index: number; selected?: boolean; readOnly?: boolean }>()
 const emit = defineEmits<{ select: []; change: []; addMeal: []; addBooking: []; addIdea: []; editDetails: [] }>()
 const store = useTripStore()
 const { dowShort, dayMon, time12 } = useDates()
@@ -30,6 +30,7 @@ const warningCount = computed(() => day.value.items.filter(
         class="plan-card__day-picker"
         :aria-label="`Set activities for day ${index + 1}`"
         title="Set activities"
+        :disabled="readOnly"
         @click.stop="emit('change')"
       >
         <DayCircle :park-id="day.parkId" :second-park-id="day.secondParkId" :third-park-id="day.thirdParkId" :date-number="parseISO(day.date).getUTCDate()" :size="56" />
@@ -38,7 +39,7 @@ const warningCount = computed(() => day.value.items.filter(
 
     <section class="plan-card__activity">
       <span class="group-label">Plan</span><strong>{{ activity }}</strong>
-      <button type="button" @click.stop="emit('change')">Change day</button>
+      <button v-if="!readOnly" type="button" @click.stop="emit('change')">Change day</button>
     </section>
 
     <div v-if="hotels.length || flights.length" class="plan-card__anchors">
@@ -57,7 +58,7 @@ const warningCount = computed(() => day.value.items.filter(
     </section>
 
     <p v-if="day.note" class="plan-card__note">{{ day.note }}</p>
-    <div class="plan-card__actions">
+    <div v-if="!readOnly" class="plan-card__actions">
       <button type="button" @click.stop="emit('addMeal')">+ Meal</button>
       <button type="button" @click.stop="emit('addBooking')">+ Booking</button>
       <button type="button" @click.stop="emit('addIdea')">+ Idea</button>

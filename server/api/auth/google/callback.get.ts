@@ -2,6 +2,7 @@ import {
   clearOAuthCookies,
   createSession,
   getCodeVerifier,
+  getOAuthRedirect,
   getOAuthState,
   googleRedirectUri,
   normalizeEmail,
@@ -44,6 +45,7 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const returnedState = typeof query.state === 'string' ? query.state : ''
   const savedState = getOAuthState(event)
+  const redirectPath = getOAuthRedirect(event)
   clearOAuthCookies(event)
   if (!returnedState || !savedState || returnedState !== savedState) {
     throw createError({ statusCode: 400, statusMessage: 'Sign-in session expired or invalid', data: { code: 'invalid_oauth_state' } })
@@ -111,5 +113,5 @@ export default defineEventHandler(async (event) => {
   // ── Create session ─────────────────────────────────────────────────────────
   await createSession(event, db, user.id)
 
-  return sendRedirect(event, '/trips')
+  return sendRedirect(event, redirectPath)
 })

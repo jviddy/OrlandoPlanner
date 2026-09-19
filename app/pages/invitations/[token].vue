@@ -14,11 +14,16 @@ onMounted(async () => {
   }
   status.value = 'loading'
   try {
-    await $fetch(`/api/invitations/${token.value}/accept`, { method: 'POST' })
+    const result = await $fetch<{ tripId: string }>(`/api/invitations/${token.value}/accept`, { method: 'POST' })
     status.value = 'accepted'
-    message.value = 'Invitation accepted. Redirecting to your trips…'
-    setTimeout(() => navigateTo('/trips', { replace: true }), 1200)
+    message.value = 'Invitation accepted. Opening the trip…'
+    setTimeout(() => navigateTo(`/trips/${result.tripId}`, { replace: true }), 800)
   } catch (err: any) {
+    const code = err?.data?.data?.code || err?.data?.code
+    if (err?.statusCode === 401 || code === 'authentication_required') {
+      navigateTo(`/auth/login?redirect=${encodeURIComponent(`/invitations/${token.value}`)}`, { replace: true })
+      return
+    }
     status.value = 'error'
     message.value = err?.data?.statusMessage || 'Could not accept the invitation. It may have expired or already been used.'
   }

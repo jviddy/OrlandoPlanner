@@ -29,8 +29,8 @@ export default defineEventHandler(async (event) => {
 
   const membershipId = `membership-${randomToken()}`
   const results = await db.batch([
-    db.prepare('UPDATE invitations SET accepted_by_user_id = ?, accepted_at = ? WHERE id = ? AND accepted_at IS NULL AND revoked_at IS NULL').bind(user.id, now, invitation.id),
     db.prepare('INSERT INTO trip_memberships (id, trip_id, user_id, role, invited_by_user_id, created_at) SELECT ?, ?, ?, i.role, i.invited_by_user_id, ? FROM invitations i WHERE i.id = ? AND i.accepted_at IS NULL AND i.revoked_at IS NULL').bind(membershipId, invitation.trip_id, user.id, now, invitation.id),
+    db.prepare('UPDATE invitations SET accepted_by_user_id = ?, accepted_at = ? WHERE id = ? AND accepted_at IS NULL AND revoked_at IS NULL').bind(user.id, now, invitation.id),
     db.prepare("INSERT INTO activity_log (trip_id, actor_user_id, actor_display_name, action, summary, created_at) VALUES (?, ?, ?, 'invite_accepted', ?, ?)").bind(invitation.trip_id, user.id, user.displayName, `Invitation accepted as ${invitation.role}`, now),
   ])
   if (!results[0]?.meta?.changes || !results[1]?.meta?.changes) {

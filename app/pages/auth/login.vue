@@ -20,7 +20,7 @@ async function sendMagicLink() {
   sending.value = false
 }
 function loginWithGoogle() {
-  navigateTo('/api/auth/google/start', { external: true })
+  navigateTo(`/api/auth/google/start?redirect=${encodeURIComponent(redirect.value)}`, { external: true })
 }
 </script>
 

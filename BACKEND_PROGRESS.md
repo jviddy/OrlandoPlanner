@@ -2,7 +2,7 @@
 
 Auto-updated checklist. If you lose context, read this file first.
 
-Last updated: 19 September 2026 (sharing panel, capability link consumption, invitation accept page)
+Last updated: 19 September 2026 (automatic cloud saving, explicit anonymous sharing, member management)
 
 ## Current production deployment
 
@@ -118,6 +118,9 @@ Last updated: 19 September 2026 (sharing panel, capability link consumption, inv
       from `TripSyncPanel`, delete from `/trips`
 - [x] Account/trip deletion UI — trip delete button on `/trips`; account logout
       on `/trips`
+- [x] New trips created while signed in become private owned trips automatically;
+      subsequent changes use debounced, serialized cloud autosave with a local
+      recovery copy, offline retry, and visible save status
 
 ## Phase 2 — ordinary sharing and collaboration
 
@@ -129,13 +132,16 @@ Last updated: 19 September 2026 (sharing panel, capability link consumption, inv
 - [x] Accept-invitation page (`/invitations/:token`)
 - [x] List capability links (`GET /api/trips/:id/capabilities`)
 - [x] Revocable unlisted view/edit links (via existing capabilities system)
-- [x] Capability token consumption on trip loader pages (`/trips/:tripId?cap=...` and `Authorization: Bearer` header)
-- [x] Sharing management UI (`TripSharingPanel.vue`) on `/edit` — create/revoke view+edit links and send/revoke email invitations
+- [x] Capability token consumption on trip loader pages (`/trips/:tripId#cap=...` and `Authorization: Bearer` header)
+- [x] Sharing management UI (`TripSharingPanel.vue`) on `/edit` — explicit temporary anonymous view links, create/revoke owned view+edit links, and send/revoke email invitations
+- [x] Invitation delivery through Resend; Google and magic-link authentication preserve the invitation/collaboration return path
+- [x] Accepted-member list and removal (`GET /api/trips/:id/members`, `DELETE /api/trips/:id/members/:memberId`)
+- [x] Viewer UI is read-only; editors can change the daily plan but cannot open trip-detail settings
 - [x] Server-side redaction for viewer/unlisted/public reads (`server/utils/tripRedaction.ts`)
 - [x] Sensitive booking fields (`confirmationNumber`, `bookingPhone`, `partySize` — schema v3, rejected on anonymous trips, redacted for viewers)
 - [x] Activity attribution (`actor_display_name` populated on all owned-trip mutations)
 - [x] Revision-conflict compare/retry flow (`TripSyncPanel.vue` — fetches server version, shows diff table, keep-local/keep-server/cancel)
-- [x] Google OAuth route implementation (`/api/auth/google/start` and callback) — production sign-in completed successfully; session verified for the test account. Callback currently redirects to `/trips`.
+- [x] Google OAuth route implementation (`/api/auth/google/start` and callback) — production sign-in completed successfully; session verified for the test account. Callback preserves a validated in-app return path.
 
 ## Phase 3 — agents, duplication, and hardening
 
@@ -195,6 +201,8 @@ Last updated: 19 September 2026 (sharing panel, capability link consumption, inv
 | GET | `/api/trips/:id/invitations` | ✅ |
 | POST | `/api/trips/:id/invitations` | ✅ |
 | DELETE | `/api/trips/:id/invitations/:inviteId` | ✅ |
+| GET | `/api/trips/:id/members` | ✅ |
+| DELETE | `/api/trips/:id/members/:memberId` | ✅ |
 | POST | `/api/trips/:id/duplicate` | ✅ |
 
 ### Invitations (`/api/invitations/`)

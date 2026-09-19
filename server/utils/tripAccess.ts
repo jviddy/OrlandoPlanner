@@ -78,7 +78,7 @@ export async function requireAccessibleTrip(
     throw createError({ statusCode: 404, statusMessage: 'Trip not found', data: { code: 'trip_not_found' } })
   }
 
-  const row = await db.prepare('SELECT t.id, t.status, t.visibility, t.payload_json, t.payload_schema_version, t.revision, t.updated_at, t.deleted_at FROM trips t WHERE t.id = ? AND t.status = ? AND t.deleted_at IS NULL').bind(tripId, 'owned').first<Omit<AccessibleTripRow, 'role'>>()
+  const row = await db.prepare("SELECT t.id, t.status, t.visibility, t.payload_json, t.payload_schema_version, t.revision, t.updated_at, t.deleted_at FROM trips t WHERE t.id = ? AND t.status IN ('anonymous', 'owned') AND t.deleted_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > ?)").bind(tripId, new Date().toISOString()).first<Omit<AccessibleTripRow, 'role'>>()
   if (!row) {
     throw createError({ statusCode: 404, statusMessage: 'Trip not found', data: { code: 'trip_not_found' } })
   }

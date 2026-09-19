@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PersistedTrip } from '~/repositories/tripRepository'
-import { snapshotTrip } from '~/repositories/tripRepository'
 import { migratePersistedTrip } from '~/utils/tripSchema'
+import { useServerTrip } from '~/composables/useServerTrip'
 
 interface User {
   id: string
@@ -33,8 +33,8 @@ interface LocalTrip {
 
 useHead({ title: 'My trips' })
 
-const router = useRouter()
 const store = useTripStore()
+const { clearServerLink } = useServerTrip()
 
 const user = ref<User | null>(null)
 const serverTrips = ref<ServerTrip[]>([])
@@ -141,10 +141,15 @@ async function uploadLocalTrip(localTrip: LocalTrip) {
 }
 
 async function createTrip() {
-  await navigateTo('/new')
+  await navigateTo('/new?fresh=1')
 }
 
 function openLocalTrip(id: string) {
+  const localTrip = localTrips.value.find((trip) => trip.id === id)
+  if (!localTrip) return
+  clearServerLink()
+  store.$reset()
+  Object.assign(store, migratePersistedTrip(localTrip.payload))
   window.localStorage.setItem('orlando-trip-v2:current', id)
   navigateTo('/')
 }
@@ -255,7 +260,7 @@ async function deleteTrip(tripId: string) {
                 :disabled="uploadingIds.has(trip.id)"
                 @click="uploadLocalTrip(trip)"
               >
-                {{ uploadingIds.has(trip.id) ? 'Saving…' : 'Save to account' }}
+                {{ uploadingIds.has(trip.id) ? 'Adding…' : 'Add to account' }}
               </button>
             </div>
           </li>

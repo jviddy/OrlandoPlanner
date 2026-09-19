@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { useServerTrip } from '~/composables/useServerTrip'
+import { capabilityTokenFromLocation, useServerTrip } from '~/composables/useServerTrip'
 
 const route = useRoute()
 const tripId = computed(() => typeof route.params.tripId === 'string' ? route.params.tripId : '')
-const capToken = computed(() => String(route.query.cap || ''))
 const { loadServerTrip } = useServerTrip()
 
 onMounted(async () => {
@@ -12,7 +11,7 @@ onMounted(async () => {
     return
   }
   try {
-    await loadServerTrip(tripId.value, capToken.value || undefined)
+    await loadServerTrip(tripId.value, capabilityTokenFromLocation() || undefined)
     navigateTo('/edit', { replace: true })
   } catch (err: any) {
     const status = err?.statusCode || err?.data?.statusCode

@@ -1,6 +1,6 @@
 # Anonymous sync foundation
 
-Anonymous server persistence is implemented behind `anonymousSyncEnabled`, which defaults to `false` on both server and client. The shipped UI does not upload local trips. When enabled, Trip settings shows an explicit upload choice, manual sync status, failure recovery wording, and capability revocation.
+Anonymous server persistence is implemented behind `anonymousSyncEnabled`, which defaults to `false` on both server and client. Local trips are never uploaded in the background. When enabled, Sharing offers an explicit temporary view-link action, retains the local recovery copy, shows the inactivity expiry, and lets the creating device update the shared snapshot. Named editors require sign-in and claim the trip into an owned account.
 
 Separate `orlando-planner-preview` and `orlando-planner-production` D1 databases were provisioned in WEUR on 18 September 2026. Migration `0001_anonymous_trips.sql` was applied and the four application tables were verified in both environments. `wrangler.toml` binds preview/local and production separately as `ORLANDO_DB`.
 

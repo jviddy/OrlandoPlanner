@@ -1,20 +1,28 @@
 <script setup lang="ts">
 import { parseISO, useDates } from '~/composables/useDates'
+import { useServerTrip } from '~/composables/useServerTrip'
 
 const store = useTripStore()
 const { dayCell } = useDayCell()
 const { dow } = useDates()
+const { meta, isServerBacked } = useServerTrip()
+const readOnly = computed(() => isServerBacked(store.tripId) && !meta.value?.canEdit)
 
 function openDay(index: number) {
   store.selectDay(index)
   navigateTo({ path: '/plan', query: { day: store.days[index]!.id } })
+}
+
+function selectDay(index: number) {
+  if (readOnly.value) openDay(index)
+  else store.openSheet(index)
 }
 </script>
 
 <template>
   <div class="daylist">
     <div v-for="(day, i) in store.days" :key="day.id" class="drow">
-      <button type="button" class="drow__main" @click="store.openSheet(i)">
+      <button type="button" class="drow__main" @click="selectDay(i)">
         <span class="drow__date">
           <span class="drow__dow">{{ dow(parseISO(day.date)) }}</span>
           <span class="drow__num">{{ dayCell(i).dateNumber }}</span>

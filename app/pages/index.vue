@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import { useServerTrip } from '~/composables/useServerTrip'
+
 useHead({ title: 'Orlando Trip Planner' })
 
 const store = useTripStore()
 const { viewMode } = useViewMode()
 const shareSheetRef = ref<{ open: () => void } | null>(null)
+const { meta, isServerBacked } = useServerTrip()
+const canEditDetails = computed(() => !isServerBacked(store.tripId) || meta.value?.role === 'owner' || meta.value?.role === 'agent')
 
 onMounted(() => {
   if (!store.hasTrip) navigateTo('/new', { replace: true })
@@ -22,13 +26,17 @@ function fixAlert(dayIndex: number | undefined) {
       <template v-if="store.hasTrip">
         <header class="ov-head">
           <div class="ov-head__row">
-            <NuxtLink to="/edit" class="ov-head__trip">
+            <NuxtLink v-if="canEditDetails" to="/edit" class="ov-head__trip">
               <span class="ov-head__name">{{ store.displayName }}</span>
               <span class="ov-head__range">
                 {{ store.rangeLabel }}
                 <AppIcon name="pencil" :size="11" class="ov-head__pencil" />
               </span>
             </NuxtLink>
+            <div v-else class="ov-head__trip">
+              <span class="ov-head__name">{{ store.displayName }}</span>
+              <span class="ov-head__range">{{ store.rangeLabel }}</span>
+            </div>
             <div class="ov-head__actions">
               <ClientOnly>
                 <ServerSyncPanel />

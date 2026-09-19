@@ -2,10 +2,12 @@
 import type { WeekStart } from '~/types/trip'
 import type { TripDetailsDraft } from '~/types/trip'
 import { dateRangeImpact } from '~/utils/tripSchema'
+import { useServerTrip } from '~/composables/useServerTrip'
 
 useHead({ title: 'Edit trip · Orlando Planner' })
 
 const store = useTripStore()
+const { meta, isServerBacked } = useServerTrip()
 
 function copyDetails(): TripDetailsDraft {
   return {
@@ -37,6 +39,10 @@ const dirty = computed(() => original.value !== JSON.stringify(draft))
 
 onMounted(() => {
   if (!store.hasTrip) navigateTo('/new', { replace: true })
+  if (isServerBacked(store.tripId) && meta.value?.role !== 'owner' && meta.value?.role !== 'agent') {
+    navigateTo('/', { replace: true })
+    return
+  }
   Object.assign(draft, copyDetails())
   original.value = JSON.stringify(draft)
 })
@@ -108,7 +114,6 @@ function save() {
           <button type="button" @click="store.clearRecovery()">Clear archive</button>
         </div>
 
-        <TripSyncPanel />
         <TripSharingPanel />
 
         <div class="edit__section">

@@ -4,7 +4,9 @@ import {
   generateCodeVerifier,
   googleRedirectUri,
   requireAuthDb,
+  safeRedirect,
   setCodeVerifierCookie,
+  setOAuthRedirectCookie,
   setOAuthStateCookie,
 } from '../../../utils/auth'
 import { randomToken } from '../../../utils/anonymousTrips'
@@ -23,6 +25,7 @@ export default defineEventHandler(async (event) => {
   clearOAuthCookies(event)
   setOAuthStateCookie(event, state)
   setCodeVerifierCookie(event, verifier)
+  setOAuthRedirectCookie(event, safeRedirect(getQuery(event).redirect))
 
   const params = new URLSearchParams({
     client_id: clientId,

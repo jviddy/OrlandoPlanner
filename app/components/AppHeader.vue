@@ -1,32 +1,24 @@
 <script setup lang="ts">
 import { useServerTrip } from '~/composables/useServerTrip'
-import { AnonymousTripRepository, snapshotTrip, type AnonymousCapability } from '~/repositories/tripRepository'
 
 const store = useTripStore()
-const route = useRoute()
 const menuOpen = ref(false)
 const user = ref<{ id: string; email: string; displayName: string } | null>(null)
-const loadingUser = ref(false)
 const shareSheetRef = ref<{ open: () => void } | null>(null)
-const sharing = ref(false)
 const shareMessage = ref('')
 
-const { meta, saving, message, isServerBacked, uploadCurrentTrip, clearServerLink } = useServerTrip()
+const { saving, message, isServerBacked, uploadCurrentTrip, clearServerLink } = useServerTrip()
 
 const backed = computed(() => isServerBacked(store.tripId))
 const hasTrip = computed(() => store.hasTrip)
-const isHome = computed(() => route.path === '/')
-const isTrips = computed(() => route.path === '/trips')
 
 async function refreshUser() {
-  loadingUser.value = true
   try {
     const session = await $fetch<{ user: { id: string; email: string; displayName: string } | null }>('/api/auth/session')
     user.value = session.user
   } catch {
     user.value = null
   }
-  loadingUser.value = false
 }
 
 onMounted(() => {
@@ -38,38 +30,15 @@ async function saveCurrentTrip() {
   menuOpen.value = false
 }
 
-function persistAnonymousCapability(value: AnonymousCapability | null) {
-  const key = `orlando-anonymous-capability:${store.tripId}`
-  if (value) localStorage.setItem(key, JSON.stringify(value))
-  else localStorage.removeItem(key)
-}
-
 async function shareTrip() {
   if (!hasTrip.value) {
     shareMessage.value = 'Create a trip first to share it.'
     return
   }
-  sharing.value = true
   shareMessage.value = ''
-  try {
-    if (!backed.value) {
-      if (user.value) {
-        const ok = await uploadCurrentTrip()
-        if (!ok) throw new Error(message.value || 'Save failed')
-      } else {
-        const repository = new AnonymousTripRepository()
-        const idempotencyKey = `${Date.now()}-${store.tripId}`
-        const capability = await repository.create(snapshotTrip(store.$state), idempotencyKey)
-        persistAnonymousCapability(capability)
-      }
-    }
-    menuOpen.value = false
-    shareSheetRef.value?.open()
-  } catch (err: any) {
-    shareMessage.value = err?.message || 'Could not prepare the trip for sharing. Please try again.'
-  } finally {
-    sharing.value = false
-  }
+  // Image sharing is generated entirely on-device and must not upload a trip.
+  menuOpen.value = false
+  shareSheetRef.value?.open()
 }
 
 async function logout() {
@@ -115,7 +84,7 @@ function closeMenu() {
       <NuxtLink to="/trips" class="app-header__item" @click="closeMenu">
         <AppIcon name="calendar" :size="16" /> My trips
       </NuxtLink>
-      <NuxtLink to="/new" class="app-header__item" @click="closeMenu">
+      <NuxtLink to="/new?fresh=1" class="app-header__item" @click="closeMenu">
         <AppIcon name="plus" :size="16" /> New trip
       </NuxtLink>
 
@@ -123,11 +92,10 @@ function closeMenu() {
         v-if="hasTrip"
         type="button"
         class="app-header__item app-header__item--action"
-        :disabled="sharing"
         @click="shareTrip"
       >
         <AppIcon name="share" :size="16" />
-        {{ sharing ? 'Preparing share…' : 'Share trip' }}
+        Share trip image
       </button>
 
       <div class="app-header__divider" />
@@ -140,7 +108,7 @@ function closeMenu() {
         @click="saveCurrentTrip"
       >
         <AppIcon name="cloud" :size="16" />
-        {{ saving ? 'Saving…' : 'Save current trip to account' }}
+        {{ saving ? 'Adding…' : 'Add this device trip to my account' }}
       </button>
 
       <button
@@ -149,7 +117,7 @@ function closeMenu() {
         class="app-header__item app-header__item--action app-header__item--success"
         @click="closeMenu"
       >
-        <AppIcon name="check" :size="16" /> Current trip is saved
+        <AppIcon name="check" :size="16" /> Saved to account automatically
       </button>
 
       <div class="app-header__divider" />

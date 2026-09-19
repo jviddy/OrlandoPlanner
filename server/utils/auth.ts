@@ -137,6 +137,35 @@ export async function deliverMagicLink(event: H3Event, email: string, token: str
   return {}
 }
 
+export async function deliverTripInvitation(
+  event: H3Event,
+  email: string,
+  token: string,
+  details: { tripName: string; inviterName: string; role: 'editor' | 'viewer' },
+): Promise<{ devLink?: string }> {
+  const config = useRuntimeConfig(event)
+  const baseUrl = String(config.appBaseUrl || getRequestURL(event).origin).replace(/\/$/, '')
+  const link = `${baseUrl}/invitations/${encodeURIComponent(token)}`
+  const branch = String((event.context as any).cloudflare?.env?.CF_PAGES_BRANCH || '')
+  if (config.authDevExposeLinks && branch !== 'main') return { devLink: link }
+
+  const apiKey = String(config.resendApiKey)
+  const from = String(config.authEmailFrom)
+  if (!apiKey || !from) throw createError({ statusCode: 503, statusMessage: 'Email delivery unavailable', data: { code: 'email_unavailable' } })
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `trip-invite/${await tokenHash(token)}` },
+    body: JSON.stringify({
+      from,
+      to: [email],
+      subject: `${details.inviterName || 'Someone'} invited you to ${details.tripName}`,
+      html: `<p>${escapeHtml(details.inviterName || 'Someone')} invited you to ${escapeHtml(details.tripName)} as a ${escapeHtml(details.role)}.</p><p><a href="${escapeHtml(link)}">View invitation</a></p><p>This one-time invitation expires in 7 days. If you were not expecting it, you can ignore this email.</p>`,
+    }),
+  })
+  if (!response.ok) throw createError({ statusCode: 503, statusMessage: 'Email delivery unavailable', data: { code: 'email_unavailable' } })
+  return {}
+}
+
 const REVOKED_SESSION_PURGE_DAYS = 7
 
 export async function purgeExpiredAuthData(db: D1DatabaseLike, now = new Date()): Promise<void> {
@@ -164,6 +193,7 @@ export async function createSession(event: H3Event, db: D1DatabaseLike, userId: 
 
 const OAUTH_STATE_COOKIE = 'orlando_oauth_state'
 const OAUTH_VERIFIER_COOKIE = 'orlando_oauth_verifier'
+const OAUTH_REDIRECT_COOKIE = 'orlando_oauth_redirect'
 
 export function oauthStateCookieOptions(event: H3Event, maxAge: number) {
   return {
@@ -186,6 +216,7 @@ export function getOAuthState(event: H3Event): string {
 export function clearOAuthCookies(event: H3Event): void {
   deleteCookie(event, OAUTH_STATE_COOKIE, oauthStateCookieOptions(event, 0))
   deleteCookie(event, OAUTH_VERIFIER_COOKIE, oauthStateCookieOptions(event, 0))
+  deleteCookie(event, OAUTH_REDIRECT_COOKIE, oauthStateCookieOptions(event, 0))
 }
 
 export function setCodeVerifierCookie(event: H3Event, verifier: string): void {
@@ -194,6 +225,14 @@ export function setCodeVerifierCookie(event: H3Event, verifier: string): void {
 
 export function getCodeVerifier(event: H3Event): string {
   return getCookie(event, OAUTH_VERIFIER_COOKIE) ?? ''
+}
+
+export function setOAuthRedirectCookie(event: H3Event, redirectPath: string): void {
+  setCookie(event, OAUTH_REDIRECT_COOKIE, safeRedirect(redirectPath), oauthStateCookieOptions(event, 600))
+}
+
+export function getOAuthRedirect(event: H3Event): string {
+  return safeRedirect(getCookie(event, OAUTH_REDIRECT_COOKIE))
 }
 
 export async function generateCodeVerifier(): Promise<string> {

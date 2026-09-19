@@ -5,10 +5,30 @@ import { migratePersistedTrip } from '~/utils/tripSchema'
 import { useServerTrip } from '~/composables/useServerTrip'
 
 const store = useTripStore()
-const { meta, conflict, saving, message, isServerBacked, saveServerTrip, keepLocal, keepServer, cancelConflict, clearServerLink } = useServerTrip()
+const { meta, conflict, saving, syncStatus, message, isServerBacked, saveServerTrip, uploadCurrentTrip, keepLocal, keepServer, cancelConflict } = useServerTrip()
 
 const open = ref(false)
 const backed = computed(() => isServerBacked(store.tripId))
+const user = ref<{ id: string } | null>(null)
+const statusLabel = computed(() => {
+  if (!backed.value) return 'On this device'
+  if (syncStatus.value === 'saving') return 'Saving…'
+  if (syncStatus.value === 'offline') return 'Offline'
+  if (syncStatus.value === 'error') return 'Save failed'
+  if (syncStatus.value === 'conflict') return 'Review changes'
+  if (syncStatus.value === 'readonly') return 'View only'
+  return 'Saved'
+})
+const statusTone = computed(() => `server-sync__trigger--${syncStatus.value}`)
+
+onMounted(async () => {
+  try {
+    const session = await $fetch<{ user: { id: string } | null }>('/api/auth/session')
+    user.value = session.user
+  } catch {
+    user.value = null
+  }
+})
 
 const conflictDiff = computed(() => {
   if (!conflict.value) return []
@@ -39,11 +59,6 @@ const conflictDiff = computed(() => {
   return diffs
 })
 
-async function save() {
-  open.value = true
-  await saveServerTrip()
-}
-
 function useServer() {
   keepServer()
 }
@@ -54,23 +69,35 @@ async function useLocal() {
 
 function close() {
   open.value = false
-  if (!conflict.value) cancelConflict()
 }
 </script>
 
 <template>
-  <div v-if="backed" class="server-sync">
-    <button type="button" class="server-sync__trigger" aria-label="Save to server" @click="save">
+  <div class="server-sync">
+    <button type="button" class="server-sync__trigger" :class="statusTone" :aria-label="statusLabel" @click="open = !open">
       <AppIcon name="cloud" :size="16" />
+      <span>{{ statusLabel }}</span>
     </button>
 
     <div v-if="open" class="server-sync__panel">
       <div class="server-sync__head">
-        <h2>Server copy</h2>
+        <h2>Save status</h2>
         <button type="button" class="server-sync__close" aria-label="Close" @click="close">×</button>
       </div>
 
-      <template v-if="conflict">
+      <template v-if="!backed">
+        <p class="server-sync__text">
+          This trip is saved automatically on this device. It has not been uploaded.
+        </p>
+        <div class="server-sync__actions">
+          <button v-if="user" type="button" :disabled="saving" @click="uploadCurrentTrip">
+            {{ saving ? 'Adding…' : 'Add to my account' }}
+          </button>
+          <NuxtLink v-else to="/auth/login?redirect=/" class="server-sync__link">Sign in for cloud saving</NuxtLink>
+        </div>
+      </template>
+
+      <template v-else-if="conflict">
         <p class="server-sync__text">The server has revision {{ conflict.revision }}. Choose how to resolve:</p>
         <div v-if="conflictDiff.length" class="server-sync__diff">
           <table>
@@ -93,15 +120,15 @@ function close() {
 
       <template v-else>
         <p class="server-sync__text">
-          Linked to server trip. Revision {{ meta?.revision }}.
+          <template v-if="meta?.canEdit">Changes save automatically to your account. Cloud revision {{ meta?.revision }}.</template>
+          <template v-else>This is a read-only shared trip.</template>
           <span v-if="meta?.role === 'viewer'" class="server-sync__readonly">(view only)</span>
           <span v-else-if="meta?.role === 'editor'" class="server-sync__readonly">(editor — cannot change trip details)</span>
         </p>
         <div class="server-sync__actions">
-          <button type="button" :disabled="saving || meta?.role === 'viewer'" @click="saveServerTrip">
-            {{ saving ? 'Saving…' : 'Save now' }}
+          <button v-if="meta?.canEdit" type="button" :disabled="saving" @click="saveServerTrip">
+            {{ saving ? 'Saving…' : syncStatus === 'error' || syncStatus === 'offline' ? 'Retry cloud save' : 'Save now' }}
           </button>
-          <button type="button" class="server-sync__cancel" @click="clearServerLink">Unlink</button>
         </div>
       </template>
 
@@ -115,16 +142,24 @@ function close() {
   position: relative;
 }
 .server-sync__trigger {
-  width: 34px;
+  min-width: 34px;
   height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border-radius: 17px;
   background: #f2f4f9;
   color: var(--text-muted);
   border: none;
   cursor: pointer;
 }
+.server-sync__trigger span { font-size:11px; font-weight:700; white-space:nowrap; }
+.server-sync__trigger--saved { background:#e8f4ee; color:#176b4d; }
+.server-sync__trigger--saving { background:#eef3fc; color:var(--c-navy); }
+.server-sync__trigger--offline,
+.server-sync__trigger--error,
+.server-sync__trigger--conflict { background:#fff1dc; color:var(--warn-ink); }
 .server-sync__trigger:active {
   transform: scale(0.94);
 }
@@ -186,6 +221,7 @@ function close() {
   font-weight: 600;
   cursor: pointer;
 }
+.server-sync__link { display:inline-flex; padding:7px 12px; border-radius:8px; background:var(--c-navy); color:#fff; font-size:12px; font-weight:700; text-decoration:none; }
 .server-sync__actions button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
