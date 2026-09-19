@@ -1,5 +1,5 @@
-# Cloudflare Pages config. Generated settings from the dashboard are merged with
-# the explicit bindings below. Build output for the Nitro `cloudflare-pages`
+# Cloudflare Pages config. Dashboard-generated settings are merged with the
+# explicit bindings below. Build output for the Nitro `cloudflare-pages`
 # preset is ./dist.
 name = "orlando-planner-git"
 pages_build_output_dir = "dist"
@@ -17,11 +17,9 @@ NUXT_PUBLIC_GOOGLE_ENABLED = "true"
 binding = "ORLANDO_DB"
 database_name = "orlando-planner-preview"
 database_id = "7e917655-43fe-48b7-a28e-3f76ca26ca68"
-migrations_dir = "migrations"
 
 # Production environment uses the production D1 database.
 [[env.production.d1_databases]]
 binding = "ORLANDO_DB"
 database_name = "orlando-planner-production"
 database_id = "8235120f-1820-455a-8b9b-92ca36f16817"
-migrations_dir = "migrations"
