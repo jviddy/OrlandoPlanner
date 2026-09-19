@@ -82,7 +82,7 @@ Last updated: 19 September 2026 (Google OAuth route verified locally; moving fro
 - [x] Sensitive booking fields (`confirmationNumber`, `bookingPhone`, `partySize` — schema v3, rejected on anonymous trips, redacted for viewers)
 - [x] Activity attribution (`actor_display_name` populated on all owned-trip mutations)
 - [x] Revision-conflict compare/retry flow (`TripSyncPanel.vue` — fetches server version, shows diff table, keep-local/keep-server/cancel)
-- [~] Google OAuth route implementation (`/api/auth/google/start` and callback) — source and local Cloudflare preview verified; repo pushed to `main` (`54030af`) and ready for the new Git-integrated Pages project; follow `docs/cloudflare-pages-git-worker-migration.md` to create the project and verify production OAuth
+- [~] Google OAuth route implementation (`/api/auth/google/start` and callback) — source and local Cloudflare preview verified; repo pushed to `main` and ready for the new Git-integrated Pages project; follow `docs/cloudflare-pages-git-worker-migration.md` to create the project and verify production OAuth
 
 ## Phase 3 — agents, duplication, and hardening
 
