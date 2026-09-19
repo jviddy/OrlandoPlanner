@@ -97,12 +97,13 @@ export default defineNuxtConfig({
       output: { inlineDynamicImports: true },
     },
     prerender: {
-      crawlLinks: false,
-      routes: [],
+      crawlLinks: true,
+      routes: ['/', '/new', '/templates', '/edit', '/day', '/plan', '/crowds', '/when-to-go'],
     },
   },
 
   routeRules: {
+    '/**': { prerender: true },
     '/api/**': { prerender: false },
   },
 
