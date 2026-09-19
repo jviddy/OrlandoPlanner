@@ -36,13 +36,13 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
       to the signed-in account; `/trips` supports deleting owned trips.
 - [ ] Exercise authenticated trip create/list/update/delete against the
       production API through the new UI.
+- [x] Make a small `main` commit to confirm the Git deployment pipeline.
 - [ ] Exercise authenticated trip create/list/update/delete against the
       production API through the new UI.
 - [ ] Test logout, session expiry, capability links, invitations, and multi-trip
       behavior in the production browser flow.
 - [ ] Decide on a final custom domain and add its Google OAuth callback URI.
-- [ ] After UI and API acceptance, make a small `main` commit to confirm the
-      Git deployment pipeline, then cut traffic over from the old project.
+- [ ] After UI and API acceptance, cut traffic over from the old project.
 - [ ] Keep the old project available for one release window before deletion.
 
 ---
