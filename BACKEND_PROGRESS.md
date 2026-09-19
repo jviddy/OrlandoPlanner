@@ -18,6 +18,7 @@ Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git
       `https://orlando-planner-git.pages.dev/api/auth/google/callback`
 - [x] Production Google sign-in tested end-to-end; user/session persisted in D1
 - [x] Anonymous and authenticated API workers are responding in production
+- [x] `/trips` account page deployed and verified on `orlando-planner-git.pages.dev`
 - [ ] Retire or redirect the old Direct Upload project
       `https://orlando-planner.pages.dev` — retain it as rollback until cutover
       is complete.
