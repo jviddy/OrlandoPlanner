@@ -2,7 +2,7 @@
 
 Auto-updated checklist. If you lose context, read this file first.
 
-Last updated: 19 September 2026 (Git-integrated Pages production deployment live; OAuth start route verified)
+Last updated: 19 September 2026 (Google OAuth production sign-in and session verified)
 
 ---
 
@@ -82,7 +82,7 @@ Last updated: 19 September 2026 (Git-integrated Pages production deployment live
 - [x] Sensitive booking fields (`confirmationNumber`, `bookingPhone`, `partySize` — schema v3, rejected on anonymous trips, redacted for viewers)
 - [x] Activity attribution (`actor_display_name` populated on all owned-trip mutations)
 - [x] Revision-conflict compare/retry flow (`TripSyncPanel.vue` — fetches server version, shows diff table, keep-local/keep-server/cancel)
-- [~] Google OAuth route implementation (`/api/auth/google/start` and callback) — production worker is live at `https://orlando-planner-git.pages.dev` and `/api/auth/google/start` returns the expected Google 302; complete interactive callback/session test remains pending
+- [x] Google OAuth route implementation (`/api/auth/google/start` and callback) — production sign-in completed successfully; session verified for the test account. Callback currently redirects to `/trips`, whose UI page remains unbuilt.
 
 ## Phase 3 — agents, duplication, and hardening
 
@@ -114,7 +114,7 @@ Last updated: 19 September 2026 (Git-integrated Pages production deployment live
 | POST | `/api/auth/logout` | ✅ |
 | POST | `/api/auth/logout-all` | ✅ |
 | GET | `/api/auth/google/start` | ✅ production 302 verified |
-| GET | `/api/auth/google/callback` | ✅ route deployed; interactive Google callback test pending |
+| GET | `/api/auth/google/callback` | ✅ production callback creates a session |
 
 ### Anonymous trips (`/api/anonymous-trips/`)
 | Method | Route | Status |

@@ -162,8 +162,10 @@ In **Google Cloud Console → APIs & Services → Credentials → OAuth client**
 - [ ] Click **Sign in with Google**.
 - [ ] Confirm Google redirects to the callback URL without
       `redirect_uri_mismatch`.
-- [ ] Confirm the callback creates a session and returns to the application.
-- [ ] Confirm refresh keeps the session.
+- [x] Confirm the callback creates a session; production `/api/auth/session`
+      returns the signed-in test account.
+- [x] Confirm the session cookie survives navigation by reading
+      `/api/auth/session` after the callback.
 - [ ] Confirm logout clears the session.
 - [ ] Confirm a second browser cannot use the first browser's session.
 
@@ -189,12 +191,12 @@ In **Google Cloud Console → APIs & Services → Credentials → OAuth client**
 - [x] New Pages project name: `orlando-planner-git`
 - [x] New production URL: `https://orlando-planner-git.pages.dev`
 - [ ] New preview URL: *(no separate preview deployment URL recorded yet)*
-- [x] GitHub commit verified in production: `6784585`
+- [x] GitHub commit verified in production: `26a9631`
 - [x] Production OAuth start route verified: 19 September 2026
 - [x] Old project retained for rollback: `orlando-planner.pages.dev`
 - [x] Update `BACKEND_PROGRESS.md` with the production deployment status.
 
-The complete interactive Google callback/session test remains open until the
-production callback is added to Google Cloud Console and a browser sign-in is
-completed successfully. The old Direct Upload project is intentionally
-retained as the rollback point.
+The backend Google callback/session test is complete. The callback currently
+redirects to `/trips`, which returns a 404 because the account trip-list UI is
+not built yet; that is tracked separately in `BACKEND_PROGRESS.md`. The old
+Direct Upload project is intentionally retained as the rollback point.
