@@ -44,7 +44,7 @@ References:
 - [x] `npm run typecheck` — passed.
 - [x] `npm run db:verify` — passed.
 - [x] `npm run build` — passed and generated the Nitro worker bundle.
-- [x] Commit and push all backend/auth changes to the repository's `main` branch (`ca9356d`).
+- [x] Commit and push all backend/auth changes to the repository's `main` branch (`4bc7fa7`).
 
 ## 2. Create a new Git-integrated Pages project
 
