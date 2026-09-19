@@ -2,7 +2,39 @@
 
 Auto-updated checklist. If you lose context, read this file first.
 
-Last updated: 19 September 2026 (Google OAuth production sign-in and session verified)
+Last updated: 19 September 2026 (production Google OAuth, D1 migrations, and Git deployment verified)
+
+## Current production deployment
+
+- [x] Git-integrated Cloudflare Pages project created: `orlando-planner-git`
+- [x] Production URL: `https://orlando-planner-git.pages.dev`
+- [x] GitHub repository/branch: `jviddy/OrlandoPlanner` / `main`
+- [x] Latest production deployment: commit `c8223d3`
+- [x] Cloudflare compatibility: `nodejs_compat` with D1 binding `ORLANDO_DB`
+- [x] Production D1 database: `orlando-planner-production`
+- [x] Production migrations 0001–0004 applied and verified
+- [x] Google OAuth client ID/secret configured as Cloudflare Production secrets
+- [x] Google production callback registered:
+      `https://orlando-planner-git.pages.dev/api/auth/google/callback`
+- [x] Production Google sign-in tested end-to-end; user/session persisted in D1
+- [x] Anonymous and authenticated API workers are responding in production
+- [ ] Retire or redirect the old Direct Upload project
+      `https://orlando-planner.pages.dev` — retain it as rollback until cutover
+      is complete.
+
+### Next deployment steps
+
+- [ ] Build the `/trips` account page; OAuth currently redirects there, but the
+      route is not yet implemented and returns a Nuxt 404.
+- [ ] Build trip-scoped plan routes and upload/claim UI for local trips.
+- [ ] Exercise authenticated trip create/list/update/delete against the
+      production API through the new UI.
+- [ ] Test logout, session expiry, capability links, invitations, and multi-trip
+      behavior in the production browser flow.
+- [ ] Decide on a final custom domain and add its Google OAuth callback URI.
+- [ ] After UI and API acceptance, make a small `main` commit to confirm the
+      Git deployment pipeline, then cut traffic over from the old project.
+- [ ] Keep the old project available for one release window before deletion.
 
 ---
 
@@ -43,6 +75,7 @@ Last updated: 19 September 2026 (Google OAuth production sign-in and session ver
 - [x] `build` in CI
 - [x] Auth table cleanup (sessions, auth_tokens, revoked capabilities purge via `purgeExpiredAuthData`)
 - [x] Apply migrations to remote preview D1 (all 4 applied, all tables verified)
+- [x] Apply migrations to remote production D1 (all 4 applied, all tables verified)
 - [x] Enable anonymous sync in controlled preview (env-specific secret + feature flags set)
 - [x] Repeat full lifecycle check on remote preview (create, read, update, conflict, revoke, read-after-revoke — all passed)
 
@@ -114,7 +147,7 @@ Last updated: 19 September 2026 (Google OAuth production sign-in and session ver
 | POST | `/api/auth/logout` | ✅ |
 | POST | `/api/auth/logout-all` | ✅ |
 | GET | `/api/auth/google/start` | ✅ production 302 verified |
-| GET | `/api/auth/google/callback` | ✅ production callback creates a session |
+| GET | `/api/auth/google/callback` | ✅ production callback creates a D1-backed session |
 
 ### Anonymous trips (`/api/anonymous-trips/`)
 | Method | Route | Status |
