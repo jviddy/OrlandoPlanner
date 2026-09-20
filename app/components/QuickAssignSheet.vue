@@ -9,11 +9,13 @@ import {
   resolvePark,
 } from '~/data/parks'
 import { parseISO, useDates } from '~/composables/useDates'
+import { useCrowdPredictions } from '~/composables/useCrowdPredictions'
 
 const store = useTripStore()
 const route = useRoute()
 const router = useRouter()
 const { dayMon } = useDates()
+const { ensureLoaded: ensureCrowdsLoaded, prediction: crowdPrediction, backgroundStyle: crowdBackgroundStyle } = useCrowdPredictions()
 
 const title = computed(() => {
   const day = store.selected
@@ -70,6 +72,28 @@ const nearbyDays = computed(() => {
     .filter((entry) => entry.day)
 })
 const fixedAnchorCount = computed(() => store.selected?.items.filter((item) => item.anchor === 'date').length ?? 0)
+
+function crowdBadge(activityId: string): string {
+  const date = store.selected?.date
+  const result = date ? crowdPrediction(date, activityId) : null
+  if (!result) return ''
+  return result.source === 'activity'
+    ? `Crowd ${result.score}/${result.max}`
+    : `Orlando ${result.score}/${result.max}`
+}
+
+function crowdBadgeTitle(activityId: string): string {
+  const date = store.selected?.date
+  const result = date ? crowdPrediction(date, activityId) : null
+  if (!result) return ''
+  return result.source === 'activity'
+    ? `${result.label} activity-specific crowd prediction: ${result.score}/${result.max}`
+    : `${result.label} Orlando crowd prediction: ${result.score}/${result.max}; no activity-specific prediction is available`
+}
+
+function activityCrowdStyle(activityId: string) {
+  return store.selected?.date ? crowdBackgroundStyle(store.selected.date, activityId) : undefined
+}
 
 function syncSelectionFromDay() {
   const day = store.selected
@@ -212,6 +236,7 @@ watch(
       searchQuery.value = ''
       syncSelectionFromDay()
       resetOpenGroups()
+      void ensureCrowdsLoaded()
     }
     if (typeof window === 'undefined') return
     if (open) window.addEventListener('keydown', onKey)
@@ -285,6 +310,7 @@ onBeforeUnmount(() => {
               >
                 <DayCircle :park-id="activity.id" :size="42" />
                 <span class="tile__label">{{ activity.short }}</span>
+                <span v-if="crowdBadge(activity.id)" class="tile__crowd" :style="activityCrowdStyle(activity.id)" :title="crowdBadgeTitle(activity.id)">{{ crowdBadge(activity.id) }}</span>
               </button>
             </div>
             <div v-else class="search-empty">
@@ -339,6 +365,7 @@ onBeforeUnmount(() => {
                   >
                     <DayCircle :park-id="pid" :size="42" />
                     <span class="tile__label">{{ PARK_BY_ID[pid]?.short }}</span>
+                    <span v-if="crowdBadge(pid)" class="tile__crowd" :style="activityCrowdStyle(pid)" :title="crowdBadgeTitle(pid)">{{ crowdBadge(pid) }}</span>
                   </button>
                   <template v-if="group.key === 'off'">
                     <button
@@ -352,6 +379,7 @@ onBeforeUnmount(() => {
                     >
                       <DayCircle :park-id="activity.id" :size="42" />
                       <span class="tile__label">{{ activity.short }}</span>
+                      <span v-if="crowdBadge(activity.id)" class="tile__crowd" :style="activityCrowdStyle(activity.id)" :title="crowdBadgeTitle(activity.id)">{{ crowdBadge(activity.id) }}</span>
                     </button>
                     <button type="button" class="tile" @click="openCustomForm()">
                       <span class="tile__add"><AppIcon name="plus" :size="18" /></span>
@@ -390,6 +418,7 @@ onBeforeUnmount(() => {
               >
                 <DayCircle :park-id="pid" :size="42" />
                 <span class="tile__label">{{ resolvePark(pid, store.customActivities)?.short }}</span>
+                <span v-if="crowdBadge(pid)" class="tile__crowd" :style="activityCrowdStyle(pid)" :title="crowdBadgeTitle(pid)">{{ crowdBadge(pid) }}</span>
               </button>
             </div>
           </div>
@@ -408,6 +437,7 @@ onBeforeUnmount(() => {
               >
                 <DayCircle :park-id="pid" :size="42" />
                 <span class="tile__label">{{ resolvePark(pid, store.customActivities)?.short }}</span>
+                <span v-if="crowdBadge(pid)" class="tile__crowd" :style="activityCrowdStyle(pid)" :title="crowdBadgeTitle(pid)">{{ crowdBadge(pid) }}</span>
               </button>
             </div>
           </div>
@@ -426,6 +456,7 @@ onBeforeUnmount(() => {
               >
                 <DayCircle :park-id="activity.id" :size="42" />
                 <span class="tile__label">{{ activity.short }}</span>
+                <span v-if="crowdBadge(activity.id)" class="tile__crowd" :style="activityCrowdStyle(activity.id)" :title="crowdBadgeTitle(activity.id)">{{ crowdBadge(activity.id) }}</span>
               </button>
             </div>
           </div>
@@ -660,6 +691,16 @@ onBeforeUnmount(() => {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+.tile__crowd {
+  padding: 2px 4px;
+  border-radius: 5px;
+  background: var(--crowd-bg, #f5f4ef);
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 750;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 .tile__add {
   width: 42px;

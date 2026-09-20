@@ -13,6 +13,9 @@
  *   grid full of out-of-range days.
  */
 import { addDays, parseISO, toISO, todayUTC } from '~/composables/useDates'
+import { useCrowdPredictions } from '~/composables/useCrowdPredictions'
+
+const { ensureLoaded: ensureCrowdsLoaded, prediction: crowdPrediction, backgroundStyle: crowdBackgroundStyle } = useCrowdPredictions()
 
 const props = withDefaults(
   defineProps<{
@@ -73,6 +76,7 @@ function openSheet() {
   const seed = props.start ? parseISO(props.start) : props.min ? parseISO(props.min) : todayUTC()
   viewMonth.value = monthStart(seed)
   isOpen.value = true
+  void ensureCrowdsLoaded()
 }
 function closeSheet() {
   isOpen.value = false
@@ -210,76 +214,9 @@ function cellState(d: Date | null): 'start' | 'end' | 'mid' | 'preview-start' | 
   return ''
 }
 
-/**
- * Simple heuristic crowd index for Orlando theme parks.
- * 0 = low, 1 = moderate, 2 = busy, 3 = very busy.
- * Real crowd data would improve this, but the relative pattern is useful.
- */
-function crowdLevel(d: Date): 0 | 1 | 2 | 3 {
-  const y = d.getUTCFullYear()
-  const m = d.getUTCMonth() // 0-11
-  const day = d.getUTCDate()
-  const dow = d.getUTCDay()
-  const isWeekend = dow === 0 || dow === 6
-
-  // Very busy holiday windows (approximate)
-  const veryBusyRanges: { start: [number, number]; end: [number, number] }[] = [
-    { start: [11, 23], end: [0, 2] }, // Christmas/New Year (Dec 23 - Jan 2)
-    { start: [6, 1], end: [6, 7] },   // July 4 week
-  ]
-  const easter = easterDate(y)
-  const easterStart = new Date(Date.UTC(easter.getUTCFullYear(), easter.getUTCMonth(), easter.getUTCDate() - 3))
-  const easterEnd = new Date(Date.UTC(easter.getUTCFullYear(), easter.getUTCMonth(), easter.getUTCDate() + 1))
-  if (d >= easterStart && d <= easterEnd) return 3
-
-  for (const range of veryBusyRanges) {
-    let start = new Date(Date.UTC(y, range.start[0], range.start[1]))
-    let end = new Date(Date.UTC(y, range.end[0], range.end[1]))
-    if (range.start[0] > range.end[0]) {
-      // crosses year boundary
-      if (m >= range.start[0] || m <= range.end[0]) return 3
-    } else {
-      if (d >= start && d <= end) return 3
-    }
-  }
-
-  // Busy windows
-  if ((m === 2 && day >= 10) || (m === 3 && day <= 15)) return 2 // Spring break
-  if (m === 5 || m === 6 || m === 7) return 2 // Summer
-  if (m === 11 && day >= 20) return 2 // Thanksgiving week
-
-  // Moderate
-  if (isWeekend) return 1
-  if (m === 2 || m === 3 || m === 4 || m === 11) return 1
-
-  // Low
-  return 0
-}
-
-function easterDate(year: number): Date {
-  // Anonymous Gregorian algorithm
-  const a = year % 19
-  const b = Math.floor(year / 100)
-  const c = year % 100
-  const d = Math.floor(b / 4)
-  const e = b % 4
-  const f = Math.floor((b + 8) / 25)
-  const g = Math.floor((b - f + 1) / 3)
-  const h = (19 * a + b - d - g + 15) % 30
-  const i = Math.floor(c / 4)
-  const k = c % 4
-  const l = (32 + 2 * e + 2 * i - h - k) % 7
-  const m = Math.floor((a + 11 * h + 22 * l) / 451)
-  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1
-  const day = ((h + l - 7 * m + 114) % 31) + 1
-  return new Date(Date.UTC(year, month, day))
-}
-
-function crowdStyle(d: Date | null) {
-  if (!d) return undefined
-  const level = crowdLevel(d)
-  const colors = ['transparent', 'rgba(106, 176, 76, 0.12)', 'rgba(255, 165, 0, 0.14)', 'rgba(220, 53, 69, 0.13)']
-  return { backgroundColor: colors[level] }
+function crowdTitle(d: Date): string {
+  const result = crowdPrediction(toISO(d))
+  return result ? `Predicted Orlando crowd: ${result.label}, ${result.score}/${result.max}` : ''
 }
 
 function pick(d: Date | null) {
@@ -377,6 +314,11 @@ onBeforeUnmount(() => {
             <p v-if="variant === 'days' && assignedDates.length" class="drf-legend">
               <span class="drf-legend__dot" /> already has a hotel
             </p>
+            <div class="drf-crowd-key" aria-label="Date backgrounds show predicted Orlando crowds from low to high">
+              <span>Predicted crowds</span>
+              <i v-for="level in 5" :key="level" :class="`drf-crowd-key__level-${level}`" />
+              <small>Low → high</small>
+            </div>
           </div>
 
           <div class="sheet__body drf-body">
@@ -393,12 +335,11 @@ onBeforeUnmount(() => {
                       :key="i"
                       type="button"
                       class="drf-cell"
-                      :class="[
-                        d ? (cellState(d) ? `drf-cell--${cellState(d)}` : '') : 'drf-cell--empty',
-                        d && !isDisabled(d) ? `drf-cell--crowd-${crowdLevel(d)}` : '',
-                      ]"
+                      :class="d ? (cellState(d) ? `drf-cell--${cellState(d)}` : '') : 'drf-cell--empty'"
                       :disabled="!d || isDisabled(d)"
-                      :style="d ? crowdStyle(d) : undefined"
+                      :style="d && !isDisabled(d) ? crowdBackgroundStyle(toISO(d)) : undefined"
+                      :title="d ? crowdTitle(d) : undefined"
+                      :aria-label="d ? `${toISO(d)}${crowdTitle(d) ? `. ${crowdTitle(d)}` : ''}` : undefined"
                       @click="pick(d)"
                       @mouseenter="d ? hoverDate = toISO(d) : null"
                       @mouseleave="hoverDate = ''"
@@ -420,6 +361,9 @@ onBeforeUnmount(() => {
                       type="button"
                       class="drf-circle"
                       :class="cellState(d) ? `drf-circle--${cellState(d)}` : ''"
+                      :style="crowdBackgroundStyle(toISO(d))"
+                      :title="crowdTitle(d)"
+                      :aria-label="`${toISO(d)}${crowdTitle(d) ? `. ${crowdTitle(d)}` : ''}`"
                       @click="pick(d)"
                       @mouseenter="hoverDate = toISO(d)"
                       @mouseleave="hoverDate = ''"
@@ -625,6 +569,22 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: var(--c-teal);
 }
+.drf-crowd-key {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.drf-crowd-key span { margin-right: 2px; font-weight: 700; }
+.drf-crowd-key i { width: 10px; height: 10px; border-radius: 3px; }
+.drf-crowd-key small { margin-left: 2px; font-size: 9px; }
+.drf-crowd-key__level-1 { background: #edf7f3; }
+.drf-crowd-key__level-2 { background: #f3f7e9; }
+.drf-crowd-key__level-3 { background: #fff7e2; }
+.drf-crowd-key__level-4 { background: #fdf0e7; }
+.drf-crowd-key__level-5 { background: #f8e7e3; }
 
 .drf-months {
   display: flex;
@@ -683,6 +643,7 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   position: relative;
   margin: 1px;
+  background: var(--crowd-bg, transparent);
 }
 .drf-cell--empty {
   visibility: hidden;
@@ -770,7 +731,7 @@ onBeforeUnmount(() => {
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
-  background: #fff;
+  background: var(--crowd-bg, #fff);
   border: 1.5px solid var(--field-border-soft);
 }
 .drf-circle__dot {

@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { parkName } from '~/data/parks'
+import { parkName, resolvePark } from '~/data/parks'
 import { formatRoute } from '~/data/airports'
 import { parseISO, useDates } from '~/composables/useDates'
+import { useCrowdPredictions } from '~/composables/useCrowdPredictions'
 
 const props = defineProps<{ index: number; selected?: boolean; readOnly?: boolean }>()
 const emit = defineEmits<{ select: []; change: []; addMeal: []; addBooking: []; addIdea: []; editDetails: [] }>()
 const store = useTripStore()
 const { dowShort, dayMon, time12 } = useDates()
+const { ensureLoaded: ensureCrowdsLoaded, prediction: crowdPrediction, backgroundStyle: crowdBackgroundStyle } = useCrowdPredictions()
 
 const day = computed(() => store.days[props.index]!)
 const activity = computed(() =>
@@ -20,6 +22,12 @@ const flights = computed(() => store.flights.filter((flight) => flight.date === 
 const warningCount = computed(() => day.value.items.filter(
   (item) => item.parkId && ![day.value.parkId, day.value.secondParkId, day.value.thirdParkId].includes(item.parkId),
 ).length)
+const crowd = computed(() => crowdPrediction(day.value.date, day.value.parkId))
+const crowdScope = computed(() => crowd.value?.source === 'activity'
+  ? resolvePark(day.value.parkId, store.customActivities)?.short ?? 'Activity'
+  : 'Orlando')
+
+onMounted(() => void ensureCrowdsLoaded())
 </script>
 
 <template>
@@ -41,6 +49,12 @@ const warningCount = computed(() => day.value.items.filter(
     <section class="plan-card__activity">
       <span class="group-label">Plan</span><strong>{{ activity }}</strong>
       <button v-if="!readOnly" type="button" @click.stop="emit('change')">Change day</button>
+      <span
+        v-if="crowd"
+        class="plan-card__crowd"
+        :style="crowdBackgroundStyle(day.date, day.parkId)"
+        :title="crowd.source === 'activity' ? 'Activity-specific prediction' : 'Orlando prediction; no activity-specific prediction is available'"
+      >Predicted crowd · {{ crowdScope }} · {{ crowd.label }} · {{ crowd.score }}/{{ crowd.max }}</span>
     </section>
 
     <div v-if="hotels.length || flights.length" class="plan-card__anchors">
@@ -80,6 +94,7 @@ const warningCount = computed(() => day.value.items.filter(
 .plan-card__activity .group-label { grid-column:1 / -1; }
 .plan-card__activity strong { min-width:0; font-size:15px; color:var(--text); }
 .plan-card__activity button { color:var(--c-navy); font-size:12px; font-weight:700; }
+.plan-card__crowd { grid-column:1 / -1; justify-self:start; margin-top:4px; padding:5px 8px; border-radius:8px; background:var(--crowd-bg, #f5f4ef); color:var(--text-muted); font-size:10.5px; font-weight:700; }
 .plan-card__anchors { display:flex; flex-direction:column; gap:7px; padding-bottom:13px; border-bottom:1px solid var(--warm-rule); }
 .plan-card__anchors p { display:flex; align-items:center; gap:7px; color:var(--text-muted); font-size:12px; }
 .plan-card__warning { display:flex; align-items:center; gap:7px; padding:9px 10px; border-radius:var(--r-alert); background:var(--warn-bg); color:var(--warn-ink); font-size:12px; font-weight:700; }
