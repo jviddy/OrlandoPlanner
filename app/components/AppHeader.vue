@@ -87,6 +87,12 @@ function closeMenu() {
       <NuxtLink to="/new?fresh=1" class="app-header__item" @click="closeMenu">
         <AppIcon name="plus" :size="16" /> New trip
       </NuxtLink>
+      <NuxtLink to="/when-to-go" class="app-header__item" @click="closeMenu">
+        <AppIcon name="calendar" :size="16" /> Best time to visit
+      </NuxtLink>
+      <NuxtLink to="/crowds" class="app-header__item" @click="closeMenu">
+        <AppIcon name="grid" :size="16" /> Crowd predictions
+      </NuxtLink>
 
       <button
         v-if="hasTrip"
