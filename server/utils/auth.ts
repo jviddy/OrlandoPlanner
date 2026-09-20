@@ -113,9 +113,17 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!)
 }
 
+function appOrigin(event: H3Event, configuredValue: unknown): string {
+  const configured = String(configuredValue || '').trim()
+  // NUXT_APP_BASE_URL is also Nuxt's reserved application base-path
+  // variable. If it contains a path (for example "/"), use the request
+  // origin rather than generating malformed absolute redirects.
+  return (/^https?:\/\//i.test(configured) ? configured : getRequestURL(event).origin).replace(/\/$/, '')
+}
+
 export async function deliverMagicLink(event: H3Event, email: string, token: string, redirectPath: string): Promise<{ devLink?: string }> {
   const config = useRuntimeConfig(event)
-  const baseUrl = String(config.appBaseUrl || getRequestURL(event).origin).replace(/\/$/, '')
+  const baseUrl = appOrigin(event, config.appBaseUrl)
   const link = `${baseUrl}/auth/verify#token=${encodeURIComponent(token)}&redirect=${encodeURIComponent(redirectPath)}`
   const branch = String((event.context as any).cloudflare?.env?.CF_PAGES_BRANCH || '')
   if (config.authDevExposeLinks && branch !== 'main') return { devLink: link }
@@ -144,7 +152,7 @@ export async function deliverTripInvitation(
   details: { tripName: string; inviterName: string; role: 'editor' | 'viewer' },
 ): Promise<{ devLink?: string }> {
   const config = useRuntimeConfig(event)
-  const baseUrl = String(config.appBaseUrl || getRequestURL(event).origin).replace(/\/$/, '')
+  const baseUrl = appOrigin(event, config.appBaseUrl)
   const link = `${baseUrl}/invitations/${encodeURIComponent(token)}`
   const branch = String((event.context as any).cloudflare?.env?.CF_PAGES_BRANCH || '')
   if (config.authDevExposeLinks && branch !== 'main') return { devLink: link }
@@ -252,6 +260,6 @@ export async function generateCodeChallenge(verifier: string): Promise<string> {
 
 export function googleRedirectUri(event: H3Event): string {
   const config = useRuntimeConfig(event)
-  const base = String(config.appBaseUrl || getRequestURL(event).origin).replace(/\/$/, '')
+  const base = appOrigin(event, config.appBaseUrl)
   return `${base}/api/auth/google/callback`
 }
