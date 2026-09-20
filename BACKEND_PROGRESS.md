@@ -2,14 +2,14 @@
 
 Auto-updated checklist. If you lose context, read this file first.
 
-Last updated: 19 September 2026 (automatic cloud saving, explicit anonymous sharing, member management)
+Last updated: 20 September 2026 (production routing and Google OAuth verified after base-URL fix)
 
 ## Current production deployment
 
 - [x] Git-integrated Cloudflare Pages project created: `orlando-planner-git`
 - [x] Production URL: `https://orlando-planner-git.pages.dev`
 - [x] GitHub repository/branch: `jviddy/OrlandoPlanner` / `main`
-- [x] Latest production deployment: commit `c8223d3`
+- [x] Latest production deployment: commit `cc3bd86`
 - [x] Cloudflare compatibility: `nodejs_compat` with D1 binding `ORLANDO_DB`
 - [x] Production D1 database: `orlando-planner-production`
 - [x] Production migrations 0001–0004 applied and verified
@@ -18,6 +18,8 @@ Last updated: 19 September 2026 (automatic cloud saving, explicit anonymous shar
       `https://orlando-planner-git.pages.dev/api/auth/google/callback`
 - [x] Production Google sign-in tested end-to-end; user/session persisted in D1
 - [x] Anonymous and authenticated API workers are responding in production
+- [x] Removed the conflicting `NUXT_APP_BASE_URL` Pages variable that caused
+      malformed redirects, desktop 431s, and mobile `__nuxt_error` downloads
 - [x] `/trips` account page deployed and verified on `orlando-planner-git.pages.dev`
 - [ ] Retire or redirect the old Direct Upload project
       `https://orlando-planner.pages.dev` — retain it as rollback until cutover
