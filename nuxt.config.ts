@@ -103,8 +103,7 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    '/**': { prerender: true },
-    '/api/**': { prerender: false },
+    '/api/**': { prerender: false, headers: { 'cache-control': 'no-store' } },
   },
 
   typescript: {
